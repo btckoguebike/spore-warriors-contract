@@ -1,0 +1,69 @@
+import types;
+import charactors;
+import scene;
+import resources;
+import asset;
+
+table OperationSet {
+    seed_list: SeedVec,
+    operation_list: ContextVec,
+}
+
+vector OperationSetVec <OperationSet>;
+
+// record all of operations to replay whole game
+table GameReplay {
+    starting_player: Warrior,
+    potion: PotionOpt,
+    scene_operation_list: OperationSetVec,
+}
+
+// statistics for game valuable record 
+table GameStatistics {
+    score: Number,
+    hp_recover: Number,
+    shield_block: Number,
+    damage_attack: Number,
+    damage_suffer: Number,
+}
+
+// saving a game state
+table GameSnapshot {
+    current_player: Warrior,
+    current_scene: ResourceId,
+    player_xy: Coordinate,
+    max_hp: Number,
+    scene_level: byte,
+}
+
+// session of a game for one single player
+table GameSession {
+    replay: GameReplay,
+    snapshot: GameSnapshot,
+    statistics: GameStatistics,
+}
+
+table Address {
+    code_hash: Hash,
+    hash_type: byte,
+    args: ByteVec,
+}
+
+table PlayerSeasonRecord {
+    address: Address,
+    season_point: Number,
+    paid: byte,
+}
+
+vector PlayerSeasonRecordVec <PlayerSeasonRecord>;
+
+// weekly competition
+table GameCompetitionSeason {
+    ckb_pool: Uint64,
+    future_block_number: Uint64,
+    resource_type_hash: Hash,
+    season_goal: byte,
+    official_address: Address,
+    ticket_price: Uint64,
+    player_record_list: PlayerSeasonRecordVec,
+}

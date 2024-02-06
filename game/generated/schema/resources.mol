@@ -1,0 +1,103 @@
+import types;
+
+table LifePoint {
+    listen_system_id: SystemId,
+    point: byte,
+    round_recover: byte,
+}
+
+union Duration {
+    Number,
+    LifePoint,
+}
+
+option DurationOpt (Duration);
+
+// effect on charactor after operation
+table Effect {
+    id: ResourceId,
+    trigger: ContextOpt,  // empty = immediate
+    execution: ContextOpt,
+    discard: ContextOpt,
+    duration: DurationOpt,
+}
+
+vector EffectVec <Effect>;
+
+// card object
+table Card {
+    id: ResourceId,
+    class: byte,
+    cost: byte,
+    price: RandomNumber,
+    effect_pool: ResourceIdVec,
+}
+
+vector CardVec <Card>;
+
+// item object
+table Item {
+    id: ResourceId,
+    class: byte,
+    quality: byte,
+    random_weight: RandomByte,
+    price: RandomNumber,
+    effect_pool: ResourceIdVec,
+}
+
+vector ItemVec <Item>;
+
+// enemy action object
+table Action {
+    id: ResourceId,
+    random: byte,
+    effect_pool: ResourceIdVec,
+}
+
+vector ActionVec <Action>;
+
+// enemy rewards
+table Package {
+    size: byte,
+    item_pool: ResourceIdVec,
+}
+
+option PackageOpt (Package);
+
+union Score {
+    Context,
+    RandomNumber,
+}
+
+table Loot {
+    id: ResourceId,
+    gold: RandomNumber,
+    score: Score,
+    card_pool: Package,
+    props_pool: PackageOpt,
+    equipment_pool: PackageOpt,
+}
+
+vector LootVec <Loot>;
+
+// generation template of potion
+table PotionAlchemy {
+    id: ResourceId,
+    hp: RandomByte,
+    gold: RandomByte,
+    power: RandomByte,
+    motion: RandomByte,
+    view_range: RandomByte,
+    armor: RandomByte,
+    shield: RandomByte,
+    attack: RandomByte,
+    defense: RandomByte,
+    physique: RandomByte,
+    draw_count: RandomByte,
+    deck_size: byte,
+    deck_status: ResourceIdVec,
+    package_size: byte,
+    package_status: ResourceIdVec,
+}
+
+vector PotionAlchemyVec <PotionAlchemy>;

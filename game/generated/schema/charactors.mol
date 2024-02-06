@@ -1,0 +1,66 @@
+import types;
+import resources;
+
+table Warrior {
+    id: ResourceId,
+    charactor_card: ResourceId,
+    hp: Number,
+    gold: Number,
+    power: byte,
+    motion: byte,
+    view_range: byte,
+    armor: byte,
+    shield: byte,
+    attack: byte,
+    attack_weak: byte,
+    defense: byte,
+    defense_weak: byte,
+    physique: byte,
+    draw_count: byte,
+    deck_status: ResourceIdVec,
+    package_status: ResourceIdVec,
+}
+
+vector WarriorVec <Warrior>;
+
+// for strengthening warrior in entire game
+table Potion {
+    count: byte,
+    hp: byte,
+    gold: byte,
+    power: byte,
+    motion: byte,
+    view_range: byte,
+    armor: byte,
+    shield: byte,
+    attack: byte,
+    defense: byte,
+    physique: byte,
+    draw_count: byte,
+    deck_status: ResourceIdVec,
+    package_status: ResourceIdVec,
+}
+
+option PotionOpt (Potion);
+
+// containing action effects
+table ActionContext {
+    random: byte,
+    action_pool: ResourceIdVec,
+}
+
+table Enemy {
+    id: ResourceId,
+    rank: byte,
+    hp: Number,
+    armor: byte,
+    shield: byte,
+    attack: byte,
+    attack_weak: byte,
+    defense: byte,
+    defense_weak: byte,
+    reward: LootVec,
+    strategy: ActionContext,
+}
+
+vector EnemyVec <Enemy>;

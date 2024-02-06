@@ -1,0 +1,40 @@
+array Number [byte; 2];
+array SystemId [byte; 2];
+array ResourceId [byte; 2];
+array Seed [byte; 8];
+array Hash [byte; 32];
+array Uint64 [byte; 8];
+
+vector ByteVec <byte>;
+vector ResourceIdVec <ResourceId>;
+vector SeedVec <Seed>;
+
+option NumberOpt (Number);
+
+table RandomNumber {
+    lower_bound: Number,
+    upper_bound: Number,
+}
+
+table RandomByte {
+    lower_bound: byte,
+    upper_bound: byte,
+}
+
+union Value {
+    ResourceId,
+    SystemId,
+    Number,
+    RandomNumber,
+}
+
+vector ValueVec <Value>;
+
+table Context {
+    charactor_id: byte,
+    system_id: SystemId,
+    args: ValueVec,
+}
+
+vector ContextVec <Context>;
+option ContextOpt (Context);

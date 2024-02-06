@@ -1,0 +1,84 @@
+import types;
+
+table NodeEnemy {
+    count: byte,
+    enemy_pool: ResourceIdVec,
+}
+
+table NodeTreasureChest {
+    pick: byte,
+    count: byte,
+    item_pool: ResourceIdVec,
+}
+
+table NodeRecoverPoint {
+    hp_percent: byte,
+}
+
+table NodeMerchant {
+    count: byte,
+    item_pool: ResourceIdVec,
+}
+
+table NodeUnknown {
+    count: byte,
+    system_pool: ContextVec,
+}
+
+table NodeCampsite {
+    card_context: Context,
+}
+
+table NodeBarrier {}
+
+table NodeStartingPoint {}
+
+table NodeTargetingPoint {}
+
+union NodeInstance {
+    NodeEnemy,
+    NodeTreasureChest,
+    NodeRecoverPoint,
+    NodeMerchant,
+    NodeUnknown,
+    NodeCampsite,
+    NodeBarrier,
+    NodeStartingPoint,
+    NodeTargetingPoint,
+}
+
+table LevelNode {
+    visible: byte,
+    x_size: byte,
+    y_size: byte,
+    node: NodeInstance,
+}
+
+vector LevelNodeVec <LevelNode>;
+
+table Coordinate {
+    x: byte,
+    y: byte,
+}
+
+vector CoordinateVec <Coordinate>;
+
+table ScenePartition {
+    start_point: Coordinate,
+    end_point: Coordinate,
+    count: RandomByte,
+    node_pool: LevelNodeVec,
+    fixed: LevelNodeVec,
+}
+
+vector ScenePartitionVec <ScenePartition>;
+
+// game playground
+table MapScene {
+    id: ResourceId,
+    width: byte,
+    height: byte,
+    partition_list: ScenePartitionVec,
+}
+
+vector MapSceneVec <MapScene>;

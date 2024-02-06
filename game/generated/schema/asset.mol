@@ -1,0 +1,33 @@
+import types;
+import scene;
+import resources;
+import charactors;
+
+// asset for client presenting
+table AssetProvider {
+    class: byte,
+    source: byte,
+    provider_content: ByteVec,
+}
+
+vector AssetProviderVec <AssetProvider>;
+
+table Asset {
+    resource_id: ResourceId,
+    providers: AssetProviderVec,
+}
+
+vector AssetVec <Asset>;
+
+table ResourcePool {
+    effect_pool: EffectVec,
+    card_pool: CardVec,
+    item_pool: ItemVec,
+    action_pool: ActionVec,
+    loot_pool: LootVec,
+    alchemy_pool: PotionAlchemyVec,
+    scene_pool: MapSceneVec,
+    warrior_pool: WarriorVec,
+    enemy_pool: EnemyVec,
+    client_assets: AssetVec,
+}
