@@ -275,7 +275,7 @@ pub struct Enemy {
     pub attack_weak: u8,
     pub defense: u8,
     pub defense_weak: u8,
-    pub reward: Vec<Loot>,
+    pub rewards: Vec<Loot>,
     pub strategy: ActionStrategy,
 }
 
@@ -285,6 +285,8 @@ impl Enemy {
         value: generated::Enemy,
         rng: &mut impl RngCore,
     ) -> Self {
+        let rewards = randomized_pool!(value.loot_pool(), resource_pool.loot_pool(), Loot, rng);
+        let strategy = ActionStrategy::randomized(resource_pool, value.action_strategy(), rng);
         Self {
             scene_id: 0,
             rank: value.rank().into(),
@@ -295,12 +297,8 @@ impl Enemy {
             attack_weak: value.attack_weak().into(),
             defense: value.defense().into(),
             defense_weak: value.defense_weak().into(),
-            reward: value
-                .reward()
-                .into_iter()
-                .map(|v| Loot::randomized(resource_pool, v, rng))
-                .collect(),
-            strategy: ActionStrategy::randomized(resource_pool, value.strategy(), rng),
+            rewards,
+            strategy,
         }
     }
 }
@@ -326,27 +324,25 @@ pub struct SizedPoint {
 
 impl From<generated::Coordinate> for SizedPoint {
     fn from(value: generated::Coordinate) -> Self {
-        Self::from_xy(value.x().into(), value.y().into())
+        Self {
+            point: Point::from_xy(value.x().into(), value.y().into()),
+            x_size: 1,
+            y_size: 1,
+        }
+    }
+}
+
+impl From<generated::Size> for SizedPoint {
+    fn from(value: generated::Size) -> Self {
+        Self {
+            point: Default::default(),
+            x_size: value.x().into(),
+            y_size: value.y().into(),
+        }
     }
 }
 
 impl SizedPoint {
-    pub fn from_xy(x: u8, y: u8) -> Self {
-        Self {
-            point: Point::from_xy(x, y),
-            x_size: 0,
-            y_size: 0,
-        }
-    }
-
-    pub fn from_size(x_size: u8, y_size: u8) -> Self {
-        Self {
-            point: Default::default(),
-            x_size,
-            y_size,
-        }
-    }
-
     pub fn x(&self) -> u8 {
         self.point.x
     }
@@ -431,10 +427,15 @@ impl Warrior {
         value: generated::Warrior,
         rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
+        let card_id =
+            randomized_selection(value.special_cards().len(), value.special_cards(), 1, rng)
+                .first()
+                .cloned()
+                .ok_or(Error::ResourceBrokenCharactorCard)?;
         let charactor_card = resource_pool
             .card_pool()
             .into_iter()
-            .find(|card| card.id().raw_data() == value.charactor_card().raw_data())
+            .find(|card| card.id().raw_data() == card_id.raw_data())
             .ok_or(Error::ResourceBrokenCardPool)?;
         let deck_status =
             randomized_pool!(value.deck_status(), resource_pool.card_pool(), Card, rng);
@@ -487,7 +488,7 @@ impl LevelNode {
     ) -> Self {
         Self {
             visible: u8::from(value.visible()) == 1u8,
-            point: SizedPoint::from_size(value.x_size().into(), value.y_size().into()),
+            point: value.size().into(),
             node: match value.node().to_enum() {
                 generated::NodeInstanceUnion::NodeEnemy(value) => {
                     let enemies = randomized_pool!(
@@ -536,6 +537,18 @@ impl LevelNode {
             },
         }
     }
+
+    pub fn fix_randomized(
+        resource_pool: &generated::ResourcePool,
+        value: generated::FixedLevelNode,
+        rng: &mut impl RngCore,
+    ) -> Self {
+        let mut node = LevelNode::randomized(resource_pool, value.node(), rng);
+        node.point = node
+            .point
+            .shift(value.point().x().into(), value.point().y().into());
+        node
+    }
 }
 
 pub struct LevelPartition {
@@ -571,7 +584,7 @@ impl LevelPartition {
             .into_iter()
             .map(|node| LevelNode::randomized(resource_pool, node, rng))
             .collect::<Vec<_>>();
-        let mut randomized_nodes = randomized_selection(nodes.len(), nodes, sample_count, rng)
+        let randomized_nodes = randomized_selection(nodes.len(), nodes, sample_count, rng)
             .into_iter()
             .zip(points.into_iter())
             .map(|(mut node, point)| {
@@ -580,13 +593,8 @@ impl LevelPartition {
             })
             .collect::<Vec<_>>();
 
-        let mut nodes = value
-            .fixed()
-            .into_iter()
-            .map(|node| LevelNode::randomized(resource_pool, node, rng))
-            .collect::<Vec<_>>();
-        nodes.append(&mut randomized_nodes);
-
-        Ok(Self { nodes })
+        Ok(Self {
+            nodes: randomized_nodes,
+        })
     }
 }

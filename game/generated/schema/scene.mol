@@ -47,10 +47,14 @@ union NodeInstance {
     NodeTargetingPoint,
 }
 
+table Size {
+    x: byte,
+    y: byte,
+}
+
 table LevelNode {
     visible: byte,
-    x_size: byte,
-    y_size: byte,
+    size: Size,
     node: NodeInstance,
 }
 
@@ -68,16 +72,23 @@ table ScenePartition {
     end_point: Coordinate,
     count: RandomByte,
     node_pool: LevelNodeVec,
-    fixed: LevelNodeVec,
 }
 
 vector ScenePartitionVec <ScenePartition>;
+
+table FixedLevelNode {
+    point: Coordinate,
+    node: LevelNode,
+}
+
+vector FixedLevelNodeVec <FixedLevelNode>;
 
 // game playground
 table MapScene {
     id: ResourceId,
     width: byte,
     height: byte,
+    fixed_nodes: FixedLevelNodeVec,
     partition_list: ScenePartitionVec,
 }
 

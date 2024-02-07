@@ -2,6 +2,7 @@
 pub enum Error {
     ResourceBroken,
     ResourceBrokenScenePool,
+    ResourceBrokenCharactorCard,
     ResourceBrokenCardPool,
     ResourceBrokenPartitionRange,
 

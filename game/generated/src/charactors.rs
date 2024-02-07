@@ -23,7 +23,7 @@ impl ::core::fmt::Display for Warrior {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "id", self.id())?;
-        write!(f, ", {}: {}", "charactor_card", self.charactor_card())?;
+        write!(f, ", {}: {}", "special_cards", self.special_cards())?;
         write!(f, ", {}: {}", "hp", self.hp())?;
         write!(f, ", {}: {}", "gold", self.gold())?;
         write!(f, ", {}: {}", "power", self.power())?;
@@ -53,11 +53,11 @@ impl ::core::default::Default for Warrior {
     }
 }
 impl Warrior {
-    const DEFAULT_VALUE: [u8; 99] = [
-        99, 0, 0, 0, 72, 0, 0, 0, 74, 0, 0, 0, 76, 0, 0, 0, 78, 0, 0, 0, 80, 0, 0, 0, 81, 0, 0, 0,
-        82, 0, 0, 0, 83, 0, 0, 0, 84, 0, 0, 0, 85, 0, 0, 0, 86, 0, 0, 0, 87, 0, 0, 0, 88, 0, 0, 0,
-        89, 0, 0, 0, 90, 0, 0, 0, 91, 0, 0, 0, 95, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    const DEFAULT_VALUE: [u8; 101] = [
+        101, 0, 0, 0, 72, 0, 0, 0, 74, 0, 0, 0, 78, 0, 0, 0, 80, 0, 0, 0, 82, 0, 0, 0, 83, 0, 0, 0,
+        84, 0, 0, 0, 85, 0, 0, 0, 86, 0, 0, 0, 87, 0, 0, 0, 88, 0, 0, 0, 89, 0, 0, 0, 90, 0, 0, 0,
+        91, 0, 0, 0, 92, 0, 0, 0, 93, 0, 0, 0, 97, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
     pub const FIELD_COUNT: usize = 17;
     pub fn total_size(&self) -> usize {
@@ -82,11 +82,11 @@ impl Warrior {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         ResourceId::new_unchecked(self.0.slice(start..end))
     }
-    pub fn charactor_card(&self) -> ResourceId {
+    pub fn special_cards(&self) -> ResourceIdVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         let end = molecule::unpack_number(&slice[12..]) as usize;
-        ResourceId::new_unchecked(self.0.slice(start..end))
+        ResourceIdVec::new_unchecked(self.0.slice(start..end))
     }
     pub fn hp(&self) -> Number {
         let slice = self.as_slice();
@@ -210,7 +210,7 @@ impl molecule::prelude::Entity for Warrior {
     fn as_builder(self) -> Self::Builder {
         Self::new_builder()
             .id(self.id())
-            .charactor_card(self.charactor_card())
+            .special_cards(self.special_cards())
             .hp(self.hp())
             .gold(self.gold())
             .power(self.power())
@@ -248,7 +248,7 @@ impl<'r> ::core::fmt::Display for WarriorReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "id", self.id())?;
-        write!(f, ", {}: {}", "charactor_card", self.charactor_card())?;
+        write!(f, ", {}: {}", "special_cards", self.special_cards())?;
         write!(f, ", {}: {}", "hp", self.hp())?;
         write!(f, ", {}: {}", "gold", self.gold())?;
         write!(f, ", {}: {}", "power", self.power())?;
@@ -295,11 +295,11 @@ impl<'r> WarriorReader<'r> {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         ResourceIdReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn charactor_card(&self) -> ResourceIdReader<'r> {
+    pub fn special_cards(&self) -> ResourceIdVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         let end = molecule::unpack_number(&slice[12..]) as usize;
-        ResourceIdReader::new_unchecked(&self.as_slice()[start..end])
+        ResourceIdVecReader::new_unchecked(&self.as_slice()[start..end])
     }
     pub fn hp(&self) -> NumberReader<'r> {
         let slice = self.as_slice();
@@ -443,7 +443,7 @@ impl<'r> molecule::prelude::Reader<'r> for WarriorReader<'r> {
             return ve!(Self, OffsetsNotMatch);
         }
         ResourceIdReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
-        ResourceIdReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
+        ResourceIdVecReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
         NumberReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
         NumberReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
         ByteReader::verify(&slice[offsets[4]..offsets[5]], compatible)?;
@@ -465,7 +465,7 @@ impl<'r> molecule::prelude::Reader<'r> for WarriorReader<'r> {
 #[derive(Clone, Debug, Default)]
 pub struct WarriorBuilder {
     pub(crate) id: ResourceId,
-    pub(crate) charactor_card: ResourceId,
+    pub(crate) special_cards: ResourceIdVec,
     pub(crate) hp: Number,
     pub(crate) gold: Number,
     pub(crate) power: Byte,
@@ -488,8 +488,8 @@ impl WarriorBuilder {
         self.id = v;
         self
     }
-    pub fn charactor_card(mut self, v: ResourceId) -> Self {
-        self.charactor_card = v;
+    pub fn special_cards(mut self, v: ResourceIdVec) -> Self {
+        self.special_cards = v;
         self
     }
     pub fn hp(mut self, v: Number) -> Self {
@@ -559,7 +559,7 @@ impl molecule::prelude::Builder for WarriorBuilder {
     fn expected_length(&self) -> usize {
         molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
             + self.id.as_slice().len()
-            + self.charactor_card.as_slice().len()
+            + self.special_cards.as_slice().len()
             + self.hp.as_slice().len()
             + self.gold.as_slice().len()
             + self.power.as_slice().len()
@@ -582,7 +582,7 @@ impl molecule::prelude::Builder for WarriorBuilder {
         offsets.push(total_size);
         total_size += self.id.as_slice().len();
         offsets.push(total_size);
-        total_size += self.charactor_card.as_slice().len();
+        total_size += self.special_cards.as_slice().len();
         offsets.push(total_size);
         total_size += self.hp.as_slice().len();
         offsets.push(total_size);
@@ -618,7 +618,7 @@ impl molecule::prelude::Builder for WarriorBuilder {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
         }
         writer.write_all(self.id.as_slice())?;
-        writer.write_all(self.charactor_card.as_slice())?;
+        writer.write_all(self.special_cards.as_slice())?;
         writer.write_all(self.hp.as_slice())?;
         writer.write_all(self.gold.as_slice())?;
         writer.write_all(self.power.as_slice())?;
@@ -1999,8 +1999,8 @@ impl ::core::fmt::Display for Enemy {
         write!(f, ", {}: {}", "attack_weak", self.attack_weak())?;
         write!(f, ", {}: {}", "defense", self.defense())?;
         write!(f, ", {}: {}", "defense_weak", self.defense_weak())?;
-        write!(f, ", {}: {}", "reward", self.reward())?;
-        write!(f, ", {}: {}", "strategy", self.strategy())?;
+        write!(f, ", {}: {}", "loot_pool", self.loot_pool())?;
+        write!(f, ", {}: {}", "action_strategy", self.action_strategy())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -2018,7 +2018,7 @@ impl Enemy {
     const DEFAULT_VALUE: [u8; 80] = [
         80, 0, 0, 0, 48, 0, 0, 0, 50, 0, 0, 0, 51, 0, 0, 0, 53, 0, 0, 0, 54, 0, 0, 0, 55, 0, 0, 0,
         56, 0, 0, 0, 57, 0, 0, 0, 58, 0, 0, 0, 59, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 4, 0, 0, 0, 17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
     pub const FIELD_COUNT: usize = 11;
     pub fn total_size(&self) -> usize {
@@ -2091,13 +2091,13 @@ impl Enemy {
         let end = molecule::unpack_number(&slice[40..]) as usize;
         Byte::new_unchecked(self.0.slice(start..end))
     }
-    pub fn reward(&self) -> LootVec {
+    pub fn loot_pool(&self) -> ResourceIdVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[40..]) as usize;
         let end = molecule::unpack_number(&slice[44..]) as usize;
-        LootVec::new_unchecked(self.0.slice(start..end))
+        ResourceIdVec::new_unchecked(self.0.slice(start..end))
     }
-    pub fn strategy(&self) -> ActionContext {
+    pub fn action_strategy(&self) -> ActionContext {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[44..]) as usize;
         if self.has_extra_fields() {
@@ -2143,8 +2143,8 @@ impl molecule::prelude::Entity for Enemy {
             .attack_weak(self.attack_weak())
             .defense(self.defense())
             .defense_weak(self.defense_weak())
-            .reward(self.reward())
-            .strategy(self.strategy())
+            .loot_pool(self.loot_pool())
+            .action_strategy(self.action_strategy())
     }
 }
 #[derive(Clone, Copy)]
@@ -2175,8 +2175,8 @@ impl<'r> ::core::fmt::Display for EnemyReader<'r> {
         write!(f, ", {}: {}", "attack_weak", self.attack_weak())?;
         write!(f, ", {}: {}", "defense", self.defense())?;
         write!(f, ", {}: {}", "defense_weak", self.defense_weak())?;
-        write!(f, ", {}: {}", "reward", self.reward())?;
-        write!(f, ", {}: {}", "strategy", self.strategy())?;
+        write!(f, ", {}: {}", "loot_pool", self.loot_pool())?;
+        write!(f, ", {}: {}", "action_strategy", self.action_strategy())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -2256,13 +2256,13 @@ impl<'r> EnemyReader<'r> {
         let end = molecule::unpack_number(&slice[40..]) as usize;
         ByteReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn reward(&self) -> LootVecReader<'r> {
+    pub fn loot_pool(&self) -> ResourceIdVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[40..]) as usize;
         let end = molecule::unpack_number(&slice[44..]) as usize;
-        LootVecReader::new_unchecked(&self.as_slice()[start..end])
+        ResourceIdVecReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn strategy(&self) -> ActionContextReader<'r> {
+    pub fn action_strategy(&self) -> ActionContextReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[44..]) as usize;
         if self.has_extra_fields() {
@@ -2328,7 +2328,7 @@ impl<'r> molecule::prelude::Reader<'r> for EnemyReader<'r> {
         ByteReader::verify(&slice[offsets[6]..offsets[7]], compatible)?;
         ByteReader::verify(&slice[offsets[7]..offsets[8]], compatible)?;
         ByteReader::verify(&slice[offsets[8]..offsets[9]], compatible)?;
-        LootVecReader::verify(&slice[offsets[9]..offsets[10]], compatible)?;
+        ResourceIdVecReader::verify(&slice[offsets[9]..offsets[10]], compatible)?;
         ActionContextReader::verify(&slice[offsets[10]..offsets[11]], compatible)?;
         Ok(())
     }
@@ -2344,8 +2344,8 @@ pub struct EnemyBuilder {
     pub(crate) attack_weak: Byte,
     pub(crate) defense: Byte,
     pub(crate) defense_weak: Byte,
-    pub(crate) reward: LootVec,
-    pub(crate) strategy: ActionContext,
+    pub(crate) loot_pool: ResourceIdVec,
+    pub(crate) action_strategy: ActionContext,
 }
 impl EnemyBuilder {
     pub const FIELD_COUNT: usize = 11;
@@ -2385,12 +2385,12 @@ impl EnemyBuilder {
         self.defense_weak = v;
         self
     }
-    pub fn reward(mut self, v: LootVec) -> Self {
-        self.reward = v;
+    pub fn loot_pool(mut self, v: ResourceIdVec) -> Self {
+        self.loot_pool = v;
         self
     }
-    pub fn strategy(mut self, v: ActionContext) -> Self {
-        self.strategy = v;
+    pub fn action_strategy(mut self, v: ActionContext) -> Self {
+        self.action_strategy = v;
         self
     }
 }
@@ -2408,8 +2408,8 @@ impl molecule::prelude::Builder for EnemyBuilder {
             + self.attack_weak.as_slice().len()
             + self.defense.as_slice().len()
             + self.defense_weak.as_slice().len()
-            + self.reward.as_slice().len()
-            + self.strategy.as_slice().len()
+            + self.loot_pool.as_slice().len()
+            + self.action_strategy.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
@@ -2433,9 +2433,9 @@ impl molecule::prelude::Builder for EnemyBuilder {
         offsets.push(total_size);
         total_size += self.defense_weak.as_slice().len();
         offsets.push(total_size);
-        total_size += self.reward.as_slice().len();
+        total_size += self.loot_pool.as_slice().len();
         offsets.push(total_size);
-        total_size += self.strategy.as_slice().len();
+        total_size += self.action_strategy.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
@@ -2449,8 +2449,8 @@ impl molecule::prelude::Builder for EnemyBuilder {
         writer.write_all(self.attack_weak.as_slice())?;
         writer.write_all(self.defense.as_slice())?;
         writer.write_all(self.defense_weak.as_slice())?;
-        writer.write_all(self.reward.as_slice())?;
-        writer.write_all(self.strategy.as_slice())?;
+        writer.write_all(self.loot_pool.as_slice())?;
+        writer.write_all(self.action_strategy.as_slice())?;
         Ok(())
     }
     fn build(&self) -> Self::Entity {

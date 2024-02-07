@@ -3,7 +3,7 @@ import resources;
 
 table Warrior {
     id: ResourceId,
-    charactor_card: ResourceId,
+    special_cards: ResourceIdVec,
     hp: Number,
     gold: Number,
     power: byte,
@@ -59,8 +59,8 @@ table Enemy {
     attack_weak: byte,
     defense: byte,
     defense_weak: byte,
-    reward: LootVec,
-    strategy: ActionContext,
+    loot_pool: ResourceIdVec,
+    action_strategy: ActionContext,
 }
 
 vector EnemyVec <Enemy>;

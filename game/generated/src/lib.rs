@@ -1,5 +1,6 @@
 #![no_std]
 #![allow(unused)]
+#![allow(clippy::all)]
 
 mod asset;
 mod charactors;

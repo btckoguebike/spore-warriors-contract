@@ -28,7 +28,11 @@ impl MapSkeleton {
             .first()
             .cloned()
             .ok_or(Error::ResourceBrokenScenePool)?;
-        let mut skeleton = Vec::<LevelNode>::new();
+        let mut skeleton = scene
+            .fixed_nodes()
+            .into_iter()
+            .map(|node| LevelNode::fix_randomized(resource_pool, node, rng))
+            .collect::<Vec<_>>();
         scene
             .partition_list()
             .into_iter()

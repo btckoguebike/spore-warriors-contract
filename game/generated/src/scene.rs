@@ -2584,6 +2584,264 @@ impl<'r> NodeInstanceUnionReader<'r> {
     }
 }
 #[derive(Clone)]
+pub struct Size(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for Size {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl ::core::fmt::Debug for Size {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl ::core::fmt::Display for Size {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "x", self.x())?;
+        write!(f, ", {}: {}", "y", self.y())?;
+        let extra_count = self.count_extra_fields();
+        if extra_count != 0 {
+            write!(f, ", .. ({} fields)", extra_count)?;
+        }
+        write!(f, " }}")
+    }
+}
+impl ::core::default::Default for Size {
+    fn default() -> Self {
+        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
+        Size::new_unchecked(v)
+    }
+}
+impl Size {
+    const DEFAULT_VALUE: [u8; 14] = [14, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0];
+    pub const FIELD_COUNT: usize = 2;
+    pub fn total_size(&self) -> usize {
+        molecule::unpack_number(self.as_slice()) as usize
+    }
+    pub fn field_count(&self) -> usize {
+        if self.total_size() == molecule::NUMBER_SIZE {
+            0
+        } else {
+            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
+        }
+    }
+    pub fn count_extra_fields(&self) -> usize {
+        self.field_count() - Self::FIELD_COUNT
+    }
+    pub fn has_extra_fields(&self) -> bool {
+        Self::FIELD_COUNT != self.field_count()
+    }
+    pub fn x(&self) -> Byte {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[4..]) as usize;
+        let end = molecule::unpack_number(&slice[8..]) as usize;
+        Byte::new_unchecked(self.0.slice(start..end))
+    }
+    pub fn y(&self) -> Byte {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[8..]) as usize;
+        if self.has_extra_fields() {
+            let end = molecule::unpack_number(&slice[12..]) as usize;
+            Byte::new_unchecked(self.0.slice(start..end))
+        } else {
+            Byte::new_unchecked(self.0.slice(start..))
+        }
+    }
+    pub fn as_reader<'r>(&'r self) -> SizeReader<'r> {
+        SizeReader::new_unchecked(self.as_slice())
+    }
+}
+impl molecule::prelude::Entity for Size {
+    type Builder = SizeBuilder;
+    const NAME: &'static str = "Size";
+    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
+        Size(data)
+    }
+    fn as_bytes(&self) -> molecule::bytes::Bytes {
+        self.0.clone()
+    }
+    fn as_slice(&self) -> &[u8] {
+        &self.0[..]
+    }
+    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        SizeReader::from_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        SizeReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn new_builder() -> Self::Builder {
+        ::core::default::Default::default()
+    }
+    fn as_builder(self) -> Self::Builder {
+        Self::new_builder().x(self.x()).y(self.y())
+    }
+}
+#[derive(Clone, Copy)]
+pub struct SizeReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for SizeReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl<'r> ::core::fmt::Debug for SizeReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl<'r> ::core::fmt::Display for SizeReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "x", self.x())?;
+        write!(f, ", {}: {}", "y", self.y())?;
+        let extra_count = self.count_extra_fields();
+        if extra_count != 0 {
+            write!(f, ", .. ({} fields)", extra_count)?;
+        }
+        write!(f, " }}")
+    }
+}
+impl<'r> SizeReader<'r> {
+    pub const FIELD_COUNT: usize = 2;
+    pub fn total_size(&self) -> usize {
+        molecule::unpack_number(self.as_slice()) as usize
+    }
+    pub fn field_count(&self) -> usize {
+        if self.total_size() == molecule::NUMBER_SIZE {
+            0
+        } else {
+            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
+        }
+    }
+    pub fn count_extra_fields(&self) -> usize {
+        self.field_count() - Self::FIELD_COUNT
+    }
+    pub fn has_extra_fields(&self) -> bool {
+        Self::FIELD_COUNT != self.field_count()
+    }
+    pub fn x(&self) -> ByteReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[4..]) as usize;
+        let end = molecule::unpack_number(&slice[8..]) as usize;
+        ByteReader::new_unchecked(&self.as_slice()[start..end])
+    }
+    pub fn y(&self) -> ByteReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[8..]) as usize;
+        if self.has_extra_fields() {
+            let end = molecule::unpack_number(&slice[12..]) as usize;
+            ByteReader::new_unchecked(&self.as_slice()[start..end])
+        } else {
+            ByteReader::new_unchecked(&self.as_slice()[start..])
+        }
+    }
+}
+impl<'r> molecule::prelude::Reader<'r> for SizeReader<'r> {
+    type Entity = Size;
+    const NAME: &'static str = "SizeReader";
+    fn to_entity(&self) -> Self::Entity {
+        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
+    }
+    fn new_unchecked(slice: &'r [u8]) -> Self {
+        SizeReader(slice)
+    }
+    fn as_slice(&self) -> &'r [u8] {
+        self.0
+    }
+    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
+        use molecule::verification_error as ve;
+        let slice_len = slice.len();
+        if slice_len < molecule::NUMBER_SIZE {
+            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE, slice_len);
+        }
+        let total_size = molecule::unpack_number(slice) as usize;
+        if slice_len != total_size {
+            return ve!(Self, TotalSizeNotMatch, total_size, slice_len);
+        }
+        if slice_len < molecule::NUMBER_SIZE * 2 {
+            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE * 2, slice_len);
+        }
+        let offset_first = molecule::unpack_number(&slice[molecule::NUMBER_SIZE..]) as usize;
+        if offset_first % molecule::NUMBER_SIZE != 0 || offset_first < molecule::NUMBER_SIZE * 2 {
+            return ve!(Self, OffsetsNotMatch);
+        }
+        if slice_len < offset_first {
+            return ve!(Self, HeaderIsBroken, offset_first, slice_len);
+        }
+        let field_count = offset_first / molecule::NUMBER_SIZE - 1;
+        if field_count < Self::FIELD_COUNT {
+            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
+        } else if !compatible && field_count > Self::FIELD_COUNT {
+            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
+        };
+        let mut offsets: Vec<usize> = slice[molecule::NUMBER_SIZE..offset_first]
+            .chunks_exact(molecule::NUMBER_SIZE)
+            .map(|x| molecule::unpack_number(x) as usize)
+            .collect();
+        offsets.push(total_size);
+        if offsets.windows(2).any(|i| i[0] > i[1]) {
+            return ve!(Self, OffsetsNotMatch);
+        }
+        ByteReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
+        ByteReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, Default)]
+pub struct SizeBuilder {
+    pub(crate) x: Byte,
+    pub(crate) y: Byte,
+}
+impl SizeBuilder {
+    pub const FIELD_COUNT: usize = 2;
+    pub fn x(mut self, v: Byte) -> Self {
+        self.x = v;
+        self
+    }
+    pub fn y(mut self, v: Byte) -> Self {
+        self.y = v;
+        self
+    }
+}
+impl molecule::prelude::Builder for SizeBuilder {
+    type Entity = Size;
+    const NAME: &'static str = "SizeBuilder";
+    fn expected_length(&self) -> usize {
+        molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
+            + self.x.as_slice().len()
+            + self.y.as_slice().len()
+    }
+    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
+        let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
+        let mut offsets = Vec::with_capacity(Self::FIELD_COUNT);
+        offsets.push(total_size);
+        total_size += self.x.as_slice().len();
+        offsets.push(total_size);
+        total_size += self.y.as_slice().len();
+        writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
+        for offset in offsets.into_iter() {
+            writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
+        }
+        writer.write_all(self.x.as_slice())?;
+        writer.write_all(self.y.as_slice())?;
+        Ok(())
+    }
+    fn build(&self) -> Self::Entity {
+        let mut inner = Vec::with_capacity(self.expected_length());
+        self.write(&mut inner)
+            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
+        Size::new_unchecked(inner.into())
+    }
+}
+#[derive(Clone)]
 pub struct LevelNode(molecule::bytes::Bytes);
 impl ::core::fmt::LowerHex for LevelNode {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
@@ -2603,8 +2861,7 @@ impl ::core::fmt::Display for LevelNode {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "visible", self.visible())?;
-        write!(f, ", {}: {}", "x_size", self.x_size())?;
-        write!(f, ", {}: {}", "y_size", self.y_size())?;
+        write!(f, ", {}: {}", "size", self.size())?;
         write!(f, ", {}: {}", "node", self.node())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
@@ -2620,11 +2877,11 @@ impl ::core::default::Default for LevelNode {
     }
 }
 impl LevelNode {
-    const DEFAULT_VALUE: [u8; 44] = [
-        44, 0, 0, 0, 20, 0, 0, 0, 21, 0, 0, 0, 22, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17,
-        0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0,
+    const DEFAULT_VALUE: [u8; 52] = [
+        52, 0, 0, 0, 16, 0, 0, 0, 17, 0, 0, 0, 31, 0, 0, 0, 0, 14, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
-    pub const FIELD_COUNT: usize = 4;
+    pub const FIELD_COUNT: usize = 3;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -2647,23 +2904,17 @@ impl LevelNode {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         Byte::new_unchecked(self.0.slice(start..end))
     }
-    pub fn x_size(&self) -> Byte {
+    pub fn size(&self) -> Size {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         let end = molecule::unpack_number(&slice[12..]) as usize;
-        Byte::new_unchecked(self.0.slice(start..end))
-    }
-    pub fn y_size(&self) -> Byte {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[12..]) as usize;
-        let end = molecule::unpack_number(&slice[16..]) as usize;
-        Byte::new_unchecked(self.0.slice(start..end))
+        Size::new_unchecked(self.0.slice(start..end))
     }
     pub fn node(&self) -> NodeInstance {
         let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[16..]) as usize;
+        let start = molecule::unpack_number(&slice[12..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[20..]) as usize;
+            let end = molecule::unpack_number(&slice[16..]) as usize;
             NodeInstance::new_unchecked(self.0.slice(start..end))
         } else {
             NodeInstance::new_unchecked(self.0.slice(start..))
@@ -2697,8 +2948,7 @@ impl molecule::prelude::Entity for LevelNode {
     fn as_builder(self) -> Self::Builder {
         Self::new_builder()
             .visible(self.visible())
-            .x_size(self.x_size())
-            .y_size(self.y_size())
+            .size(self.size())
             .node(self.node())
     }
 }
@@ -2722,8 +2972,7 @@ impl<'r> ::core::fmt::Display for LevelNodeReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "visible", self.visible())?;
-        write!(f, ", {}: {}", "x_size", self.x_size())?;
-        write!(f, ", {}: {}", "y_size", self.y_size())?;
+        write!(f, ", {}: {}", "size", self.size())?;
         write!(f, ", {}: {}", "node", self.node())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
@@ -2733,7 +2982,7 @@ impl<'r> ::core::fmt::Display for LevelNodeReader<'r> {
     }
 }
 impl<'r> LevelNodeReader<'r> {
-    pub const FIELD_COUNT: usize = 4;
+    pub const FIELD_COUNT: usize = 3;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -2756,23 +3005,17 @@ impl<'r> LevelNodeReader<'r> {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         ByteReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn x_size(&self) -> ByteReader<'r> {
+    pub fn size(&self) -> SizeReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         let end = molecule::unpack_number(&slice[12..]) as usize;
-        ByteReader::new_unchecked(&self.as_slice()[start..end])
-    }
-    pub fn y_size(&self) -> ByteReader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[12..]) as usize;
-        let end = molecule::unpack_number(&slice[16..]) as usize;
-        ByteReader::new_unchecked(&self.as_slice()[start..end])
+        SizeReader::new_unchecked(&self.as_slice()[start..end])
     }
     pub fn node(&self) -> NodeInstanceReader<'r> {
         let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[16..]) as usize;
+        let start = molecule::unpack_number(&slice[12..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[20..]) as usize;
+            let end = molecule::unpack_number(&slice[16..]) as usize;
             NodeInstanceReader::new_unchecked(&self.as_slice()[start..end])
         } else {
             NodeInstanceReader::new_unchecked(&self.as_slice()[start..])
@@ -2826,31 +3069,25 @@ impl<'r> molecule::prelude::Reader<'r> for LevelNodeReader<'r> {
             return ve!(Self, OffsetsNotMatch);
         }
         ByteReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
-        ByteReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
-        ByteReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
-        NodeInstanceReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
+        SizeReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
+        NodeInstanceReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
         Ok(())
     }
 }
 #[derive(Clone, Debug, Default)]
 pub struct LevelNodeBuilder {
     pub(crate) visible: Byte,
-    pub(crate) x_size: Byte,
-    pub(crate) y_size: Byte,
+    pub(crate) size: Size,
     pub(crate) node: NodeInstance,
 }
 impl LevelNodeBuilder {
-    pub const FIELD_COUNT: usize = 4;
+    pub const FIELD_COUNT: usize = 3;
     pub fn visible(mut self, v: Byte) -> Self {
         self.visible = v;
         self
     }
-    pub fn x_size(mut self, v: Byte) -> Self {
-        self.x_size = v;
-        self
-    }
-    pub fn y_size(mut self, v: Byte) -> Self {
-        self.y_size = v;
+    pub fn size(mut self, v: Size) -> Self {
+        self.size = v;
         self
     }
     pub fn node(mut self, v: NodeInstance) -> Self {
@@ -2864,8 +3101,7 @@ impl molecule::prelude::Builder for LevelNodeBuilder {
     fn expected_length(&self) -> usize {
         molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
             + self.visible.as_slice().len()
-            + self.x_size.as_slice().len()
-            + self.y_size.as_slice().len()
+            + self.size.as_slice().len()
             + self.node.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
@@ -2874,9 +3110,7 @@ impl molecule::prelude::Builder for LevelNodeBuilder {
         offsets.push(total_size);
         total_size += self.visible.as_slice().len();
         offsets.push(total_size);
-        total_size += self.x_size.as_slice().len();
-        offsets.push(total_size);
-        total_size += self.y_size.as_slice().len();
+        total_size += self.size.as_slice().len();
         offsets.push(total_size);
         total_size += self.node.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
@@ -2884,8 +3118,7 @@ impl molecule::prelude::Builder for LevelNodeBuilder {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
         }
         writer.write_all(self.visible.as_slice())?;
-        writer.write_all(self.x_size.as_slice())?;
-        writer.write_all(self.y_size.as_slice())?;
+        writer.write_all(self.size.as_slice())?;
         writer.write_all(self.node.as_slice())?;
         Ok(())
     }
@@ -3857,7 +4090,6 @@ impl ::core::fmt::Display for ScenePartition {
         write!(f, ", {}: {}", "end_point", self.end_point())?;
         write!(f, ", {}: {}", "count", self.count())?;
         write!(f, ", {}: {}", "node_pool", self.node_pool())?;
-        write!(f, ", {}: {}", "fixed", self.fixed())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -3872,12 +4104,12 @@ impl ::core::default::Default for ScenePartition {
     }
 }
 impl ScenePartition {
-    const DEFAULT_VALUE: [u8; 74] = [
-        74, 0, 0, 0, 24, 0, 0, 0, 38, 0, 0, 0, 52, 0, 0, 0, 66, 0, 0, 0, 70, 0, 0, 0, 14, 0, 0, 0,
-        12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 14, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 14, 0, 0, 0,
-        12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0,
+    const DEFAULT_VALUE: [u8; 66] = [
+        66, 0, 0, 0, 20, 0, 0, 0, 34, 0, 0, 0, 48, 0, 0, 0, 62, 0, 0, 0, 14, 0, 0, 0, 12, 0, 0, 0,
+        13, 0, 0, 0, 0, 0, 14, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 14, 0, 0, 0, 12, 0, 0, 0,
+        13, 0, 0, 0, 0, 0, 4, 0, 0, 0,
     ];
-    pub const FIELD_COUNT: usize = 5;
+    pub const FIELD_COUNT: usize = 4;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -3915,14 +4147,8 @@ impl ScenePartition {
     pub fn node_pool(&self) -> LevelNodeVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[16..]) as usize;
-        let end = molecule::unpack_number(&slice[20..]) as usize;
-        LevelNodeVec::new_unchecked(self.0.slice(start..end))
-    }
-    pub fn fixed(&self) -> LevelNodeVec {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[20..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[24..]) as usize;
+            let end = molecule::unpack_number(&slice[20..]) as usize;
             LevelNodeVec::new_unchecked(self.0.slice(start..end))
         } else {
             LevelNodeVec::new_unchecked(self.0.slice(start..))
@@ -3959,7 +4185,6 @@ impl molecule::prelude::Entity for ScenePartition {
             .end_point(self.end_point())
             .count(self.count())
             .node_pool(self.node_pool())
-            .fixed(self.fixed())
     }
 }
 #[derive(Clone, Copy)]
@@ -3985,7 +4210,6 @@ impl<'r> ::core::fmt::Display for ScenePartitionReader<'r> {
         write!(f, ", {}: {}", "end_point", self.end_point())?;
         write!(f, ", {}: {}", "count", self.count())?;
         write!(f, ", {}: {}", "node_pool", self.node_pool())?;
-        write!(f, ", {}: {}", "fixed", self.fixed())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -3994,7 +4218,7 @@ impl<'r> ::core::fmt::Display for ScenePartitionReader<'r> {
     }
 }
 impl<'r> ScenePartitionReader<'r> {
-    pub const FIELD_COUNT: usize = 5;
+    pub const FIELD_COUNT: usize = 4;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -4032,14 +4256,8 @@ impl<'r> ScenePartitionReader<'r> {
     pub fn node_pool(&self) -> LevelNodeVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[16..]) as usize;
-        let end = molecule::unpack_number(&slice[20..]) as usize;
-        LevelNodeVecReader::new_unchecked(&self.as_slice()[start..end])
-    }
-    pub fn fixed(&self) -> LevelNodeVecReader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[20..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[24..]) as usize;
+            let end = molecule::unpack_number(&slice[20..]) as usize;
             LevelNodeVecReader::new_unchecked(&self.as_slice()[start..end])
         } else {
             LevelNodeVecReader::new_unchecked(&self.as_slice()[start..])
@@ -4096,7 +4314,6 @@ impl<'r> molecule::prelude::Reader<'r> for ScenePartitionReader<'r> {
         CoordinateReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
         RandomByteReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
         LevelNodeVecReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
-        LevelNodeVecReader::verify(&slice[offsets[4]..offsets[5]], compatible)?;
         Ok(())
     }
 }
@@ -4106,10 +4323,9 @@ pub struct ScenePartitionBuilder {
     pub(crate) end_point: Coordinate,
     pub(crate) count: RandomByte,
     pub(crate) node_pool: LevelNodeVec,
-    pub(crate) fixed: LevelNodeVec,
 }
 impl ScenePartitionBuilder {
-    pub const FIELD_COUNT: usize = 5;
+    pub const FIELD_COUNT: usize = 4;
     pub fn start_point(mut self, v: Coordinate) -> Self {
         self.start_point = v;
         self
@@ -4126,10 +4342,6 @@ impl ScenePartitionBuilder {
         self.node_pool = v;
         self
     }
-    pub fn fixed(mut self, v: LevelNodeVec) -> Self {
-        self.fixed = v;
-        self
-    }
 }
 impl molecule::prelude::Builder for ScenePartitionBuilder {
     type Entity = ScenePartition;
@@ -4140,7 +4352,6 @@ impl molecule::prelude::Builder for ScenePartitionBuilder {
             + self.end_point.as_slice().len()
             + self.count.as_slice().len()
             + self.node_pool.as_slice().len()
-            + self.fixed.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
@@ -4153,8 +4364,6 @@ impl molecule::prelude::Builder for ScenePartitionBuilder {
         total_size += self.count.as_slice().len();
         offsets.push(total_size);
         total_size += self.node_pool.as_slice().len();
-        offsets.push(total_size);
-        total_size += self.fixed.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
@@ -4163,7 +4372,6 @@ impl molecule::prelude::Builder for ScenePartitionBuilder {
         writer.write_all(self.end_point.as_slice())?;
         writer.write_all(self.count.as_slice())?;
         writer.write_all(self.node_pool.as_slice())?;
-        writer.write_all(self.fixed.as_slice())?;
         Ok(())
     }
     fn build(&self) -> Self::Entity {
@@ -4514,6 +4722,608 @@ impl<'t: 'r, 'r> ::core::iter::ExactSizeIterator for ScenePartitionVecReaderIter
     }
 }
 #[derive(Clone)]
+pub struct FixedLevelNode(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for FixedLevelNode {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl ::core::fmt::Debug for FixedLevelNode {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl ::core::fmt::Display for FixedLevelNode {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "point", self.point())?;
+        write!(f, ", {}: {}", "node", self.node())?;
+        let extra_count = self.count_extra_fields();
+        if extra_count != 0 {
+            write!(f, ", .. ({} fields)", extra_count)?;
+        }
+        write!(f, " }}")
+    }
+}
+impl ::core::default::Default for FixedLevelNode {
+    fn default() -> Self {
+        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
+        FixedLevelNode::new_unchecked(v)
+    }
+}
+impl FixedLevelNode {
+    const DEFAULT_VALUE: [u8; 78] = [
+        78, 0, 0, 0, 12, 0, 0, 0, 26, 0, 0, 0, 14, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 52, 0,
+        0, 0, 16, 0, 0, 0, 17, 0, 0, 0, 31, 0, 0, 0, 0, 14, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+    pub const FIELD_COUNT: usize = 2;
+    pub fn total_size(&self) -> usize {
+        molecule::unpack_number(self.as_slice()) as usize
+    }
+    pub fn field_count(&self) -> usize {
+        if self.total_size() == molecule::NUMBER_SIZE {
+            0
+        } else {
+            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
+        }
+    }
+    pub fn count_extra_fields(&self) -> usize {
+        self.field_count() - Self::FIELD_COUNT
+    }
+    pub fn has_extra_fields(&self) -> bool {
+        Self::FIELD_COUNT != self.field_count()
+    }
+    pub fn point(&self) -> Coordinate {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[4..]) as usize;
+        let end = molecule::unpack_number(&slice[8..]) as usize;
+        Coordinate::new_unchecked(self.0.slice(start..end))
+    }
+    pub fn node(&self) -> LevelNode {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[8..]) as usize;
+        if self.has_extra_fields() {
+            let end = molecule::unpack_number(&slice[12..]) as usize;
+            LevelNode::new_unchecked(self.0.slice(start..end))
+        } else {
+            LevelNode::new_unchecked(self.0.slice(start..))
+        }
+    }
+    pub fn as_reader<'r>(&'r self) -> FixedLevelNodeReader<'r> {
+        FixedLevelNodeReader::new_unchecked(self.as_slice())
+    }
+}
+impl molecule::prelude::Entity for FixedLevelNode {
+    type Builder = FixedLevelNodeBuilder;
+    const NAME: &'static str = "FixedLevelNode";
+    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
+        FixedLevelNode(data)
+    }
+    fn as_bytes(&self) -> molecule::bytes::Bytes {
+        self.0.clone()
+    }
+    fn as_slice(&self) -> &[u8] {
+        &self.0[..]
+    }
+    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        FixedLevelNodeReader::from_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        FixedLevelNodeReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn new_builder() -> Self::Builder {
+        ::core::default::Default::default()
+    }
+    fn as_builder(self) -> Self::Builder {
+        Self::new_builder().point(self.point()).node(self.node())
+    }
+}
+#[derive(Clone, Copy)]
+pub struct FixedLevelNodeReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for FixedLevelNodeReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl<'r> ::core::fmt::Debug for FixedLevelNodeReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl<'r> ::core::fmt::Display for FixedLevelNodeReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "point", self.point())?;
+        write!(f, ", {}: {}", "node", self.node())?;
+        let extra_count = self.count_extra_fields();
+        if extra_count != 0 {
+            write!(f, ", .. ({} fields)", extra_count)?;
+        }
+        write!(f, " }}")
+    }
+}
+impl<'r> FixedLevelNodeReader<'r> {
+    pub const FIELD_COUNT: usize = 2;
+    pub fn total_size(&self) -> usize {
+        molecule::unpack_number(self.as_slice()) as usize
+    }
+    pub fn field_count(&self) -> usize {
+        if self.total_size() == molecule::NUMBER_SIZE {
+            0
+        } else {
+            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
+        }
+    }
+    pub fn count_extra_fields(&self) -> usize {
+        self.field_count() - Self::FIELD_COUNT
+    }
+    pub fn has_extra_fields(&self) -> bool {
+        Self::FIELD_COUNT != self.field_count()
+    }
+    pub fn point(&self) -> CoordinateReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[4..]) as usize;
+        let end = molecule::unpack_number(&slice[8..]) as usize;
+        CoordinateReader::new_unchecked(&self.as_slice()[start..end])
+    }
+    pub fn node(&self) -> LevelNodeReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[8..]) as usize;
+        if self.has_extra_fields() {
+            let end = molecule::unpack_number(&slice[12..]) as usize;
+            LevelNodeReader::new_unchecked(&self.as_slice()[start..end])
+        } else {
+            LevelNodeReader::new_unchecked(&self.as_slice()[start..])
+        }
+    }
+}
+impl<'r> molecule::prelude::Reader<'r> for FixedLevelNodeReader<'r> {
+    type Entity = FixedLevelNode;
+    const NAME: &'static str = "FixedLevelNodeReader";
+    fn to_entity(&self) -> Self::Entity {
+        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
+    }
+    fn new_unchecked(slice: &'r [u8]) -> Self {
+        FixedLevelNodeReader(slice)
+    }
+    fn as_slice(&self) -> &'r [u8] {
+        self.0
+    }
+    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
+        use molecule::verification_error as ve;
+        let slice_len = slice.len();
+        if slice_len < molecule::NUMBER_SIZE {
+            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE, slice_len);
+        }
+        let total_size = molecule::unpack_number(slice) as usize;
+        if slice_len != total_size {
+            return ve!(Self, TotalSizeNotMatch, total_size, slice_len);
+        }
+        if slice_len < molecule::NUMBER_SIZE * 2 {
+            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE * 2, slice_len);
+        }
+        let offset_first = molecule::unpack_number(&slice[molecule::NUMBER_SIZE..]) as usize;
+        if offset_first % molecule::NUMBER_SIZE != 0 || offset_first < molecule::NUMBER_SIZE * 2 {
+            return ve!(Self, OffsetsNotMatch);
+        }
+        if slice_len < offset_first {
+            return ve!(Self, HeaderIsBroken, offset_first, slice_len);
+        }
+        let field_count = offset_first / molecule::NUMBER_SIZE - 1;
+        if field_count < Self::FIELD_COUNT {
+            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
+        } else if !compatible && field_count > Self::FIELD_COUNT {
+            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
+        };
+        let mut offsets: Vec<usize> = slice[molecule::NUMBER_SIZE..offset_first]
+            .chunks_exact(molecule::NUMBER_SIZE)
+            .map(|x| molecule::unpack_number(x) as usize)
+            .collect();
+        offsets.push(total_size);
+        if offsets.windows(2).any(|i| i[0] > i[1]) {
+            return ve!(Self, OffsetsNotMatch);
+        }
+        CoordinateReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
+        LevelNodeReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, Default)]
+pub struct FixedLevelNodeBuilder {
+    pub(crate) point: Coordinate,
+    pub(crate) node: LevelNode,
+}
+impl FixedLevelNodeBuilder {
+    pub const FIELD_COUNT: usize = 2;
+    pub fn point(mut self, v: Coordinate) -> Self {
+        self.point = v;
+        self
+    }
+    pub fn node(mut self, v: LevelNode) -> Self {
+        self.node = v;
+        self
+    }
+}
+impl molecule::prelude::Builder for FixedLevelNodeBuilder {
+    type Entity = FixedLevelNode;
+    const NAME: &'static str = "FixedLevelNodeBuilder";
+    fn expected_length(&self) -> usize {
+        molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
+            + self.point.as_slice().len()
+            + self.node.as_slice().len()
+    }
+    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
+        let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
+        let mut offsets = Vec::with_capacity(Self::FIELD_COUNT);
+        offsets.push(total_size);
+        total_size += self.point.as_slice().len();
+        offsets.push(total_size);
+        total_size += self.node.as_slice().len();
+        writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
+        for offset in offsets.into_iter() {
+            writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
+        }
+        writer.write_all(self.point.as_slice())?;
+        writer.write_all(self.node.as_slice())?;
+        Ok(())
+    }
+    fn build(&self) -> Self::Entity {
+        let mut inner = Vec::with_capacity(self.expected_length());
+        self.write(&mut inner)
+            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
+        FixedLevelNode::new_unchecked(inner.into())
+    }
+}
+#[derive(Clone)]
+pub struct FixedLevelNodeVec(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for FixedLevelNodeVec {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl ::core::fmt::Debug for FixedLevelNodeVec {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl ::core::fmt::Display for FixedLevelNodeVec {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} [", Self::NAME)?;
+        for i in 0..self.len() {
+            if i == 0 {
+                write!(f, "{}", self.get_unchecked(i))?;
+            } else {
+                write!(f, ", {}", self.get_unchecked(i))?;
+            }
+        }
+        write!(f, "]")
+    }
+}
+impl ::core::default::Default for FixedLevelNodeVec {
+    fn default() -> Self {
+        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
+        FixedLevelNodeVec::new_unchecked(v)
+    }
+}
+impl FixedLevelNodeVec {
+    const DEFAULT_VALUE: [u8; 4] = [4, 0, 0, 0];
+    pub fn total_size(&self) -> usize {
+        molecule::unpack_number(self.as_slice()) as usize
+    }
+    pub fn item_count(&self) -> usize {
+        if self.total_size() == molecule::NUMBER_SIZE {
+            0
+        } else {
+            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
+        }
+    }
+    pub fn len(&self) -> usize {
+        self.item_count()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    pub fn get(&self, idx: usize) -> Option<FixedLevelNode> {
+        if idx >= self.len() {
+            None
+        } else {
+            Some(self.get_unchecked(idx))
+        }
+    }
+    pub fn get_unchecked(&self, idx: usize) -> FixedLevelNode {
+        let slice = self.as_slice();
+        let start_idx = molecule::NUMBER_SIZE * (1 + idx);
+        let start = molecule::unpack_number(&slice[start_idx..]) as usize;
+        if idx == self.len() - 1 {
+            FixedLevelNode::new_unchecked(self.0.slice(start..))
+        } else {
+            let end_idx = start_idx + molecule::NUMBER_SIZE;
+            let end = molecule::unpack_number(&slice[end_idx..]) as usize;
+            FixedLevelNode::new_unchecked(self.0.slice(start..end))
+        }
+    }
+    pub fn as_reader<'r>(&'r self) -> FixedLevelNodeVecReader<'r> {
+        FixedLevelNodeVecReader::new_unchecked(self.as_slice())
+    }
+}
+impl molecule::prelude::Entity for FixedLevelNodeVec {
+    type Builder = FixedLevelNodeVecBuilder;
+    const NAME: &'static str = "FixedLevelNodeVec";
+    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
+        FixedLevelNodeVec(data)
+    }
+    fn as_bytes(&self) -> molecule::bytes::Bytes {
+        self.0.clone()
+    }
+    fn as_slice(&self) -> &[u8] {
+        &self.0[..]
+    }
+    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        FixedLevelNodeVecReader::from_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        FixedLevelNodeVecReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn new_builder() -> Self::Builder {
+        ::core::default::Default::default()
+    }
+    fn as_builder(self) -> Self::Builder {
+        Self::new_builder().extend(self.into_iter())
+    }
+}
+#[derive(Clone, Copy)]
+pub struct FixedLevelNodeVecReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for FixedLevelNodeVecReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl<'r> ::core::fmt::Debug for FixedLevelNodeVecReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl<'r> ::core::fmt::Display for FixedLevelNodeVecReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} [", Self::NAME)?;
+        for i in 0..self.len() {
+            if i == 0 {
+                write!(f, "{}", self.get_unchecked(i))?;
+            } else {
+                write!(f, ", {}", self.get_unchecked(i))?;
+            }
+        }
+        write!(f, "]")
+    }
+}
+impl<'r> FixedLevelNodeVecReader<'r> {
+    pub fn total_size(&self) -> usize {
+        molecule::unpack_number(self.as_slice()) as usize
+    }
+    pub fn item_count(&self) -> usize {
+        if self.total_size() == molecule::NUMBER_SIZE {
+            0
+        } else {
+            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
+        }
+    }
+    pub fn len(&self) -> usize {
+        self.item_count()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    pub fn get(&self, idx: usize) -> Option<FixedLevelNodeReader<'r>> {
+        if idx >= self.len() {
+            None
+        } else {
+            Some(self.get_unchecked(idx))
+        }
+    }
+    pub fn get_unchecked(&self, idx: usize) -> FixedLevelNodeReader<'r> {
+        let slice = self.as_slice();
+        let start_idx = molecule::NUMBER_SIZE * (1 + idx);
+        let start = molecule::unpack_number(&slice[start_idx..]) as usize;
+        if idx == self.len() - 1 {
+            FixedLevelNodeReader::new_unchecked(&self.as_slice()[start..])
+        } else {
+            let end_idx = start_idx + molecule::NUMBER_SIZE;
+            let end = molecule::unpack_number(&slice[end_idx..]) as usize;
+            FixedLevelNodeReader::new_unchecked(&self.as_slice()[start..end])
+        }
+    }
+}
+impl<'r> molecule::prelude::Reader<'r> for FixedLevelNodeVecReader<'r> {
+    type Entity = FixedLevelNodeVec;
+    const NAME: &'static str = "FixedLevelNodeVecReader";
+    fn to_entity(&self) -> Self::Entity {
+        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
+    }
+    fn new_unchecked(slice: &'r [u8]) -> Self {
+        FixedLevelNodeVecReader(slice)
+    }
+    fn as_slice(&self) -> &'r [u8] {
+        self.0
+    }
+    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
+        use molecule::verification_error as ve;
+        let slice_len = slice.len();
+        if slice_len < molecule::NUMBER_SIZE {
+            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE, slice_len);
+        }
+        let total_size = molecule::unpack_number(slice) as usize;
+        if slice_len != total_size {
+            return ve!(Self, TotalSizeNotMatch, total_size, slice_len);
+        }
+        if slice_len == molecule::NUMBER_SIZE {
+            return Ok(());
+        }
+        if slice_len < molecule::NUMBER_SIZE * 2 {
+            return ve!(
+                Self,
+                TotalSizeNotMatch,
+                molecule::NUMBER_SIZE * 2,
+                slice_len
+            );
+        }
+        let offset_first = molecule::unpack_number(&slice[molecule::NUMBER_SIZE..]) as usize;
+        if offset_first % molecule::NUMBER_SIZE != 0 || offset_first < molecule::NUMBER_SIZE * 2 {
+            return ve!(Self, OffsetsNotMatch);
+        }
+        if slice_len < offset_first {
+            return ve!(Self, HeaderIsBroken, offset_first, slice_len);
+        }
+        let mut offsets: Vec<usize> = slice[molecule::NUMBER_SIZE..offset_first]
+            .chunks_exact(molecule::NUMBER_SIZE)
+            .map(|x| molecule::unpack_number(x) as usize)
+            .collect();
+        offsets.push(total_size);
+        if offsets.windows(2).any(|i| i[0] > i[1]) {
+            return ve!(Self, OffsetsNotMatch);
+        }
+        for pair in offsets.windows(2) {
+            let start = pair[0];
+            let end = pair[1];
+            FixedLevelNodeReader::verify(&slice[start..end], compatible)?;
+        }
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, Default)]
+pub struct FixedLevelNodeVecBuilder(pub(crate) Vec<FixedLevelNode>);
+impl FixedLevelNodeVecBuilder {
+    pub fn set(mut self, v: Vec<FixedLevelNode>) -> Self {
+        self.0 = v;
+        self
+    }
+    pub fn push(mut self, v: FixedLevelNode) -> Self {
+        self.0.push(v);
+        self
+    }
+    pub fn extend<T: ::core::iter::IntoIterator<Item = FixedLevelNode>>(mut self, iter: T) -> Self {
+        for elem in iter {
+            self.0.push(elem);
+        }
+        self
+    }
+    pub fn replace(&mut self, index: usize, v: FixedLevelNode) -> Option<FixedLevelNode> {
+        self.0
+            .get_mut(index)
+            .map(|item| ::core::mem::replace(item, v))
+    }
+}
+impl molecule::prelude::Builder for FixedLevelNodeVecBuilder {
+    type Entity = FixedLevelNodeVec;
+    const NAME: &'static str = "FixedLevelNodeVecBuilder";
+    fn expected_length(&self) -> usize {
+        molecule::NUMBER_SIZE * (self.0.len() + 1)
+            + self
+                .0
+                .iter()
+                .map(|inner| inner.as_slice().len())
+                .sum::<usize>()
+    }
+    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
+        let item_count = self.0.len();
+        if item_count == 0 {
+            writer.write_all(&molecule::pack_number(
+                molecule::NUMBER_SIZE as molecule::Number,
+            ))?;
+        } else {
+            let (total_size, offsets) = self.0.iter().fold(
+                (
+                    molecule::NUMBER_SIZE * (item_count + 1),
+                    Vec::with_capacity(item_count),
+                ),
+                |(start, mut offsets), inner| {
+                    offsets.push(start);
+                    (start + inner.as_slice().len(), offsets)
+                },
+            );
+            writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
+            for offset in offsets.into_iter() {
+                writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
+            }
+            for inner in self.0.iter() {
+                writer.write_all(inner.as_slice())?;
+            }
+        }
+        Ok(())
+    }
+    fn build(&self) -> Self::Entity {
+        let mut inner = Vec::with_capacity(self.expected_length());
+        self.write(&mut inner)
+            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
+        FixedLevelNodeVec::new_unchecked(inner.into())
+    }
+}
+pub struct FixedLevelNodeVecIterator(FixedLevelNodeVec, usize, usize);
+impl ::core::iter::Iterator for FixedLevelNodeVecIterator {
+    type Item = FixedLevelNode;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.1 >= self.2 {
+            None
+        } else {
+            let ret = self.0.get_unchecked(self.1);
+            self.1 += 1;
+            Some(ret)
+        }
+    }
+}
+impl ::core::iter::ExactSizeIterator for FixedLevelNodeVecIterator {
+    fn len(&self) -> usize {
+        self.2 - self.1
+    }
+}
+impl ::core::iter::IntoIterator for FixedLevelNodeVec {
+    type Item = FixedLevelNode;
+    type IntoIter = FixedLevelNodeVecIterator;
+    fn into_iter(self) -> Self::IntoIter {
+        let len = self.len();
+        FixedLevelNodeVecIterator(self, 0, len)
+    }
+}
+impl<'r> FixedLevelNodeVecReader<'r> {
+    pub fn iter<'t>(&'t self) -> FixedLevelNodeVecReaderIterator<'t, 'r> {
+        FixedLevelNodeVecReaderIterator(&self, 0, self.len())
+    }
+}
+pub struct FixedLevelNodeVecReaderIterator<'t, 'r>(&'t FixedLevelNodeVecReader<'r>, usize, usize);
+impl<'t: 'r, 'r> ::core::iter::Iterator for FixedLevelNodeVecReaderIterator<'t, 'r> {
+    type Item = FixedLevelNodeReader<'t>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.1 >= self.2 {
+            None
+        } else {
+            let ret = self.0.get_unchecked(self.1);
+            self.1 += 1;
+            Some(ret)
+        }
+    }
+}
+impl<'t: 'r, 'r> ::core::iter::ExactSizeIterator for FixedLevelNodeVecReaderIterator<'t, 'r> {
+    fn len(&self) -> usize {
+        self.2 - self.1
+    }
+}
+#[derive(Clone)]
 pub struct MapScene(molecule::bytes::Bytes);
 impl ::core::fmt::LowerHex for MapScene {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
@@ -4535,6 +5345,7 @@ impl ::core::fmt::Display for MapScene {
         write!(f, "{}: {}", "id", self.id())?;
         write!(f, ", {}: {}", "width", self.width())?;
         write!(f, ", {}: {}", "height", self.height())?;
+        write!(f, ", {}: {}", "fixed_nodes", self.fixed_nodes())?;
         write!(f, ", {}: {}", "partition_list", self.partition_list())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
@@ -4550,10 +5361,11 @@ impl ::core::default::Default for MapScene {
     }
 }
 impl MapScene {
-    const DEFAULT_VALUE: [u8; 28] = [
-        28, 0, 0, 0, 20, 0, 0, 0, 22, 0, 0, 0, 23, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
+    const DEFAULT_VALUE: [u8; 36] = [
+        36, 0, 0, 0, 24, 0, 0, 0, 26, 0, 0, 0, 27, 0, 0, 0, 28, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0,
+        4, 0, 0, 0, 4, 0, 0, 0,
     ];
-    pub const FIELD_COUNT: usize = 4;
+    pub const FIELD_COUNT: usize = 5;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -4588,11 +5400,17 @@ impl MapScene {
         let end = molecule::unpack_number(&slice[16..]) as usize;
         Byte::new_unchecked(self.0.slice(start..end))
     }
-    pub fn partition_list(&self) -> ScenePartitionVec {
+    pub fn fixed_nodes(&self) -> FixedLevelNodeVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[16..]) as usize;
+        let end = molecule::unpack_number(&slice[20..]) as usize;
+        FixedLevelNodeVec::new_unchecked(self.0.slice(start..end))
+    }
+    pub fn partition_list(&self) -> ScenePartitionVec {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[20..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[20..]) as usize;
+            let end = molecule::unpack_number(&slice[24..]) as usize;
             ScenePartitionVec::new_unchecked(self.0.slice(start..end))
         } else {
             ScenePartitionVec::new_unchecked(self.0.slice(start..))
@@ -4628,6 +5446,7 @@ impl molecule::prelude::Entity for MapScene {
             .id(self.id())
             .width(self.width())
             .height(self.height())
+            .fixed_nodes(self.fixed_nodes())
             .partition_list(self.partition_list())
     }
 }
@@ -4653,6 +5472,7 @@ impl<'r> ::core::fmt::Display for MapSceneReader<'r> {
         write!(f, "{}: {}", "id", self.id())?;
         write!(f, ", {}: {}", "width", self.width())?;
         write!(f, ", {}: {}", "height", self.height())?;
+        write!(f, ", {}: {}", "fixed_nodes", self.fixed_nodes())?;
         write!(f, ", {}: {}", "partition_list", self.partition_list())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
@@ -4662,7 +5482,7 @@ impl<'r> ::core::fmt::Display for MapSceneReader<'r> {
     }
 }
 impl<'r> MapSceneReader<'r> {
-    pub const FIELD_COUNT: usize = 4;
+    pub const FIELD_COUNT: usize = 5;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -4697,11 +5517,17 @@ impl<'r> MapSceneReader<'r> {
         let end = molecule::unpack_number(&slice[16..]) as usize;
         ByteReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn partition_list(&self) -> ScenePartitionVecReader<'r> {
+    pub fn fixed_nodes(&self) -> FixedLevelNodeVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[16..]) as usize;
+        let end = molecule::unpack_number(&slice[20..]) as usize;
+        FixedLevelNodeVecReader::new_unchecked(&self.as_slice()[start..end])
+    }
+    pub fn partition_list(&self) -> ScenePartitionVecReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[20..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[20..]) as usize;
+            let end = molecule::unpack_number(&slice[24..]) as usize;
             ScenePartitionVecReader::new_unchecked(&self.as_slice()[start..end])
         } else {
             ScenePartitionVecReader::new_unchecked(&self.as_slice()[start..])
@@ -4757,7 +5583,8 @@ impl<'r> molecule::prelude::Reader<'r> for MapSceneReader<'r> {
         ResourceIdReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
         ByteReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
         ByteReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
-        ScenePartitionVecReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
+        FixedLevelNodeVecReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
+        ScenePartitionVecReader::verify(&slice[offsets[4]..offsets[5]], compatible)?;
         Ok(())
     }
 }
@@ -4766,10 +5593,11 @@ pub struct MapSceneBuilder {
     pub(crate) id: ResourceId,
     pub(crate) width: Byte,
     pub(crate) height: Byte,
+    pub(crate) fixed_nodes: FixedLevelNodeVec,
     pub(crate) partition_list: ScenePartitionVec,
 }
 impl MapSceneBuilder {
-    pub const FIELD_COUNT: usize = 4;
+    pub const FIELD_COUNT: usize = 5;
     pub fn id(mut self, v: ResourceId) -> Self {
         self.id = v;
         self
@@ -4780,6 +5608,10 @@ impl MapSceneBuilder {
     }
     pub fn height(mut self, v: Byte) -> Self {
         self.height = v;
+        self
+    }
+    pub fn fixed_nodes(mut self, v: FixedLevelNodeVec) -> Self {
+        self.fixed_nodes = v;
         self
     }
     pub fn partition_list(mut self, v: ScenePartitionVec) -> Self {
@@ -4795,6 +5627,7 @@ impl molecule::prelude::Builder for MapSceneBuilder {
             + self.id.as_slice().len()
             + self.width.as_slice().len()
             + self.height.as_slice().len()
+            + self.fixed_nodes.as_slice().len()
             + self.partition_list.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
@@ -4807,6 +5640,8 @@ impl molecule::prelude::Builder for MapSceneBuilder {
         offsets.push(total_size);
         total_size += self.height.as_slice().len();
         offsets.push(total_size);
+        total_size += self.fixed_nodes.as_slice().len();
+        offsets.push(total_size);
         total_size += self.partition_list.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
@@ -4815,6 +5650,7 @@ impl molecule::prelude::Builder for MapSceneBuilder {
         writer.write_all(self.id.as_slice())?;
         writer.write_all(self.width.as_slice())?;
         writer.write_all(self.height.as_slice())?;
+        writer.write_all(self.fixed_nodes.as_slice())?;
         writer.write_all(self.partition_list.as_slice())?;
         Ok(())
     }
