@@ -10,3 +10,6 @@ molecule = { version = "0.7.5", default-features = false }
 rand = { version = "0.8.5", default-features = false, features = ["small_rng"] }
 
 spore-warriors-generated = { path = "../generated" }
+
+[features]
+debug = []

@@ -57,6 +57,7 @@ pub fn randomized_selection<T: IntoIterator>(
         .collect::<Vec<_>>()
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub enum Value {
     Resource(u16),
     System(u16),
@@ -74,6 +75,7 @@ impl Value {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Context {
     pub scene_id: u8,
     pub system_id: u16,
@@ -94,6 +96,7 @@ impl Context {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub enum Duration {
     Round(u16),
     LifePoint(u16, u8, bool),
@@ -112,6 +115,7 @@ impl From<generated::Duration> for Duration {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Effect {
     pub on_trigger: Option<Context>,
     pub on_execution: Option<Context>,
@@ -137,6 +141,7 @@ impl Effect {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Item {
     pub class: u8,
     pub quality: u8,
@@ -167,6 +172,7 @@ impl Item {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub enum Score {
     Function(Context),
     Number(u16),
@@ -181,6 +187,7 @@ impl Score {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Loot {
     pub gold: u16,
     pub score: Score,
@@ -215,6 +222,7 @@ impl Loot {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Action {
     pub random_select: bool,
     pub pointer: u8,
@@ -241,6 +249,7 @@ impl Action {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct ActionStrategy {
     pub random_select: bool,
     pub actions: Vec<Action>,
@@ -265,6 +274,7 @@ impl ActionStrategy {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Enemy {
     pub scene_id: u8,
     pub rank: u8,
@@ -304,6 +314,7 @@ impl Enemy {
 }
 
 #[derive(PartialEq, Eq, Default)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Point {
     pub x: u8,
     pub y: u8,
@@ -316,6 +327,7 @@ impl Point {
 }
 
 #[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct SizedPoint {
     pub point: Point,
     x_size: u8,
@@ -374,6 +386,7 @@ impl SizedPoint {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Card {
     pub class: u8,
     pub power_cost: u8,
@@ -402,6 +415,7 @@ impl Card {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Warrior {
     pub charactor_card: Card,
     pub hp: u16,
@@ -462,6 +476,7 @@ impl Warrior {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub enum Node {
     Enemy(Vec<Enemy>),
     TreasureChest(Vec<Item>, u8),
@@ -474,6 +489,7 @@ pub enum Node {
     TargetingPoint(),
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct LevelNode {
     pub visible: bool,
     pub point: SizedPoint,
@@ -551,6 +567,7 @@ impl LevelNode {
     }
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct LevelPartition {
     pub nodes: Vec<LevelNode>,
 }

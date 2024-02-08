@@ -8,6 +8,7 @@ use spore_warriors_generated as generated;
 use crate::errors::Error;
 use crate::wrappings::{randomized_selection, LevelNode, LevelPartition, Node, Point, Warrior};
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct MapSkeleton {
     width: i16,
     height: i16,
@@ -62,6 +63,14 @@ impl MapSkeleton {
 
     pub fn contains(&self, point: &Point) -> bool {
         (point.x as i16) < self.width && (point.y as i16) < self.height
+    }
+
+    pub fn width(&self) -> u8 {
+        self.width as u8
+    }
+
+    pub fn height(&self) -> u8 {
+        self.height as u8
     }
 
     pub fn movable_range(&self) -> Vec<Point> {

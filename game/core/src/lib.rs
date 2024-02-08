@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(debug), no_std)]
 
 pub mod errors;
 pub mod map;
