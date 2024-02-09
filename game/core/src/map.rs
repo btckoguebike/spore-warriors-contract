@@ -43,7 +43,7 @@ impl MapSkeleton {
             .for_each(|mut level| skeleton.append(&mut level.nodes));
 
         let good_start = skeleton.iter().any(|level| {
-            if let Node::StartingPoint() = level.node {
+            if let Node::StartingPoint = level.node {
                 return level.point.contains(&player_point);
             }
             false
@@ -101,23 +101,23 @@ impl MapSkeleton {
             .collect()
     }
 
-    pub fn peak_upcoming_movment(&self, player_point: Point) -> Result<Option<&LevelNode>, Error> {
-        if !self.contains(&player_point) {
+    pub fn peak_upcoming_movment(&self, peak_point: Point) -> Result<Option<&LevelNode>, Error> {
+        if !self.contains(&peak_point) {
             return Err(Error::ScenePlayerPointBeyondMap);
         }
         let movable_range = self.movable_range();
         let nodes = self.filter_nonempty_nodes(&movable_range);
-        let mut placed_node = None;
+        let mut peaked_node = None;
         if nodes.is_empty() {
-            if !movable_range.into_iter().any(|point| point == player_point) {
+            if !movable_range.into_iter().any(|point| point == peak_point) {
                 return Err(Error::ScenePlayerPointInvalid);
             }
         } else {
-            placed_node = nodes
+            peaked_node = nodes
                 .into_iter()
-                .find(|node| node.point.contains(&player_point));
+                .find(|node| node.point.contains(&peak_point));
         }
-        Ok(placed_node)
+        Ok(peaked_node)
     }
 
     pub fn unchecked_move(&mut self, player_point: Point) {

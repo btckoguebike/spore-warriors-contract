@@ -320,6 +320,15 @@ pub struct Point {
     pub y: u8,
 }
 
+impl From<(u8, u8)> for Point {
+    fn from(value: (u8, u8)) -> Self {
+        Self {
+            x: value.0,
+            y: value.1,
+        }
+    }
+}
+
 impl Point {
     pub fn from_xy(x: u8, y: u8) -> Self {
         Self { x, y }
@@ -338,8 +347,8 @@ impl From<generated::Coordinate> for SizedPoint {
     fn from(value: generated::Coordinate) -> Self {
         Self {
             point: Point::from_xy(value.x().into(), value.y().into()),
-            x_size: 1,
-            y_size: 1,
+            x_size: 0,
+            y_size: 0,
         }
     }
 }
@@ -484,9 +493,9 @@ pub enum Node {
     Merchant(Vec<Item>),
     Unknown(Vec<Context>),
     Campsite(Context),
-    Barrier(),
-    StartingPoint(),
-    TargetingPoint(),
+    Barrier,
+    StartingPoint,
+    TargetingPoint,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -547,9 +556,9 @@ impl LevelNode {
                         randomized_selection(items.len(), items, value.count().into(), rng);
                     Node::TreasureChest(randomized_items, value.pick().into())
                 }
-                generated::NodeInstanceUnion::NodeBarrier(_) => Node::Barrier(),
-                generated::NodeInstanceUnion::NodeStartingPoint(_) => Node::StartingPoint(),
-                generated::NodeInstanceUnion::NodeTargetingPoint(_) => Node::TargetingPoint(),
+                generated::NodeInstanceUnion::NodeBarrier(_) => Node::Barrier,
+                generated::NodeInstanceUnion::NodeStartingPoint(_) => Node::StartingPoint,
+                generated::NodeInstanceUnion::NodeTargetingPoint(_) => Node::TargetingPoint,
             },
         }
     }
