@@ -3817,7 +3817,7 @@ impl ::core::fmt::Debug for Context {
 impl ::core::fmt::Display for Context {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "charactor_id", self.charactor_id())?;
+        write!(f, "{}: {}", "target_position", self.target_position())?;
         write!(f, ", {}: {}", "system_id", self.system_id())?;
         write!(f, ", {}: {}", "args", self.args())?;
         let extra_count = self.count_extra_fields();
@@ -3854,7 +3854,7 @@ impl Context {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn charactor_id(&self) -> Byte {
+    pub fn target_position(&self) -> Byte {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         let end = molecule::unpack_number(&slice[8..]) as usize;
@@ -3903,7 +3903,7 @@ impl molecule::prelude::Entity for Context {
     }
     fn as_builder(self) -> Self::Builder {
         Self::new_builder()
-            .charactor_id(self.charactor_id())
+            .target_position(self.target_position())
             .system_id(self.system_id())
             .args(self.args())
     }
@@ -3927,7 +3927,7 @@ impl<'r> ::core::fmt::Debug for ContextReader<'r> {
 impl<'r> ::core::fmt::Display for ContextReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "charactor_id", self.charactor_id())?;
+        write!(f, "{}: {}", "target_position", self.target_position())?;
         write!(f, ", {}: {}", "system_id", self.system_id())?;
         write!(f, ", {}: {}", "args", self.args())?;
         let extra_count = self.count_extra_fields();
@@ -3955,7 +3955,7 @@ impl<'r> ContextReader<'r> {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn charactor_id(&self) -> ByteReader<'r> {
+    pub fn target_position(&self) -> ByteReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         let end = molecule::unpack_number(&slice[8..]) as usize;
@@ -4032,14 +4032,14 @@ impl<'r> molecule::prelude::Reader<'r> for ContextReader<'r> {
 }
 #[derive(Clone, Debug, Default)]
 pub struct ContextBuilder {
-    pub(crate) charactor_id: Byte,
+    pub(crate) target_position: Byte,
     pub(crate) system_id: SystemId,
     pub(crate) args: ValueVec,
 }
 impl ContextBuilder {
     pub const FIELD_COUNT: usize = 3;
-    pub fn charactor_id(mut self, v: Byte) -> Self {
-        self.charactor_id = v;
+    pub fn target_position(mut self, v: Byte) -> Self {
+        self.target_position = v;
         self
     }
     pub fn system_id(mut self, v: SystemId) -> Self {
@@ -4056,7 +4056,7 @@ impl molecule::prelude::Builder for ContextBuilder {
     const NAME: &'static str = "ContextBuilder";
     fn expected_length(&self) -> usize {
         molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
-            + self.charactor_id.as_slice().len()
+            + self.target_position.as_slice().len()
             + self.system_id.as_slice().len()
             + self.args.as_slice().len()
     }
@@ -4064,7 +4064,7 @@ impl molecule::prelude::Builder for ContextBuilder {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
         let mut offsets = Vec::with_capacity(Self::FIELD_COUNT);
         offsets.push(total_size);
-        total_size += self.charactor_id.as_slice().len();
+        total_size += self.target_position.as_slice().len();
         offsets.push(total_size);
         total_size += self.system_id.as_slice().len();
         offsets.push(total_size);
@@ -4073,7 +4073,7 @@ impl molecule::prelude::Builder for ContextBuilder {
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
         }
-        writer.write_all(self.charactor_id.as_slice())?;
+        writer.write_all(self.target_position.as_slice())?;
         writer.write_all(self.system_id.as_slice())?;
         writer.write_all(self.args.as_slice())?;
         Ok(())

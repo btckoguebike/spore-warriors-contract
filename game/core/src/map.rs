@@ -1,26 +1,26 @@
 extern crate alloc;
-use core::cmp::{max, min};
-
 use alloc::vec::Vec;
+use core::cmp::{max, min};
 use rand::RngCore;
 use spore_warriors_generated as generated;
 
+use crate::contexts::WarriorContext;
 use crate::errors::Error;
 use crate::wrappings::{randomized_selection, LevelNode, LevelPartition, Node, Point, Warrior};
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub struct MapSkeleton {
+pub struct MapSkeleton<'a> {
     width: i16,
     height: i16,
     skeleton: Vec<LevelNode>,
-    player: Warrior,
+    player: WarriorContext<'a>,
     player_point: Point,
 }
 
-impl MapSkeleton {
+impl<'p> MapSkeleton<'p> {
     pub fn randomized(
         resource_pool: &generated::ResourcePool,
-        player: Warrior,
+        player: &'p Warrior,
         player_point: Point,
         rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
@@ -33,7 +33,7 @@ impl MapSkeleton {
             .fixed_nodes()
             .into_iter()
             .map(|node| LevelNode::fix_randomized(resource_pool, node, rng))
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>, _>>()?;
         scene
             .partition_list()
             .into_iter()
@@ -56,7 +56,7 @@ impl MapSkeleton {
             width: u8::from(scene.width()) as i16,
             height: u8::from(scene.height()) as i16,
             skeleton,
-            player,
+            player: WarriorContext::new(player),
             player_point,
         })
     }
@@ -73,8 +73,17 @@ impl MapSkeleton {
         self.height as u8
     }
 
+    pub fn current_point(&self) -> (u8, u8) {
+        let Point { x, y } = self.player_point;
+        (x, y)
+    }
+
+    pub fn node_skeleton(&self) -> &Vec<LevelNode> {
+        &self.skeleton
+    }
+
     pub fn movable_range(&self) -> Vec<Point> {
-        let motion = self.player.motion as i16;
+        let motion = self.player.warrior.motion as i16;
         let mut points = Vec::<Point>::new();
         (1..motion).for_each(|y_step| {
             let y = y_step;

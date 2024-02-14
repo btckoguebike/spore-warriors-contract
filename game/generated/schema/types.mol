@@ -31,7 +31,7 @@ union Value {
 vector ValueVec <Value>;
 
 table Context {
-    charactor_id: byte,
+    target_position: byte,
     system_id: SystemId,
     args: ValueVec,
 }

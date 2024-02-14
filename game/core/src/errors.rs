@@ -6,7 +6,21 @@ pub enum Error {
     ResourceBrokenCharactorCard,
     ResourceBrokenCardPool,
     ResourceBrokenPartitionRange,
+    ResourceBrokenItemClass,
+    ResourceEffectSetupConflict,
+    ResourceBrokenTargetPosition,
 
     ScenePlayerPointBeyondMap,
     ScenePlayerPointInvalid,
+
+    BattleNotStarted,
+    BattleRepeatStart,
+    BattleOperationInvalid,
+    BattleOperationMismatch,
+    BattleSelectionError,
+    BattleSelectionMismatch,
+    BattlePowerInsufficient,
+    BattleUnexpectedOutput,
+    BattleUnexpectedPosition,
+    BattleNoPendingContext,
 }

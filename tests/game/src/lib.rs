@@ -17,7 +17,7 @@ mod test {
             Warrior::randomized(&resource_pool, warrior, &mut rng).unwrap()
         };
         let point = Point::from_xy(1, 0);
-        let map = MapSkeleton::randomized(&resource_pool, player, point, &mut rng).unwrap();
+        let map = MapSkeleton::randomized(&resource_pool, &player, point, &mut rng).unwrap();
         println!("[map] = {map:?}");
         println!("[avaliable_range] = {:?}", map.movable_range());
         println!("[node] = {:?}", map.peak_upcoming_movment((1, 1).into()));

@@ -20,7 +20,7 @@ macro_rules! randomized_pool {
                     None
                 }
             })
-            .collect::<Vec<_>>()
+            .collect::<Result<Vec<_>, _>>()
     }};
 }
 
@@ -76,23 +76,49 @@ impl Value {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+pub enum RequireTarget {
+    Owner,
+    Player,
+    Enemy,
+    RandomEnemy,
+    AllEnemy,
+    AllCharactor,
+}
+
+impl TryFrom<u8> for RequireTarget {
+    type Error = Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Owner),
+            1 => Ok(Self::Player),
+            2 => Ok(Self::Enemy),
+            3 => Ok(Self::RandomEnemy),
+            4 => Ok(Self::AllEnemy),
+            5 => Ok(Self::AllCharactor),
+            _ => Err(Error::ResourceBrokenTargetPosition),
+        }
+    }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Context {
-    pub scene_id: u8,
+    pub target_position: RequireTarget,
     pub system_id: u16,
     pub args: Vec<Value>,
 }
 
 impl Context {
-    pub fn randomized(value: generated::Context, rng: &mut impl RngCore) -> Self {
-        Self {
-            scene_id: value.charactor_id().into(),
+    pub fn randomized(value: generated::Context, rng: &mut impl RngCore) -> Result<Self, Error> {
+        Ok(Self {
+            target_position: u8::from(value.target_position()).try_into()?,
             system_id: value.system_id().into(),
             args: value
                 .args()
                 .into_iter()
                 .map(|v| Value::randomized(v, rng))
                 .collect(),
-        }
+        })
     }
 }
 
@@ -128,22 +154,49 @@ impl Effect {
         _: &generated::ResourcePool,
         value: generated::Effect,
         rng: &mut impl RngCore,
-    ) -> Self {
-        fn casting(context: generated::ContextOpt, rng: &mut impl RngCore) -> Option<Context> {
-            context.to_opt().map(|v| Context::randomized(v, rng))
+    ) -> Result<Self, Error> {
+        fn casting(
+            context: generated::ContextOpt,
+            rng: &mut impl RngCore,
+        ) -> Result<Option<Context>, Error> {
+            match context.to_opt() {
+                Some(v) => Ok(Some(Context::randomized(v, rng)?)),
+                None => Ok(None),
+            }
         }
-        Self {
-            on_trigger: casting(value.trigger(), rng),
-            on_execution: casting(value.execution(), rng),
-            on_discard: casting(value.discard(), rng),
+        Ok(Self {
+            on_trigger: casting(value.trigger(), rng)?,
+            on_execution: casting(value.execution(), rng)?,
+            on_discard: casting(value.discard(), rng)?,
             duration: value.duration().to_opt().map(Into::into),
+        })
+    }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(PartialEq)]
+pub enum ItemClass {
+    Equipment,
+    Props,
+}
+
+impl TryFrom<u8> for ItemClass {
+    type Error = Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        if value == 0 {
+            Ok(Self::Equipment)
+        } else if value == 1 {
+            Ok(Self::Props)
+        } else {
+            Err(Error::ResourceBrokenItemClass)
         }
     }
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Item {
-    pub class: u8,
+    pub class: ItemClass,
     pub quality: u8,
     pub weight: u8,
     pub price: u16,
@@ -155,20 +208,20 @@ impl Item {
         resource_pool: &generated::ResourcePool,
         value: generated::Item,
         rng: &mut impl RngCore,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let effect_pool = randomized_pool!(
             value.effect_pool(),
             resource_pool.effect_pool(),
             Effect,
             rng
-        );
-        Self {
-            class: value.class().into(),
+        )?;
+        Ok(Self {
+            class: u8::from(value.class()).try_into()?,
             quality: value.quality().into(),
             weight: randomized_byte(value.random_weight(), rng),
             price: randomized_number(value.price(), rng),
             effect_pool,
-        }
+        })
     }
 }
 
@@ -179,11 +232,11 @@ pub enum Score {
 }
 
 impl Score {
-    pub fn randomized(value: generated::Score, rng: &mut impl RngCore) -> Self {
-        match value.to_enum() {
-            generated::ScoreUnion::Context(v) => Self::Function(Context::randomized(v, rng)),
+    pub fn randomized(value: generated::Score, rng: &mut impl RngCore) -> Result<Self, Error> {
+        Ok(match value.to_enum() {
+            generated::ScoreUnion::Context(v) => Self::Function(Context::randomized(v, rng)?),
             generated::ScoreUnion::RandomNumber(v) => Self::Number(randomized_number(v, rng)),
-        }
+        })
     }
 }
 
@@ -201,24 +254,24 @@ impl Loot {
         resource_pool: &generated::ResourcePool,
         value: generated::Loot,
         rng: &mut impl RngCore,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         fn package_unpack(
             resource_pool: &generated::ResourcePool,
             package: Option<generated::Package>,
             rng: &mut impl RngCore,
-        ) -> Vec<Item> {
+        ) -> Result<Vec<Item>, Error> {
             let Some(package) = package else {
-                return Default::default();
+                return Ok(Default::default());
             };
             randomized_pool!(package.item_pool(), resource_pool.item_pool(), Item, rng)
         }
-        Self {
+        Ok(Self {
             gold: randomized_number(value.gold(), rng),
-            score: Score::randomized(value.score(), rng),
-            card_pool: package_unpack(resource_pool, Some(value.card_pool()), rng),
-            props_pool: package_unpack(resource_pool, value.props_pool().to_opt(), rng),
-            equipment_pool: package_unpack(resource_pool, value.equipment_pool().to_opt(), rng),
-        }
+            score: Score::randomized(value.score(), rng)?,
+            card_pool: package_unpack(resource_pool, Some(value.card_pool()), rng)?,
+            props_pool: package_unpack(resource_pool, value.props_pool().to_opt(), rng)?,
+            equipment_pool: package_unpack(resource_pool, value.equipment_pool().to_opt(), rng)?,
+        })
     }
 }
 
@@ -234,18 +287,18 @@ impl Action {
         resource_pool: &generated::ResourcePool,
         value: generated::Action,
         rng: &mut impl RngCore,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let effect_pool = randomized_pool!(
             value.effect_pool(),
             resource_pool.effect_pool(),
             Effect,
             rng
-        );
-        Self {
+        )?;
+        Ok(Self {
             random_select: u8::from(value.random()) == 1u8,
             pointer: 0,
             effect_pool,
-        }
+        })
     }
 }
 
@@ -260,17 +313,17 @@ impl ActionStrategy {
         resource_pool: &generated::ResourcePool,
         value: generated::ActionContext,
         rng: &mut impl RngCore,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let actions = randomized_pool!(
             value.action_pool(),
             resource_pool.action_pool(),
             Action,
             rng
-        );
-        Self {
+        )?;
+        Ok(Self {
             random_select: u8::from(value.random()) == 1u8,
             actions,
-        }
+        })
     }
 }
 
@@ -294,10 +347,10 @@ impl Enemy {
         resource_pool: &generated::ResourcePool,
         value: generated::Enemy,
         rng: &mut impl RngCore,
-    ) -> Self {
-        let rewards = randomized_pool!(value.loot_pool(), resource_pool.loot_pool(), Loot, rng);
-        let strategy = ActionStrategy::randomized(resource_pool, value.action_strategy(), rng);
-        Self {
+    ) -> Result<Self, Error> {
+        let rewards = randomized_pool!(value.loot_pool(), resource_pool.loot_pool(), Loot, rng)?;
+        let strategy = ActionStrategy::randomized(resource_pool, value.action_strategy(), rng)?;
+        Ok(Self {
             scene_id: 0,
             rank: value.rank().into(),
             hp: value.hp().into(),
@@ -309,7 +362,7 @@ impl Enemy {
             defense_weak: value.defense_weak().into(),
             rewards,
             strategy,
-        }
+        })
     }
 }
 
@@ -408,19 +461,19 @@ impl Card {
         resource_pool: &generated::ResourcePool,
         value: generated::Card,
         rng: &mut impl RngCore,
-    ) -> Card {
+    ) -> Result<Self, Error> {
         let effect_pool = randomized_pool!(
             value.effect_pool(),
             resource_pool.effect_pool(),
             Effect,
             rng
-        );
-        Self {
+        )?;
+        Ok(Self {
             class: value.class().into(),
             power_cost: value.cost().into(),
             merchant_price: randomized_number(value.price(), rng),
             effect_pool,
-        }
+        })
     }
 }
 
@@ -461,11 +514,11 @@ impl Warrior {
             .find(|card| card.id().raw_data() == card_id.raw_data())
             .ok_or(Error::ResourceBrokenCardPool)?;
         let deck_status =
-            randomized_pool!(value.deck_status(), resource_pool.card_pool(), Card, rng);
+            randomized_pool!(value.deck_status(), resource_pool.card_pool(), Card, rng)?;
         let package_status =
-            randomized_pool!(value.package_status(), resource_pool.item_pool(), Item, rng);
+            randomized_pool!(value.package_status(), resource_pool.item_pool(), Item, rng)?;
         Ok(Self {
-            charactor_card: Card::randomized(resource_pool, charactor_card, rng),
+            charactor_card: Card::randomized(resource_pool, charactor_card, rng)?,
             hp: value.hp().into(),
             gold: value.gold().into(),
             power: value.power().into(),
@@ -510,8 +563,8 @@ impl LevelNode {
         resource_pool: &generated::ResourcePool,
         value: generated::LevelNode,
         rng: &mut impl RngCore,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, Error> {
+        Ok(Self {
             visible: u8::from(value.visible()) == 1u8,
             point: value.size().into(),
             node: match value.node().to_enum() {
@@ -521,7 +574,7 @@ impl LevelNode {
                         resource_pool.enemy_pool(),
                         Enemy,
                         rng
-                    );
+                    )?;
                     let randomized_enemies =
                         randomized_selection(enemies.len(), enemies, value.count().into(), rng);
                     Node::Enemy(randomized_enemies)
@@ -531,13 +584,13 @@ impl LevelNode {
                 }
                 generated::NodeInstanceUnion::NodeMerchant(value) => {
                     let goods =
-                        randomized_pool!(value.item_pool(), resource_pool.item_pool(), Item, rng);
+                        randomized_pool!(value.item_pool(), resource_pool.item_pool(), Item, rng)?;
                     let randomized_goods =
                         randomized_selection(goods.len(), goods, value.count().into(), rng);
                     Node::Merchant(randomized_goods)
                 }
                 generated::NodeInstanceUnion::NodeCampsite(value) => {
-                    Node::Campsite(Context::randomized(value.card_context(), rng))
+                    Node::Campsite(Context::randomized(value.card_context(), rng)?)
                 }
                 generated::NodeInstanceUnion::NodeUnknown(value) => {
                     let contexts = value
@@ -546,12 +599,14 @@ impl LevelNode {
                         .map(|context| Context::randomized(context, rng))
                         .collect::<Vec<_>>();
                     let randomized_contexts =
-                        randomized_selection(contexts.len(), contexts, value.count().into(), rng);
+                        randomized_selection(contexts.len(), contexts, value.count().into(), rng)
+                            .into_iter()
+                            .collect::<Result<_, _>>()?;
                     Node::Unknown(randomized_contexts)
                 }
                 generated::NodeInstanceUnion::NodeTreasureChest(value) => {
                     let items =
-                        randomized_pool!(value.item_pool(), resource_pool.item_pool(), Item, rng);
+                        randomized_pool!(value.item_pool(), resource_pool.item_pool(), Item, rng)?;
                     let randomized_items =
                         randomized_selection(items.len(), items, value.count().into(), rng);
                     Node::TreasureChest(randomized_items, value.pick().into())
@@ -560,19 +615,19 @@ impl LevelNode {
                 generated::NodeInstanceUnion::NodeStartingPoint(_) => Node::StartingPoint,
                 generated::NodeInstanceUnion::NodeTargetingPoint(_) => Node::TargetingPoint,
             },
-        }
+        })
     }
 
     pub fn fix_randomized(
         resource_pool: &generated::ResourcePool,
         value: generated::FixedLevelNode,
         rng: &mut impl RngCore,
-    ) -> Self {
-        let mut node = LevelNode::randomized(resource_pool, value.node(), rng);
+    ) -> Result<Self, Error> {
+        let mut node = LevelNode::randomized(resource_pool, value.node(), rng)?;
         node.point = node
             .point
             .shift(value.point().x().into(), value.point().y().into());
-        node
+        Ok(node)
     }
 }
 
@@ -609,7 +664,7 @@ impl LevelPartition {
             .node_pool()
             .into_iter()
             .map(|node| LevelNode::randomized(resource_pool, node, rng))
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>, _>>()?;
         let randomized_nodes = randomized_selection(nodes.len(), nodes, sample_count, rng)
             .into_iter()
             .zip(points.into_iter())
@@ -621,6 +676,53 @@ impl LevelPartition {
 
         Ok(Self {
             nodes: randomized_nodes,
+        })
+    }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+pub struct Potion {
+    pub count: u8,
+    pub hp: u8,
+    pub gold: u8,
+    pub power: u8,
+    pub motion: u8,
+    pub view_range: u8,
+    pub armor: u8,
+    pub shield: u8,
+    pub attack: u8,
+    pub defense: u8,
+    pub physique: u8,
+    pub draw_count: u8,
+    pub deck_status: Vec<Card>,
+    pub package_status: Vec<Item>,
+}
+
+impl Potion {
+    pub fn randomized(
+        resource_pool: &generated::ResourcePool,
+        value: generated::Potion,
+        rng: &mut impl RngCore,
+    ) -> Result<Self, Error> {
+        let deck_status =
+            randomized_pool!(value.deck_status(), resource_pool.card_pool(), Card, rng)?;
+        let package_status =
+            randomized_pool!(value.package_status(), resource_pool.item_pool(), Item, rng)?;
+        Ok(Self {
+            count: value.count().into(),
+            hp: value.hp().into(),
+            gold: value.gold().into(),
+            power: value.power().into(),
+            motion: value.motion().into(),
+            view_range: value.view_range().into(),
+            armor: value.armor().into(),
+            shield: value.shield().into(),
+            attack: value.attack().into(),
+            defense: value.defense().into(),
+            physique: value.physique().into(),
+            draw_count: value.draw_count().into(),
+            deck_status,
+            package_status,
         })
     }
 }
