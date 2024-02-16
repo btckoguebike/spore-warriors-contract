@@ -1,5 +1,9 @@
+extern crate alloc;
+use alloc::vec;
 use core::cmp::{max, min};
+use rand::RngCore;
 
+use crate::errors::Error;
 use crate::wrappings::{Card, Effect, Enemy, Item, ItemClass, Warrior};
 
 macro_rules! change_value {
@@ -31,7 +35,8 @@ pub struct EnemyContext<'e> {
     pub attack_weak: u8,
     pub defense: u8,
     pub defense_weak: u8,
-    pub fight_effects: Vec<&'e Effect>,
+    pub strategy: Vec<Vec<&'e Effect>>,
+    pub pending_effects: Vec<&'e Effect>,
 }
 
 impl<'e> EnemyContext<'e> {
@@ -45,8 +50,42 @@ impl<'e> EnemyContext<'e> {
             attack_weak: enemy.attack_weak,
             defense: enemy.defense,
             defense_weak: enemy.defense_weak,
-            fight_effects: vec![],
+            strategy: vec![],
+            pending_effects: vec![],
         }
+    }
+
+    pub fn pop_action(&mut self, rng: &mut impl RngCore) -> Result<Vec<&'e Effect>, Error> {
+        if self.strategy.is_empty() {
+            self.reset_strategy(rng);
+        }
+        if self.strategy.is_empty() {
+            return Err(Error::ResourceBrokenEnemyStrategy);
+        }
+        Ok(self.strategy.remove(0))
+    }
+
+    pub fn reset_strategy(&mut self, rng: &mut impl RngCore) {
+        let mut randomized_actions = self.enemy.strategy.actions.iter().collect::<Vec<_>>();
+        if self.enemy.strategy.random_select {
+            let mut actions = randomized_actions.drain(..).collect::<Vec<_>>();
+            while !actions.is_empty() {
+                let offset = rng.next_u32() as usize % actions.len();
+                randomized_actions.push(actions.remove(offset));
+            }
+        }
+        self.strategy.clear();
+        randomized_actions.into_iter().for_each(|action| {
+            let mut randomized_effects = action.effect_pool.iter().collect::<Vec<_>>();
+            if action.random_select {
+                let mut effects = randomized_effects.drain(..).collect::<Vec<_>>();
+                while !effects.is_empty() {
+                    let offset = rng.next_u32() as usize % effects.len();
+                    randomized_effects.push(effects.remove(offset));
+                }
+            }
+            self.strategy.push(randomized_effects);
+        });
     }
 }
 
@@ -105,8 +144,8 @@ pub struct WarriorContext<'w> {
     pub hand_deck: Vec<&'w Card>,
     pub deck: Vec<&'w Card>,
     pub grave_deck: Vec<&'w Card>,
-    pub outside_deck: Vec<&'w Card>,
-    pub fight_effects: Vec<&'w Effect>,
+    pub pending_deck: Vec<&'w Card>,
+    pub pending_effects: Vec<&'w Effect>,
 }
 
 impl<'w> WarriorContext<'w> {
@@ -131,8 +170,8 @@ impl<'w> WarriorContext<'w> {
             deck: warrior.deck_status.iter().collect(),
             hand_deck: vec![],
             grave_deck: vec![],
-            outside_deck: vec![],
-            fight_effects: vec![],
+            pending_deck: vec![],
+            pending_effects: vec![],
         }
     }
 }

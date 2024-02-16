@@ -7,8 +7,13 @@ pub enum Error {
     ResourceBrokenCardPool,
     ResourceBrokenPartitionRange,
     ResourceBrokenItemClass,
-    ResourceEffectSetupConflict,
     ResourceBrokenTargetPosition,
+    ResourceBrokenEnemyStrategy,
+
+    ResourceEffectMultiTargetInEffectPool,
+    ResourceEffectSetupConflict,
+    ResourceEffectCardSelectInEnemy,
+    ResourceEffectNotNegative,
 
     ScenePlayerPointBeyondMap,
     ScenePlayerPointInvalid,
@@ -19,8 +24,17 @@ pub enum Error {
     BattleOperationMismatch,
     BattleSelectionError,
     BattleSelectionMismatch,
+    BattleUserSelectionMissing,
     BattlePowerInsufficient,
+    BattleEnemyNotFound,
+    BattleInstructionNotEmpty,
+    BattleInstructionEmpty,
+    BattleSystemInvalidReturn,
+
     BattleUnexpectedOutput,
     BattleUnexpectedPosition,
-    BattleNoPendingContext,
+    BattleUnexpectedSystemReturn,
+
+    SystemMissing,
+    SystemError,
 }

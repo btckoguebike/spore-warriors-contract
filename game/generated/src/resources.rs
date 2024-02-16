@@ -3,752 +3,6 @@
 use super::types::*;
 use molecule::prelude::*;
 #[derive(Clone)]
-pub struct LifePoint(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for LifePoint {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl ::core::fmt::Debug for LifePoint {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl ::core::fmt::Display for LifePoint {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "listen_system_id", self.listen_system_id())?;
-        write!(f, ", {}: {}", "point", self.point())?;
-        write!(f, ", {}: {}", "round_recover", self.round_recover())?;
-        let extra_count = self.count_extra_fields();
-        if extra_count != 0 {
-            write!(f, ", .. ({} fields)", extra_count)?;
-        }
-        write!(f, " }}")
-    }
-}
-impl ::core::default::Default for LifePoint {
-    fn default() -> Self {
-        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        LifePoint::new_unchecked(v)
-    }
-}
-impl LifePoint {
-    const DEFAULT_VALUE: [u8; 20] = [
-        20, 0, 0, 0, 16, 0, 0, 0, 18, 0, 0, 0, 19, 0, 0, 0, 0, 0, 0, 0,
-    ];
-    pub const FIELD_COUNT: usize = 3;
-    pub fn total_size(&self) -> usize {
-        molecule::unpack_number(self.as_slice()) as usize
-    }
-    pub fn field_count(&self) -> usize {
-        if self.total_size() == molecule::NUMBER_SIZE {
-            0
-        } else {
-            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
-        }
-    }
-    pub fn count_extra_fields(&self) -> usize {
-        self.field_count() - Self::FIELD_COUNT
-    }
-    pub fn has_extra_fields(&self) -> bool {
-        Self::FIELD_COUNT != self.field_count()
-    }
-    pub fn listen_system_id(&self) -> SystemId {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[4..]) as usize;
-        let end = molecule::unpack_number(&slice[8..]) as usize;
-        SystemId::new_unchecked(self.0.slice(start..end))
-    }
-    pub fn point(&self) -> Byte {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[8..]) as usize;
-        let end = molecule::unpack_number(&slice[12..]) as usize;
-        Byte::new_unchecked(self.0.slice(start..end))
-    }
-    pub fn round_recover(&self) -> Byte {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[12..]) as usize;
-        if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[16..]) as usize;
-            Byte::new_unchecked(self.0.slice(start..end))
-        } else {
-            Byte::new_unchecked(self.0.slice(start..))
-        }
-    }
-    pub fn as_reader<'r>(&'r self) -> LifePointReader<'r> {
-        LifePointReader::new_unchecked(self.as_slice())
-    }
-}
-impl molecule::prelude::Entity for LifePoint {
-    type Builder = LifePointBuilder;
-    const NAME: &'static str = "LifePoint";
-    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        LifePoint(data)
-    }
-    fn as_bytes(&self) -> molecule::bytes::Bytes {
-        self.0.clone()
-    }
-    fn as_slice(&self) -> &[u8] {
-        &self.0[..]
-    }
-    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        LifePointReader::from_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        LifePointReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn new_builder() -> Self::Builder {
-        ::core::default::Default::default()
-    }
-    fn as_builder(self) -> Self::Builder {
-        Self::new_builder()
-            .listen_system_id(self.listen_system_id())
-            .point(self.point())
-            .round_recover(self.round_recover())
-    }
-}
-#[derive(Clone, Copy)]
-pub struct LifePointReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for LifePointReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl<'r> ::core::fmt::Debug for LifePointReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl<'r> ::core::fmt::Display for LifePointReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "listen_system_id", self.listen_system_id())?;
-        write!(f, ", {}: {}", "point", self.point())?;
-        write!(f, ", {}: {}", "round_recover", self.round_recover())?;
-        let extra_count = self.count_extra_fields();
-        if extra_count != 0 {
-            write!(f, ", .. ({} fields)", extra_count)?;
-        }
-        write!(f, " }}")
-    }
-}
-impl<'r> LifePointReader<'r> {
-    pub const FIELD_COUNT: usize = 3;
-    pub fn total_size(&self) -> usize {
-        molecule::unpack_number(self.as_slice()) as usize
-    }
-    pub fn field_count(&self) -> usize {
-        if self.total_size() == molecule::NUMBER_SIZE {
-            0
-        } else {
-            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
-        }
-    }
-    pub fn count_extra_fields(&self) -> usize {
-        self.field_count() - Self::FIELD_COUNT
-    }
-    pub fn has_extra_fields(&self) -> bool {
-        Self::FIELD_COUNT != self.field_count()
-    }
-    pub fn listen_system_id(&self) -> SystemIdReader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[4..]) as usize;
-        let end = molecule::unpack_number(&slice[8..]) as usize;
-        SystemIdReader::new_unchecked(&self.as_slice()[start..end])
-    }
-    pub fn point(&self) -> ByteReader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[8..]) as usize;
-        let end = molecule::unpack_number(&slice[12..]) as usize;
-        ByteReader::new_unchecked(&self.as_slice()[start..end])
-    }
-    pub fn round_recover(&self) -> ByteReader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[12..]) as usize;
-        if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[16..]) as usize;
-            ByteReader::new_unchecked(&self.as_slice()[start..end])
-        } else {
-            ByteReader::new_unchecked(&self.as_slice()[start..])
-        }
-    }
-}
-impl<'r> molecule::prelude::Reader<'r> for LifePointReader<'r> {
-    type Entity = LifePoint;
-    const NAME: &'static str = "LifePointReader";
-    fn to_entity(&self) -> Self::Entity {
-        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
-    }
-    fn new_unchecked(slice: &'r [u8]) -> Self {
-        LifePointReader(slice)
-    }
-    fn as_slice(&self) -> &'r [u8] {
-        self.0
-    }
-    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
-        use molecule::verification_error as ve;
-        let slice_len = slice.len();
-        if slice_len < molecule::NUMBER_SIZE {
-            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE, slice_len);
-        }
-        let total_size = molecule::unpack_number(slice) as usize;
-        if slice_len != total_size {
-            return ve!(Self, TotalSizeNotMatch, total_size, slice_len);
-        }
-        if slice_len < molecule::NUMBER_SIZE * 2 {
-            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE * 2, slice_len);
-        }
-        let offset_first = molecule::unpack_number(&slice[molecule::NUMBER_SIZE..]) as usize;
-        if offset_first % molecule::NUMBER_SIZE != 0 || offset_first < molecule::NUMBER_SIZE * 2 {
-            return ve!(Self, OffsetsNotMatch);
-        }
-        if slice_len < offset_first {
-            return ve!(Self, HeaderIsBroken, offset_first, slice_len);
-        }
-        let field_count = offset_first / molecule::NUMBER_SIZE - 1;
-        if field_count < Self::FIELD_COUNT {
-            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
-        } else if !compatible && field_count > Self::FIELD_COUNT {
-            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
-        };
-        let mut offsets: Vec<usize> = slice[molecule::NUMBER_SIZE..offset_first]
-            .chunks_exact(molecule::NUMBER_SIZE)
-            .map(|x| molecule::unpack_number(x) as usize)
-            .collect();
-        offsets.push(total_size);
-        if offsets.windows(2).any(|i| i[0] > i[1]) {
-            return ve!(Self, OffsetsNotMatch);
-        }
-        SystemIdReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
-        ByteReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
-        ByteReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
-        Ok(())
-    }
-}
-#[derive(Clone, Debug, Default)]
-pub struct LifePointBuilder {
-    pub(crate) listen_system_id: SystemId,
-    pub(crate) point: Byte,
-    pub(crate) round_recover: Byte,
-}
-impl LifePointBuilder {
-    pub const FIELD_COUNT: usize = 3;
-    pub fn listen_system_id(mut self, v: SystemId) -> Self {
-        self.listen_system_id = v;
-        self
-    }
-    pub fn point(mut self, v: Byte) -> Self {
-        self.point = v;
-        self
-    }
-    pub fn round_recover(mut self, v: Byte) -> Self {
-        self.round_recover = v;
-        self
-    }
-}
-impl molecule::prelude::Builder for LifePointBuilder {
-    type Entity = LifePoint;
-    const NAME: &'static str = "LifePointBuilder";
-    fn expected_length(&self) -> usize {
-        molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
-            + self.listen_system_id.as_slice().len()
-            + self.point.as_slice().len()
-            + self.round_recover.as_slice().len()
-    }
-    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
-        let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
-        let mut offsets = Vec::with_capacity(Self::FIELD_COUNT);
-        offsets.push(total_size);
-        total_size += self.listen_system_id.as_slice().len();
-        offsets.push(total_size);
-        total_size += self.point.as_slice().len();
-        offsets.push(total_size);
-        total_size += self.round_recover.as_slice().len();
-        writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
-        for offset in offsets.into_iter() {
-            writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
-        }
-        writer.write_all(self.listen_system_id.as_slice())?;
-        writer.write_all(self.point.as_slice())?;
-        writer.write_all(self.round_recover.as_slice())?;
-        Ok(())
-    }
-    fn build(&self) -> Self::Entity {
-        let mut inner = Vec::with_capacity(self.expected_length());
-        self.write(&mut inner)
-            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        LifePoint::new_unchecked(inner.into())
-    }
-}
-#[derive(Clone)]
-pub struct Duration(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for Duration {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl ::core::fmt::Debug for Duration {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl ::core::fmt::Display for Duration {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}(", Self::NAME)?;
-        self.to_enum().display_inner(f)?;
-        write!(f, ")")
-    }
-}
-impl ::core::default::Default for Duration {
-    fn default() -> Self {
-        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        Duration::new_unchecked(v)
-    }
-}
-impl Duration {
-    const DEFAULT_VALUE: [u8; 6] = [0, 0, 0, 0, 0, 0];
-    pub const ITEMS_COUNT: usize = 2;
-    pub fn item_id(&self) -> molecule::Number {
-        molecule::unpack_number(self.as_slice())
-    }
-    pub fn to_enum(&self) -> DurationUnion {
-        let inner = self.0.slice(molecule::NUMBER_SIZE..);
-        match self.item_id() {
-            0 => Number::new_unchecked(inner).into(),
-            1 => LifePoint::new_unchecked(inner).into(),
-            _ => panic!("{}: invalid data", Self::NAME),
-        }
-    }
-    pub fn as_reader<'r>(&'r self) -> DurationReader<'r> {
-        DurationReader::new_unchecked(self.as_slice())
-    }
-}
-impl molecule::prelude::Entity for Duration {
-    type Builder = DurationBuilder;
-    const NAME: &'static str = "Duration";
-    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        Duration(data)
-    }
-    fn as_bytes(&self) -> molecule::bytes::Bytes {
-        self.0.clone()
-    }
-    fn as_slice(&self) -> &[u8] {
-        &self.0[..]
-    }
-    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        DurationReader::from_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        DurationReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn new_builder() -> Self::Builder {
-        ::core::default::Default::default()
-    }
-    fn as_builder(self) -> Self::Builder {
-        Self::new_builder().set(self.to_enum())
-    }
-}
-#[derive(Clone, Copy)]
-pub struct DurationReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for DurationReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl<'r> ::core::fmt::Debug for DurationReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl<'r> ::core::fmt::Display for DurationReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}(", Self::NAME)?;
-        self.to_enum().display_inner(f)?;
-        write!(f, ")")
-    }
-}
-impl<'r> DurationReader<'r> {
-    pub const ITEMS_COUNT: usize = 2;
-    pub fn item_id(&self) -> molecule::Number {
-        molecule::unpack_number(self.as_slice())
-    }
-    pub fn to_enum(&self) -> DurationUnionReader<'r> {
-        let inner = &self.as_slice()[molecule::NUMBER_SIZE..];
-        match self.item_id() {
-            0 => NumberReader::new_unchecked(inner).into(),
-            1 => LifePointReader::new_unchecked(inner).into(),
-            _ => panic!("{}: invalid data", Self::NAME),
-        }
-    }
-}
-impl<'r> molecule::prelude::Reader<'r> for DurationReader<'r> {
-    type Entity = Duration;
-    const NAME: &'static str = "DurationReader";
-    fn to_entity(&self) -> Self::Entity {
-        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
-    }
-    fn new_unchecked(slice: &'r [u8]) -> Self {
-        DurationReader(slice)
-    }
-    fn as_slice(&self) -> &'r [u8] {
-        self.0
-    }
-    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
-        use molecule::verification_error as ve;
-        let slice_len = slice.len();
-        if slice_len < molecule::NUMBER_SIZE {
-            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE, slice_len);
-        }
-        let item_id = molecule::unpack_number(slice);
-        let inner_slice = &slice[molecule::NUMBER_SIZE..];
-        match item_id {
-            0 => NumberReader::verify(inner_slice, compatible),
-            1 => LifePointReader::verify(inner_slice, compatible),
-            _ => ve!(Self, UnknownItem, Self::ITEMS_COUNT, item_id),
-        }?;
-        Ok(())
-    }
-}
-#[derive(Clone, Debug, Default)]
-pub struct DurationBuilder(pub(crate) DurationUnion);
-impl DurationBuilder {
-    pub const ITEMS_COUNT: usize = 2;
-    pub fn set<I>(mut self, v: I) -> Self
-    where
-        I: ::core::convert::Into<DurationUnion>,
-    {
-        self.0 = v.into();
-        self
-    }
-}
-impl molecule::prelude::Builder for DurationBuilder {
-    type Entity = Duration;
-    const NAME: &'static str = "DurationBuilder";
-    fn expected_length(&self) -> usize {
-        molecule::NUMBER_SIZE + self.0.as_slice().len()
-    }
-    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
-        writer.write_all(&molecule::pack_number(self.0.item_id()))?;
-        writer.write_all(self.0.as_slice())
-    }
-    fn build(&self) -> Self::Entity {
-        let mut inner = Vec::with_capacity(self.expected_length());
-        self.write(&mut inner)
-            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        Duration::new_unchecked(inner.into())
-    }
-}
-#[derive(Debug, Clone)]
-pub enum DurationUnion {
-    Number(Number),
-    LifePoint(LifePoint),
-}
-#[derive(Debug, Clone, Copy)]
-pub enum DurationUnionReader<'r> {
-    Number(NumberReader<'r>),
-    LifePoint(LifePointReader<'r>),
-}
-impl ::core::default::Default for DurationUnion {
-    fn default() -> Self {
-        DurationUnion::Number(::core::default::Default::default())
-    }
-}
-impl ::core::fmt::Display for DurationUnion {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            DurationUnion::Number(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, Number::NAME, item)
-            }
-            DurationUnion::LifePoint(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, LifePoint::NAME, item)
-            }
-        }
-    }
-}
-impl<'r> ::core::fmt::Display for DurationUnionReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            DurationUnionReader::Number(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, Number::NAME, item)
-            }
-            DurationUnionReader::LifePoint(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, LifePoint::NAME, item)
-            }
-        }
-    }
-}
-impl DurationUnion {
-    pub(crate) fn display_inner(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            DurationUnion::Number(ref item) => write!(f, "{}", item),
-            DurationUnion::LifePoint(ref item) => write!(f, "{}", item),
-        }
-    }
-}
-impl<'r> DurationUnionReader<'r> {
-    pub(crate) fn display_inner(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            DurationUnionReader::Number(ref item) => write!(f, "{}", item),
-            DurationUnionReader::LifePoint(ref item) => write!(f, "{}", item),
-        }
-    }
-}
-impl ::core::convert::From<Number> for DurationUnion {
-    fn from(item: Number) -> Self {
-        DurationUnion::Number(item)
-    }
-}
-impl ::core::convert::From<LifePoint> for DurationUnion {
-    fn from(item: LifePoint) -> Self {
-        DurationUnion::LifePoint(item)
-    }
-}
-impl<'r> ::core::convert::From<NumberReader<'r>> for DurationUnionReader<'r> {
-    fn from(item: NumberReader<'r>) -> Self {
-        DurationUnionReader::Number(item)
-    }
-}
-impl<'r> ::core::convert::From<LifePointReader<'r>> for DurationUnionReader<'r> {
-    fn from(item: LifePointReader<'r>) -> Self {
-        DurationUnionReader::LifePoint(item)
-    }
-}
-impl DurationUnion {
-    pub const NAME: &'static str = "DurationUnion";
-    pub fn as_bytes(&self) -> molecule::bytes::Bytes {
-        match self {
-            DurationUnion::Number(item) => item.as_bytes(),
-            DurationUnion::LifePoint(item) => item.as_bytes(),
-        }
-    }
-    pub fn as_slice(&self) -> &[u8] {
-        match self {
-            DurationUnion::Number(item) => item.as_slice(),
-            DurationUnion::LifePoint(item) => item.as_slice(),
-        }
-    }
-    pub fn item_id(&self) -> molecule::Number {
-        match self {
-            DurationUnion::Number(_) => 0,
-            DurationUnion::LifePoint(_) => 1,
-        }
-    }
-    pub fn item_name(&self) -> &str {
-        match self {
-            DurationUnion::Number(_) => "Number",
-            DurationUnion::LifePoint(_) => "LifePoint",
-        }
-    }
-    pub fn as_reader<'r>(&'r self) -> DurationUnionReader<'r> {
-        match self {
-            DurationUnion::Number(item) => item.as_reader().into(),
-            DurationUnion::LifePoint(item) => item.as_reader().into(),
-        }
-    }
-}
-impl<'r> DurationUnionReader<'r> {
-    pub const NAME: &'r str = "DurationUnionReader";
-    pub fn as_slice(&self) -> &'r [u8] {
-        match self {
-            DurationUnionReader::Number(item) => item.as_slice(),
-            DurationUnionReader::LifePoint(item) => item.as_slice(),
-        }
-    }
-    pub fn item_id(&self) -> molecule::Number {
-        match self {
-            DurationUnionReader::Number(_) => 0,
-            DurationUnionReader::LifePoint(_) => 1,
-        }
-    }
-    pub fn item_name(&self) -> &str {
-        match self {
-            DurationUnionReader::Number(_) => "Number",
-            DurationUnionReader::LifePoint(_) => "LifePoint",
-        }
-    }
-}
-#[derive(Clone)]
-pub struct DurationOpt(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for DurationOpt {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl ::core::fmt::Debug for DurationOpt {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl ::core::fmt::Display for DurationOpt {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        if let Some(v) = self.to_opt() {
-            write!(f, "{}(Some({}))", Self::NAME, v)
-        } else {
-            write!(f, "{}(None)", Self::NAME)
-        }
-    }
-}
-impl ::core::default::Default for DurationOpt {
-    fn default() -> Self {
-        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        DurationOpt::new_unchecked(v)
-    }
-}
-impl DurationOpt {
-    const DEFAULT_VALUE: [u8; 0] = [];
-    pub fn is_none(&self) -> bool {
-        self.0.is_empty()
-    }
-    pub fn is_some(&self) -> bool {
-        !self.0.is_empty()
-    }
-    pub fn to_opt(&self) -> Option<Duration> {
-        if self.is_none() {
-            None
-        } else {
-            Some(Duration::new_unchecked(self.0.clone()))
-        }
-    }
-    pub fn as_reader<'r>(&'r self) -> DurationOptReader<'r> {
-        DurationOptReader::new_unchecked(self.as_slice())
-    }
-}
-impl molecule::prelude::Entity for DurationOpt {
-    type Builder = DurationOptBuilder;
-    const NAME: &'static str = "DurationOpt";
-    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        DurationOpt(data)
-    }
-    fn as_bytes(&self) -> molecule::bytes::Bytes {
-        self.0.clone()
-    }
-    fn as_slice(&self) -> &[u8] {
-        &self.0[..]
-    }
-    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        DurationOptReader::from_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        DurationOptReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn new_builder() -> Self::Builder {
-        ::core::default::Default::default()
-    }
-    fn as_builder(self) -> Self::Builder {
-        Self::new_builder().set(self.to_opt())
-    }
-}
-#[derive(Clone, Copy)]
-pub struct DurationOptReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for DurationOptReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl<'r> ::core::fmt::Debug for DurationOptReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl<'r> ::core::fmt::Display for DurationOptReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        if let Some(v) = self.to_opt() {
-            write!(f, "{}(Some({}))", Self::NAME, v)
-        } else {
-            write!(f, "{}(None)", Self::NAME)
-        }
-    }
-}
-impl<'r> DurationOptReader<'r> {
-    pub fn is_none(&self) -> bool {
-        self.0.is_empty()
-    }
-    pub fn is_some(&self) -> bool {
-        !self.0.is_empty()
-    }
-    pub fn to_opt(&self) -> Option<DurationReader<'r>> {
-        if self.is_none() {
-            None
-        } else {
-            Some(DurationReader::new_unchecked(self.as_slice()))
-        }
-    }
-}
-impl<'r> molecule::prelude::Reader<'r> for DurationOptReader<'r> {
-    type Entity = DurationOpt;
-    const NAME: &'static str = "DurationOptReader";
-    fn to_entity(&self) -> Self::Entity {
-        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
-    }
-    fn new_unchecked(slice: &'r [u8]) -> Self {
-        DurationOptReader(slice)
-    }
-    fn as_slice(&self) -> &'r [u8] {
-        self.0
-    }
-    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
-        if !slice.is_empty() {
-            DurationReader::verify(&slice[..], compatible)?;
-        }
-        Ok(())
-    }
-}
-#[derive(Clone, Debug, Default)]
-pub struct DurationOptBuilder(pub(crate) Option<Duration>);
-impl DurationOptBuilder {
-    pub fn set(mut self, v: Option<Duration>) -> Self {
-        self.0 = v;
-        self
-    }
-}
-impl molecule::prelude::Builder for DurationOptBuilder {
-    type Entity = DurationOpt;
-    const NAME: &'static str = "DurationOptBuilder";
-    fn expected_length(&self) -> usize {
-        self.0
-            .as_ref()
-            .map(|ref inner| inner.as_slice().len())
-            .unwrap_or(0)
-    }
-    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
-        self.0
-            .as_ref()
-            .map(|ref inner| writer.write_all(inner.as_slice()))
-            .unwrap_or(Ok(()))
-    }
-    fn build(&self) -> Self::Entity {
-        let mut inner = Vec::with_capacity(self.expected_length());
-        self.write(&mut inner)
-            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        DurationOpt::new_unchecked(inner.into())
-    }
-}
-#[derive(Clone)]
 pub struct Effect(molecule::bytes::Bytes);
 impl ::core::fmt::LowerHex for Effect {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
@@ -771,7 +25,6 @@ impl ::core::fmt::Display for Effect {
         write!(f, ", {}: {}", "trigger", self.trigger())?;
         write!(f, ", {}: {}", "execution", self.execution())?;
         write!(f, ", {}: {}", "discard", self.discard())?;
-        write!(f, ", {}: {}", "duration", self.duration())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -786,10 +39,10 @@ impl ::core::default::Default for Effect {
     }
 }
 impl Effect {
-    const DEFAULT_VALUE: [u8; 26] = [
-        26, 0, 0, 0, 24, 0, 0, 0, 26, 0, 0, 0, 26, 0, 0, 0, 26, 0, 0, 0, 26, 0, 0, 0, 0, 0,
+    const DEFAULT_VALUE: [u8; 22] = [
+        22, 0, 0, 0, 20, 0, 0, 0, 22, 0, 0, 0, 22, 0, 0, 0, 22, 0, 0, 0, 0, 0,
     ];
-    pub const FIELD_COUNT: usize = 5;
+    pub const FIELD_COUNT: usize = 4;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -827,17 +80,11 @@ impl Effect {
     pub fn discard(&self) -> ContextOpt {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[16..]) as usize;
-        let end = molecule::unpack_number(&slice[20..]) as usize;
-        ContextOpt::new_unchecked(self.0.slice(start..end))
-    }
-    pub fn duration(&self) -> DurationOpt {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[20..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[24..]) as usize;
-            DurationOpt::new_unchecked(self.0.slice(start..end))
+            let end = molecule::unpack_number(&slice[20..]) as usize;
+            ContextOpt::new_unchecked(self.0.slice(start..end))
         } else {
-            DurationOpt::new_unchecked(self.0.slice(start..))
+            ContextOpt::new_unchecked(self.0.slice(start..))
         }
     }
     pub fn as_reader<'r>(&'r self) -> EffectReader<'r> {
@@ -871,7 +118,6 @@ impl molecule::prelude::Entity for Effect {
             .trigger(self.trigger())
             .execution(self.execution())
             .discard(self.discard())
-            .duration(self.duration())
     }
 }
 #[derive(Clone, Copy)]
@@ -897,7 +143,6 @@ impl<'r> ::core::fmt::Display for EffectReader<'r> {
         write!(f, ", {}: {}", "trigger", self.trigger())?;
         write!(f, ", {}: {}", "execution", self.execution())?;
         write!(f, ", {}: {}", "discard", self.discard())?;
-        write!(f, ", {}: {}", "duration", self.duration())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -906,7 +151,7 @@ impl<'r> ::core::fmt::Display for EffectReader<'r> {
     }
 }
 impl<'r> EffectReader<'r> {
-    pub const FIELD_COUNT: usize = 5;
+    pub const FIELD_COUNT: usize = 4;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -944,17 +189,11 @@ impl<'r> EffectReader<'r> {
     pub fn discard(&self) -> ContextOptReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[16..]) as usize;
-        let end = molecule::unpack_number(&slice[20..]) as usize;
-        ContextOptReader::new_unchecked(&self.as_slice()[start..end])
-    }
-    pub fn duration(&self) -> DurationOptReader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[20..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[24..]) as usize;
-            DurationOptReader::new_unchecked(&self.as_slice()[start..end])
+            let end = molecule::unpack_number(&slice[20..]) as usize;
+            ContextOptReader::new_unchecked(&self.as_slice()[start..end])
         } else {
-            DurationOptReader::new_unchecked(&self.as_slice()[start..])
+            ContextOptReader::new_unchecked(&self.as_slice()[start..])
         }
     }
 }
@@ -1008,7 +247,6 @@ impl<'r> molecule::prelude::Reader<'r> for EffectReader<'r> {
         ContextOptReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
         ContextOptReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
         ContextOptReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
-        DurationOptReader::verify(&slice[offsets[4]..offsets[5]], compatible)?;
         Ok(())
     }
 }
@@ -1018,10 +256,9 @@ pub struct EffectBuilder {
     pub(crate) trigger: ContextOpt,
     pub(crate) execution: ContextOpt,
     pub(crate) discard: ContextOpt,
-    pub(crate) duration: DurationOpt,
 }
 impl EffectBuilder {
-    pub const FIELD_COUNT: usize = 5;
+    pub const FIELD_COUNT: usize = 4;
     pub fn id(mut self, v: ResourceId) -> Self {
         self.id = v;
         self
@@ -1038,10 +275,6 @@ impl EffectBuilder {
         self.discard = v;
         self
     }
-    pub fn duration(mut self, v: DurationOpt) -> Self {
-        self.duration = v;
-        self
-    }
 }
 impl molecule::prelude::Builder for EffectBuilder {
     type Entity = Effect;
@@ -1052,7 +285,6 @@ impl molecule::prelude::Builder for EffectBuilder {
             + self.trigger.as_slice().len()
             + self.execution.as_slice().len()
             + self.discard.as_slice().len()
-            + self.duration.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
@@ -1065,8 +297,6 @@ impl molecule::prelude::Builder for EffectBuilder {
         total_size += self.execution.as_slice().len();
         offsets.push(total_size);
         total_size += self.discard.as_slice().len();
-        offsets.push(total_size);
-        total_size += self.duration.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
@@ -1075,7 +305,6 @@ impl molecule::prelude::Builder for EffectBuilder {
         writer.write_all(self.trigger.as_slice())?;
         writer.write_all(self.execution.as_slice())?;
         writer.write_all(self.discard.as_slice())?;
-        writer.write_all(self.duration.as_slice())?;
         Ok(())
     }
     fn build(&self) -> Self::Entity {

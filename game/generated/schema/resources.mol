@@ -1,25 +1,11 @@
 import types;
 
-table LifePoint {
-    listen_system_id: SystemId,
-    point: byte,
-    round_recover: byte,
-}
-
-union Duration {
-    Number,
-    LifePoint,
-}
-
-option DurationOpt (Duration);
-
 // effect on charactor after operation
 table Effect {
     id: ResourceId,
     trigger: ContextOpt,  // empty = immediate
     execution: ContextOpt,
     discard: ContextOpt,
-    duration: DurationOpt,
 }
 
 vector EffectVec <Effect>;

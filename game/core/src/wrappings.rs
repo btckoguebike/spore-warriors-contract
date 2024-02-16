@@ -76,13 +76,13 @@ impl Value {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Copy)]
 pub enum RequireTarget {
     Owner,
-    Player,
-    Enemy,
-    RandomEnemy,
-    AllEnemy,
-    AllCharactor,
+    Opponent,
+    RandomOpponent,
+    AllOpponents,
+    AllCharactors,
 }
 
 impl TryFrom<u8> for RequireTarget {
@@ -91,11 +91,10 @@ impl TryFrom<u8> for RequireTarget {
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(Self::Owner),
-            1 => Ok(Self::Player),
-            2 => Ok(Self::Enemy),
-            3 => Ok(Self::RandomEnemy),
-            4 => Ok(Self::AllEnemy),
-            5 => Ok(Self::AllCharactor),
+            1 => Ok(Self::Opponent),
+            3 => Ok(Self::RandomOpponent),
+            4 => Ok(Self::AllOpponents),
+            5 => Ok(Self::AllCharactors),
             _ => Err(Error::ResourceBrokenTargetPosition),
         }
     }
@@ -123,30 +122,10 @@ impl Context {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub enum Duration {
-    Round(u16),
-    LifePoint(u16, u8, bool),
-}
-
-impl From<generated::Duration> for Duration {
-    fn from(value: generated::Duration) -> Self {
-        match value.to_enum() {
-            generated::DurationUnion::Number(v) => Self::Round(v.into()),
-            generated::DurationUnion::LifePoint(v) => Self::LifePoint(
-                v.listen_system_id().into(),
-                v.point().into(),
-                u8::from(v.round_recover()) == 1u8,
-            ),
-        }
-    }
-}
-
-#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Effect {
     pub on_trigger: Option<Context>,
     pub on_execution: Option<Context>,
     pub on_discard: Option<Context>,
-    pub duration: Option<Duration>,
 }
 
 impl Effect {
@@ -164,11 +143,25 @@ impl Effect {
                 None => Ok(None),
             }
         }
+        let on_trigger = casting(value.trigger(), rng)?;
+        let on_execution = casting(value.execution(), rng)?;
+        let on_discard = casting(value.discard(), rng)?;
+        // one of exeuction and discard must exist if trigger exists
+        if on_trigger.is_some() && on_execution.is_none() && on_discard.is_none() {
+            return Err(Error::ResourceEffectSetupConflict);
+        }
+        // trigger and execution cannot be simuletously none
+        if on_trigger.is_none() && on_execution.is_none() {
+            return Err(Error::ResourceEffectSetupConflict);
+        }
+        // one of execution and discard must be none if trigger dosen't exist
+        if on_trigger.is_none() && on_execution.is_some() && on_discard.is_some() {
+            return Err(Error::ResourceEffectSetupConflict);
+        }
         Ok(Self {
-            on_trigger: casting(value.trigger(), rng)?,
-            on_execution: casting(value.execution(), rng)?,
-            on_discard: casting(value.discard(), rng)?,
-            duration: value.duration().to_opt().map(Into::into),
+            on_trigger,
+            on_execution,
+            on_discard,
         })
     }
 }
@@ -278,7 +271,6 @@ impl Loot {
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Action {
     pub random_select: bool,
-    pub pointer: u8,
     pub effect_pool: Vec<Effect>,
 }
 
@@ -296,7 +288,6 @@ impl Action {
         )?;
         Ok(Self {
             random_select: u8::from(value.random()) == 1u8,
-            pointer: 0,
             effect_pool,
         })
     }
@@ -329,7 +320,6 @@ impl ActionStrategy {
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Enemy {
-    pub scene_id: u8,
     pub rank: u8,
     pub hp: u16,
     pub armor: u8,
@@ -351,7 +341,6 @@ impl Enemy {
         let rewards = randomized_pool!(value.loot_pool(), resource_pool.loot_pool(), Loot, rng)?;
         let strategy = ActionStrategy::randomized(resource_pool, value.action_strategy(), rng)?;
         Ok(Self {
-            scene_id: 0,
             rank: value.rank().into(),
             hp: value.hp().into(),
             armor: value.rank().into(),

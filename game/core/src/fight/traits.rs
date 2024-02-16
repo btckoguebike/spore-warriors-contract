@@ -3,7 +3,8 @@ use alloc::vec::Vec;
 use rand::RngCore;
 
 use crate::errors::Error;
-use crate::wrappings::{Enemy, Potion, RequireTarget, Warrior};
+use crate::systems::GameSystem;
+use crate::wrappings::{Enemy, Potion, Warrior};
 
 #[derive(Clone)]
 pub enum Target {
@@ -17,34 +18,37 @@ pub enum Target {
 #[derive(Clone)]
 pub enum Selection {
     Item(usize),
-    Deck(Vec<usize>),
+    SingleCard(usize),
+    MultiCards(Vec<usize>),
 }
 
 pub enum IterationInput {
-    ItemUse(Selection, Target),
-    SpecialCardUse(Target),
-    HandCardUse(Selection, Target),
-    HandCardSelect(Selection),
-    DeckCardSelect(Selection),
-    GraveCardSelect(Selection),
-    OutsideCardSelect(Selection),
-    PlayerRoundEnd,
+    ItemUse(Selection, Option<usize>),
+    SpecialCardUse(Option<usize>),
+    HandCardUse(Selection, Option<usize>),
+    PendingCardSelect(Selection),
     EnemyTurn,
 }
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum IterationOutput {
+    Continue,
     GameWin,
     GameLose,
-    RequireHandCardSelect,
-    RequireDeckCardSelect,
-    RequireGraveCardSelect,
-    RequireOutsideCardSelect,
-    Continue,
+    RequireCardSelect,
     PlayerTurn,
 }
 
-pub enum FightLog {}
+#[derive(Clone, PartialEq)]
+pub enum FightLog {
+    TurnToEnemy(u8),
+    TurnToPlayer(u8),
+    PowerCost(u8),
+    SpecialCardUse,
+    HandCardUse(usize),
+    ItemUse(usize),
+    Draw(u8),
+}
 
 pub trait SimplePVE<'a, T: RngCore>
 where
@@ -54,12 +58,18 @@ where
         player: &'a Warrior,
         potion: Option<&'a Potion>,
         enemies: &'a [Enemy],
-        rng: &'a mut T,
     ) -> Result<Self, Error>;
 
-    fn start(&mut self) -> Result<IterationOutput, Error>;
+    fn start(
+        &mut self,
+        system: &mut GameSystem<'a, T>,
+    ) -> Result<(IterationOutput, &Vec<FightLog>), Error>;
 
-    fn run(&mut self, operations: Vec<IterationInput>) -> Result<IterationOutput, Error>;
+    fn run(
+        &mut self,
+        operations: Vec<IterationInput>,
+        system: &mut GameSystem<'a, T>,
+    ) -> Result<(IterationOutput, &Vec<FightLog>), Error>;
 
-    fn peak_target(&self, hand_card_selection: Selection) -> Result<Vec<&'a RequireTarget>, Error>;
+    fn peak_target(&self, hand_card_selection: Selection) -> Result<bool, Error>;
 }
