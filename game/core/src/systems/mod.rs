@@ -6,12 +6,7 @@ use spore_warriors_generated as generated;
 use crate::contexts::CtxAdaptor;
 use crate::errors::Error;
 use crate::fight::traits::FightLog;
-use crate::wrappings::Value;
-
-#[derive(PartialEq, PartialOrd, Eq, Ord)]
-pub enum SystemId {
-    NormalDamage,
-}
+use crate::wrappings::{SystemId, Value};
 
 #[derive(PartialEq)]
 pub enum SystemReturn {
@@ -46,7 +41,7 @@ pub struct GameSystem<'a, T: RngCore> {
 impl<'a, T: RngCore> GameSystem<'a, T> {
     pub fn new(resource_pool: &'a generated::ResourcePool, rng: &'a mut T) -> Self {
         let mut system_callbacks = BTreeMap::new();
-        system_callbacks.insert(SystemId::NormalDamage, normal_attack as SystemCallback);
+        system_callbacks.insert(SystemId::Damage, normal_attack as SystemCallback);
         Self {
             resource_pool,
             rng,

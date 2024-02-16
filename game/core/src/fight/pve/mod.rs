@@ -35,7 +35,7 @@ pub struct MapFightPVE<'a> {
     pending_instructions: Vec<Instruction<'a>>,
 }
 
-impl<'a, T: RngCore> SimplePVE<'a, T> for MapFightPVE<'a> {
+impl<'a> SimplePVE<'a> for MapFightPVE<'a> {
     fn create(
         player: &'a Warrior,
         potion: Option<&'a Potion>,
@@ -56,7 +56,6 @@ impl<'a, T: RngCore> SimplePVE<'a, T> for MapFightPVE<'a> {
                 .deck
                 .append(&mut potion.deck_status.iter().collect());
         }
-
         Ok(Self {
             player: warrior_context,
             opponents: enemies.iter().map(EnemyContext::new).collect(),
@@ -69,8 +68,8 @@ impl<'a, T: RngCore> SimplePVE<'a, T> for MapFightPVE<'a> {
 
     fn start(
         &mut self,
-        system: &mut GameSystem<'a, T>,
-    ) -> Result<(IterationOutput, &Vec<FightLog>), Error> {
+        system: &mut GameSystem<'a, impl RngCore>,
+    ) -> Result<(IterationOutput, Vec<FightLog>), Error> {
         if self.round != 0 {
             return Err(Error::BattleRepeatStart);
         }
@@ -83,23 +82,27 @@ impl<'a, T: RngCore> SimplePVE<'a, T> for MapFightPVE<'a> {
             }
         });
         self.round = 1;
+        self.trigger_fight_log(FightLog::PlayerTurn(self.round), system)?;
+        self.player_draw(self.player.draw_count, system)?;
         let output =
             self.operate_positive_effects(FightView::Player, &equipment_effects, None, system)?;
-        Ok((output, &self.fight_logs))
+        let logs = self.fight_logs.drain(..).collect();
+        Ok((output, logs))
     }
 
     fn run(
         &mut self,
         operations: Vec<IterationInput>,
-        system: &mut GameSystem<'a, T>,
-    ) -> Result<(IterationOutput, &Vec<FightLog>), Error> {
+        system: &mut GameSystem<'a, impl RngCore>,
+    ) -> Result<(IterationOutput, Vec<FightLog>), Error> {
         if self.round == 0 {
             return Err(Error::BattleNotStarted);
         }
         for operation in operations {
             self.iterate(operation, system)?;
         }
-        Ok((self.last_output, &self.fight_logs))
+        let logs = self.fight_logs.drain(..).collect();
+        Ok((self.last_output, logs))
     }
 
     fn peak_target(&self, hand_card_selection: Selection) -> Result<bool, Error> {

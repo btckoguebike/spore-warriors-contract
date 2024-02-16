@@ -5,7 +5,7 @@ use rand::RngCore;
 use crate::errors::Error;
 use crate::fight::pve::{FightView, Instruction, MapFightPVE};
 use crate::fight::traits::FightLog;
-use crate::systems::{GameSystem, SystemId, SystemInput, SystemReturn};
+use crate::systems::{GameSystem, SystemInput, SystemReturn};
 use crate::wrappings::Effect;
 
 impl<'a> MapFightPVE<'a> {
@@ -63,7 +63,7 @@ impl<'a> MapFightPVE<'a> {
                 )?;
                 let system_input = SystemInput::FightLog(log.clone());
                 let trigger_return = system.call(
-                    SystemId::NormalDamage,
+                    trigger.system_id,
                     &trigger.args,
                     &system_contexts,
                     Some(system_input.clone()),

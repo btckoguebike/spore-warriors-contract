@@ -6,7 +6,7 @@ use crate::contexts::CtxAdaptor;
 use crate::errors::Error;
 use crate::fight::pve::{FightView, Instruction, MapFightPVE};
 use crate::fight::traits::{FightLog, IterationOutput};
-use crate::systems::{GameSystem, SystemId, SystemReturn};
+use crate::systems::{GameSystem, SystemReturn};
 use crate::wrappings::{Effect, RequireTarget};
 
 impl<'a> MapFightPVE<'a> {
@@ -173,7 +173,7 @@ impl<'a> MapFightPVE<'a> {
                 system,
             )?;
             let system_return = system.call(
-                SystemId::NormalDamage, // TODO: replace with true system ids
+                value.context.system_id,
                 &value.context.args,
                 &system_contexts,
                 value.system_input,

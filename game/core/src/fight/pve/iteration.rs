@@ -127,7 +127,7 @@ impl<'a> MapFightPVE<'a> {
         }
         let mut remained_hand_cards = self.player.hand_deck.drain(..).collect::<Vec<_>>();
         self.player.grave_deck.append(&mut remained_hand_cards);
-        self.trigger_fight_log(FightLog::TurnToEnemy(self.round), system)?;
+        self.trigger_fight_log(FightLog::EnemyTurn(self.round), system)?;
 
         let actions = self
             .opponents
@@ -145,7 +145,7 @@ impl<'a> MapFightPVE<'a> {
             return Err(Error::BattleInstructionNotEmpty);
         }
         self.round += 1;
-        self.trigger_fight_log(FightLog::TurnToPlayer(self.round), system)?;
+        self.trigger_fight_log(FightLog::PlayerTurn(self.round), system)?;
         self.player_draw(self.player.draw_count, system)?;
 
         let output = self.operate_pending_instructions(system)?;

@@ -30,6 +30,7 @@ pub enum IterationInput {
     EnemyTurn,
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone, Copy, PartialEq)]
 pub enum IterationOutput {
     Continue,
@@ -39,10 +40,11 @@ pub enum IterationOutput {
     PlayerTurn,
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone, PartialEq)]
 pub enum FightLog {
-    TurnToEnemy(u8),
-    TurnToPlayer(u8),
+    EnemyTurn(u8),
+    PlayerTurn(u8),
     PowerCost(u8),
     SpecialCardUse,
     HandCardUse(usize),
@@ -50,7 +52,7 @@ pub enum FightLog {
     Draw(u8),
 }
 
-pub trait SimplePVE<'a, T: RngCore>
+pub trait SimplePVE<'a>
 where
     Self: Sized,
 {
@@ -62,14 +64,14 @@ where
 
     fn start(
         &mut self,
-        system: &mut GameSystem<'a, T>,
-    ) -> Result<(IterationOutput, &Vec<FightLog>), Error>;
+        system: &mut GameSystem<'a, impl RngCore>,
+    ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn run(
         &mut self,
         operations: Vec<IterationInput>,
-        system: &mut GameSystem<'a, T>,
-    ) -> Result<(IterationOutput, &Vec<FightLog>), Error>;
+        system: &mut GameSystem<'a, impl RngCore>,
+    ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn peak_target(&self, hand_card_selection: Selection) -> Result<bool, Error>;
 }

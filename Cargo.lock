@@ -644,6 +644,7 @@ name = "game-tests"
 version = "0.1.0"
 dependencies = [
  "eyre",
+ "lazy_static",
  "molecule",
  "rand 0.8.5",
  "spore-warriors-core",

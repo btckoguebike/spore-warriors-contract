@@ -1,5 +1,6 @@
 [workspace]
 members = ["contracts/spore-warriors", "game/core", "game/generated", "tests/game", "tests/contracts"]
+resolver = "2"
 
 [profile.release]
 overflow-checks = true

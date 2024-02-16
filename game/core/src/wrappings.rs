@@ -101,9 +101,28 @@ impl TryFrom<u8> for RequireTarget {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy)]
+pub enum SystemId {
+    Damage,
+    MultipleDamage,
+}
+
+impl TryFrom<generated::SystemId> for SystemId {
+    type Error = Error;
+
+    fn try_from(value: generated::SystemId) -> Result<Self, Self::Error> {
+        match u16::from(value) {
+            0 => Ok(Self::Damage),
+            1 => Ok(Self::MultipleDamage),
+            _ => Err(Error::ResourceBrokenSystemId),
+        }
+    }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Context {
     pub target_position: RequireTarget,
-    pub system_id: u16,
+    pub system_id: SystemId,
     pub args: Vec<Value>,
 }
 
@@ -111,7 +130,7 @@ impl Context {
     pub fn randomized(value: generated::Context, rng: &mut impl RngCore) -> Result<Self, Error> {
         Ok(Self {
             target_position: u8::from(value.target_position()).try_into()?,
-            system_id: value.system_id().into(),
+            system_id: value.system_id().try_into()?,
             args: value
                 .args()
                 .into_iter()

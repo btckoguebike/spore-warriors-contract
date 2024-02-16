@@ -9,6 +9,7 @@ pub enum Error {
     ResourceBrokenItemClass,
     ResourceBrokenTargetPosition,
     ResourceBrokenEnemyStrategy,
+    ResourceBrokenSystemId,
 
     ResourceEffectMultiTargetInEffectPool,
     ResourceEffectSetupConflict,
