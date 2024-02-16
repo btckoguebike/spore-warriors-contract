@@ -521,8 +521,12 @@ impl Warrior {
             .into_iter()
             .find(|card| card.id().raw_data() == card_id.raw_data())
             .ok_or(Error::ResourceBrokenCardPool)?;
+        let draw_count: u8 = value.draw_count().into();
         let deck_status =
             randomized_pool!(value.deck_status(), resource_pool.card_pool(), Card, rng)?;
+        if draw_count as usize > deck_status.len() {
+            return Err(Error::ResourceBrokenPlayerDeck);
+        }
         let package_status =
             randomized_pool!(value.package_status(), resource_pool.item_pool(), Item, rng)?;
         Ok(Self {
@@ -539,7 +543,7 @@ impl Warrior {
             defense: value.defense().into(),
             defense_weak: value.defense_weak().into(),
             physique: value.physique().into(),
-            draw_count: value.draw_count().into(),
+            draw_count,
             deck_status,
             package_status,
         })

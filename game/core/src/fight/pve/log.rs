@@ -55,7 +55,7 @@ impl<'a> MapFightPVE<'a> {
                 let Some(trigger) = &effect.on_trigger else {
                     return Err(Error::ResourceEffectNotNegative);
                 };
-                let system_contexts = self.collect_system_contexts(
+                let mut system_contexts = self.collect_system_contexts(
                     view,
                     trigger.target_position,
                     enemy_offset,
@@ -65,7 +65,7 @@ impl<'a> MapFightPVE<'a> {
                 let trigger_return = system.call(
                     trigger.system_id,
                     &trigger.args,
-                    &system_contexts,
+                    &mut system_contexts,
                     Some(system_input.clone()),
                 )?;
                 let context = match trigger_return {

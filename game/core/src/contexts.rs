@@ -15,6 +15,7 @@ macro_rules! change_value {
 }
 
 pub trait CtxAdaptor {
+    fn offset(&self) -> usize;
     fn change_hp(&mut self, diff: i16);
     fn change_armor(&mut self, diff: i8);
     fn change_shield(&mut self, diff: i8);
@@ -28,6 +29,7 @@ pub trait CtxAdaptor {
 
 pub struct EnemyContext<'e> {
     pub enemy: &'e Enemy,
+    pub offset: usize,
     pub hp: u16,
     pub armor: u8,
     pub shield: u8,
@@ -43,6 +45,7 @@ impl<'e> EnemyContext<'e> {
     pub fn new(enemy: &'e Enemy) -> Self {
         Self {
             enemy,
+            offset: 0,
             hp: enemy.hp,
             armor: enemy.armor,
             shield: enemy.shield,
@@ -90,6 +93,10 @@ impl<'e> EnemyContext<'e> {
 }
 
 impl<'e> CtxAdaptor for EnemyContext<'e> {
+    fn offset(&self) -> usize {
+        self.offset
+    }
+
     fn change_hp(&mut self, diff: i16) {
         change_value!(self.hp, diff, i32, u16);
     }
@@ -130,6 +137,7 @@ impl<'e> CtxAdaptor for EnemyContext<'e> {
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct WarriorContext<'w> {
     pub warrior: &'w Warrior,
+    pub offset: usize,
     pub hp: u16,
     pub power: u8,
     pub armor: u8,
@@ -152,6 +160,7 @@ impl<'w> WarriorContext<'w> {
     pub fn new(warrior: &'w Warrior) -> Self {
         Self {
             warrior,
+            offset: 0,
             hp: warrior.hp,
             power: warrior.power,
             armor: warrior.armor,
@@ -177,6 +186,10 @@ impl<'w> WarriorContext<'w> {
 }
 
 impl<'p> CtxAdaptor for WarriorContext<'p> {
+    fn offset(&self) -> usize {
+        self.offset
+    }
+
     fn change_hp(&mut self, diff: i16) {
         change_value!(self.hp, diff, i32, u16);
     }

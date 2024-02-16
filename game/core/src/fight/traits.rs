@@ -50,6 +50,7 @@ pub enum FightLog {
     HandCardUse(usize),
     ItemUse(usize),
     Draw(u8),
+    SystemDamage(usize, u16),
 }
 
 pub trait SimplePVE<'a>

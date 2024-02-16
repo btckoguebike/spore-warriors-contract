@@ -7,7 +7,7 @@ mod test {
     use rand::rngs::SmallRng;
     use rand::SeedableRng;
     use spore_warriors_core::fight::pve::MapFightPVE;
-    use spore_warriors_core::fight::traits::SimplePVE;
+    use spore_warriors_core::fight::traits::{IterationInput, Selection, SimplePVE};
     use spore_warriors_core::map::MapSkeleton;
     use spore_warriors_core::systems::GameSystem;
     use spore_warriors_core::wrappings::{Enemy, Point, Warrior};
@@ -51,6 +51,19 @@ mod test {
         let mut game_system = GameSystem::new(&RESOURCE_POOL, rng);
         let mut battle = MapFightPVE::create(&player, None, &enemies).unwrap();
         let (output, logs) = battle.start(&mut game_system).unwrap();
+        println!("===START===");
+        println!("[output] = {output:?}");
+        println!("[logs] = {logs:?}");
+        let (output, logs) = battle
+            .run(
+                vec![IterationInput::HandCardUse(
+                    Selection::SingleCard(0),
+                    Some(0),
+                )],
+                &mut game_system,
+            )
+            .unwrap();
+        println!("===RUN===");
         println!("[output] = {output:?}");
         println!("[logs] = {logs:?}");
         Ok(())

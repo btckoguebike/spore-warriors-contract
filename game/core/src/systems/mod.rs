@@ -10,7 +10,6 @@ use crate::wrappings::{SystemId, Value};
 
 #[derive(PartialEq)]
 pub enum SystemReturn {
-    Null,
     Discarded,
     Triggered,
     NeedCardSelect,
@@ -28,9 +27,9 @@ type SystemCallback = fn(
     &generated::ResourcePool,
     &mut dyn RngCore,
     &[Value],
-    &[&mut dyn CtxAdaptor],
+    &mut [&mut dyn CtxAdaptor],
     Option<SystemInput>,
-) -> SystemReturn;
+) -> Result<SystemReturn, Error>;
 
 pub struct GameSystem<'a, T: RngCore> {
     resource_pool: &'a generated::ResourcePool,
@@ -41,7 +40,8 @@ pub struct GameSystem<'a, T: RngCore> {
 impl<'a, T: RngCore> GameSystem<'a, T> {
     pub fn new(resource_pool: &'a generated::ResourcePool, rng: &'a mut T) -> Self {
         let mut system_callbacks = BTreeMap::new();
-        system_callbacks.insert(SystemId::Damage, normal_attack as SystemCallback);
+        system_callbacks.insert(SystemId::Damage, attack as SystemCallback);
+        system_callbacks.insert(SystemId::MultipleDamage, multiple_attack as SystemCallback);
         Self {
             resource_pool,
             rng,
@@ -61,29 +61,54 @@ impl<'a, T: RngCore> GameSystem<'a, T> {
         &mut self,
         system_id: SystemId,
         args: &[Value],
-        contexts: &[&mut dyn CtxAdaptor],
+        contexts: &mut [&mut dyn CtxAdaptor],
         system_input: Option<SystemInput>,
     ) -> Result<SystemReturn, Error> {
         let system = self
             .system_callbacks
             .get(&system_id)
             .ok_or(Error::SystemMissing)?;
-        Ok(system(
-            self.resource_pool,
-            self.rng,
-            args,
-            contexts,
-            system_input,
-        ))
+        system(self.resource_pool, self.rng, args, contexts, system_input)
     }
 }
 
-fn normal_attack(
+fn attack(
     _resource_pool: &generated::ResourcePool,
     _rng: &mut dyn RngCore,
-    _args: &[Value],
-    _contexts: &[&mut dyn CtxAdaptor],
+    args: &[Value],
+    contexts: &mut [&mut dyn CtxAdaptor],
     _extra: Option<SystemInput>,
-) -> SystemReturn {
-    SystemReturn::Null
+) -> Result<SystemReturn, Error> {
+    let Some(Value::Number(damage)) = args.get(0) else {
+        return Err(Error::BattleUnexpectedSystemArgs);
+    };
+    let value = *damage as i16;
+    let mut logs = vec![];
+    for object in contexts {
+        object.change_hp(-value);
+        logs.push(FightLog::SystemDamage(object.offset(), *damage));
+    }
+    Ok(SystemReturn::FightLog(logs))
+}
+
+fn multiple_attack(
+    _resource_pool: &generated::ResourcePool,
+    _rng: &mut dyn RngCore,
+    args: &[Value],
+    contexts: &mut [&mut dyn CtxAdaptor],
+    _extra: Option<SystemInput>,
+) -> Result<SystemReturn, Error> {
+    let (Some(Value::Number(damage)), Some(Value::Number(count))) = (args.get(0), args.get(1))
+    else {
+        return Err(Error::BattleUnexpectedSystemArgs);
+    };
+    let value = *damage as i16;
+    let mut logs = vec![];
+    for object in contexts {
+        (0..*count).for_each(|_| {
+            object.change_hp(-value);
+            logs.push(FightLog::SystemDamage(object.offset(), *damage));
+        });
+    }
+    Ok(SystemReturn::FightLog(logs))
 }

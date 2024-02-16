@@ -10,6 +10,7 @@ pub enum Error {
     ResourceBrokenTargetPosition,
     ResourceBrokenEnemyStrategy,
     ResourceBrokenSystemId,
+    ResourceBrokenPlayerDeck,
 
     ResourceEffectMultiTargetInEffectPool,
     ResourceEffectSetupConflict,
@@ -32,9 +33,11 @@ pub enum Error {
     BattleInstructionEmpty,
     BattleSystemInvalidReturn,
 
+    BattleUnexpectedDrawCount,
     BattleUnexpectedOutput,
     BattleUnexpectedPosition,
     BattleUnexpectedSystemReturn,
+    BattleUnexpectedSystemArgs,
 
     SystemMissing,
     SystemError,

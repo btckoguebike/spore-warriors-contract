@@ -15,6 +15,9 @@ impl<'a> MapFightPVE<'a> {
         draw_count: u8,
         system: &mut GameSystem<'a, impl RngCore>,
     ) -> Result<(), Error> {
+        if draw_count == 0 {
+            return Err(Error::BattleUnexpectedDrawCount);
+        }
         for _ in 0..draw_count {
             if self.player.deck.is_empty() {
                 let mut grave_cards = self.player.grave_deck.drain(..).collect::<Vec<_>>();
@@ -166,7 +169,7 @@ impl<'a> MapFightPVE<'a> {
     ) -> Result<IterationOutput, Error> {
         self.last_output = IterationOutput::Continue;
         while let Some(value) = self.pending_instructions.first().cloned() {
-            let system_contexts = self.collect_system_contexts(
+            let mut system_contexts = self.collect_system_contexts(
                 value.view,
                 value.context.target_position,
                 value.enemy_offset,
@@ -175,7 +178,7 @@ impl<'a> MapFightPVE<'a> {
             let system_return = system.call(
                 value.context.system_id,
                 &value.context.args,
-                &system_contexts,
+                &mut system_contexts,
                 value.system_input,
             )?;
             if self.player.hp == 0 {
@@ -196,7 +199,6 @@ impl<'a> MapFightPVE<'a> {
                 }
                 SystemReturn::DrawCard(draw_count) => self.player_draw(draw_count, system)?,
                 SystemReturn::FightLog(mut logs) => self.fight_logs.append(&mut logs),
-                SystemReturn::Null => {}
                 _ => return Err(Error::BattleUnexpectedSystemReturn),
             }
             self.pending_instructions.remove(0);
