@@ -467,7 +467,7 @@ pub struct Card {
     pub id: u16,
     pub class: u8,
     pub power_cost: u8,
-    pub merchant_price: u16,
+    pub price: u16,
     pub effect_pool: Vec<Effect>,
 }
 
@@ -487,7 +487,7 @@ impl Card {
             id: value.id().into(),
             class: value.class().into(),
             power_cost: value.cost().into(),
-            merchant_price: randomized_number(value.price(), rng),
+            price: randomized_number(value.price(), rng),
             effect_pool,
         })
     }
@@ -565,7 +565,8 @@ pub enum Node {
     Enemy(Vec<Enemy>),
     TreasureChest(Vec<Item>, u8),
     RecoverPoint(u8),
-    Merchant(Vec<Item>),
+    ItemMerchant(Vec<Item>),
+    CardMerchant(Vec<Card>),
     Unknown(Vec<Context>),
     Campsite(Context),
     Barrier,
@@ -608,12 +609,19 @@ impl LevelNode {
                     }
                     Node::RecoverPoint(percent)
                 }
-                generated::NodeInstanceUnion::NodeMerchant(value) => {
+                generated::NodeInstanceUnion::NodeItemMerchant(value) => {
                     let goods =
                         randomized_pool!(value.item_pool(), resource_pool.item_pool(), Item, rng)?;
                     let randomized_goods =
                         randomized_selection(goods.len(), goods, value.count().into(), rng);
-                    Node::Merchant(randomized_goods)
+                    Node::ItemMerchant(randomized_goods)
+                }
+                generated::NodeInstanceUnion::NodeCardMerchant(value) => {
+                    let goods =
+                        randomized_pool!(value.card_pool(), resource_pool.card_pool(), Card, rng)?;
+                    let randomized_goods =
+                        randomized_selection(goods.len(), goods, value.count().into(), rng);
+                    Node::CardMerchant(randomized_goods)
                 }
                 generated::NodeInstanceUnion::NodeCampsite(value) => {
                     Node::Campsite(Context::randomized(value.card_context(), rng)?)

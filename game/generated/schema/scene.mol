@@ -15,9 +15,14 @@ table NodeRecoverPoint {
     hp_percent: byte,
 }
 
-table NodeMerchant {
+table NodeItemMerchant {
     count: byte,
     item_pool: ResourceIdVec,
+}
+
+table NodeCardMerchant {
+    count: byte,
+    card_pool: ResourceIdVec,
 }
 
 table NodeUnknown {
@@ -39,7 +44,8 @@ union NodeInstance {
     NodeEnemy,
     NodeTreasureChest,
     NodeRecoverPoint,
-    NodeMerchant,
+    NodeItemMerchant,
+    NodeCardMerchant,
     NodeUnknown,
     NodeCampsite,
     NodeBarrier,

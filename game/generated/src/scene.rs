@@ -783,8 +783,8 @@ impl molecule::prelude::Builder for NodeRecoverPointBuilder {
     }
 }
 #[derive(Clone)]
-pub struct NodeMerchant(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for NodeMerchant {
+pub struct NodeItemMerchant(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for NodeItemMerchant {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         use molecule::hex_string;
         if f.alternate() {
@@ -793,12 +793,12 @@ impl ::core::fmt::LowerHex for NodeMerchant {
         write!(f, "{}", hex_string(self.as_slice()))
     }
 }
-impl ::core::fmt::Debug for NodeMerchant {
+impl ::core::fmt::Debug for NodeItemMerchant {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{}({:#x})", Self::NAME, self)
     }
 }
-impl ::core::fmt::Display for NodeMerchant {
+impl ::core::fmt::Display for NodeItemMerchant {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "count", self.count())?;
@@ -810,13 +810,13 @@ impl ::core::fmt::Display for NodeMerchant {
         write!(f, " }}")
     }
 }
-impl ::core::default::Default for NodeMerchant {
+impl ::core::default::Default for NodeItemMerchant {
     fn default() -> Self {
         let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        NodeMerchant::new_unchecked(v)
+        NodeItemMerchant::new_unchecked(v)
     }
 }
-impl NodeMerchant {
+impl NodeItemMerchant {
     const DEFAULT_VALUE: [u8; 17] = [17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0];
     pub const FIELD_COUNT: usize = 2;
     pub fn total_size(&self) -> usize {
@@ -851,15 +851,15 @@ impl NodeMerchant {
             ResourceIdVec::new_unchecked(self.0.slice(start..))
         }
     }
-    pub fn as_reader<'r>(&'r self) -> NodeMerchantReader<'r> {
-        NodeMerchantReader::new_unchecked(self.as_slice())
+    pub fn as_reader<'r>(&'r self) -> NodeItemMerchantReader<'r> {
+        NodeItemMerchantReader::new_unchecked(self.as_slice())
     }
 }
-impl molecule::prelude::Entity for NodeMerchant {
-    type Builder = NodeMerchantBuilder;
-    const NAME: &'static str = "NodeMerchant";
+impl molecule::prelude::Entity for NodeItemMerchant {
+    type Builder = NodeItemMerchantBuilder;
+    const NAME: &'static str = "NodeItemMerchant";
     fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        NodeMerchant(data)
+        NodeItemMerchant(data)
     }
     fn as_bytes(&self) -> molecule::bytes::Bytes {
         self.0.clone()
@@ -868,10 +868,10 @@ impl molecule::prelude::Entity for NodeMerchant {
         &self.0[..]
     }
     fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        NodeMerchantReader::from_slice(slice).map(|reader| reader.to_entity())
+        NodeItemMerchantReader::from_slice(slice).map(|reader| reader.to_entity())
     }
     fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        NodeMerchantReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+        NodeItemMerchantReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
     }
     fn new_builder() -> Self::Builder {
         ::core::default::Default::default()
@@ -883,8 +883,8 @@ impl molecule::prelude::Entity for NodeMerchant {
     }
 }
 #[derive(Clone, Copy)]
-pub struct NodeMerchantReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for NodeMerchantReader<'r> {
+pub struct NodeItemMerchantReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for NodeItemMerchantReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         use molecule::hex_string;
         if f.alternate() {
@@ -893,12 +893,12 @@ impl<'r> ::core::fmt::LowerHex for NodeMerchantReader<'r> {
         write!(f, "{}", hex_string(self.as_slice()))
     }
 }
-impl<'r> ::core::fmt::Debug for NodeMerchantReader<'r> {
+impl<'r> ::core::fmt::Debug for NodeItemMerchantReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{}({:#x})", Self::NAME, self)
     }
 }
-impl<'r> ::core::fmt::Display for NodeMerchantReader<'r> {
+impl<'r> ::core::fmt::Display for NodeItemMerchantReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "count", self.count())?;
@@ -910,7 +910,7 @@ impl<'r> ::core::fmt::Display for NodeMerchantReader<'r> {
         write!(f, " }}")
     }
 }
-impl<'r> NodeMerchantReader<'r> {
+impl<'r> NodeItemMerchantReader<'r> {
     pub const FIELD_COUNT: usize = 2;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
@@ -945,14 +945,14 @@ impl<'r> NodeMerchantReader<'r> {
         }
     }
 }
-impl<'r> molecule::prelude::Reader<'r> for NodeMerchantReader<'r> {
-    type Entity = NodeMerchant;
-    const NAME: &'static str = "NodeMerchantReader";
+impl<'r> molecule::prelude::Reader<'r> for NodeItemMerchantReader<'r> {
+    type Entity = NodeItemMerchant;
+    const NAME: &'static str = "NodeItemMerchantReader";
     fn to_entity(&self) -> Self::Entity {
         Self::Entity::new_unchecked(self.as_slice().to_owned().into())
     }
     fn new_unchecked(slice: &'r [u8]) -> Self {
-        NodeMerchantReader(slice)
+        NodeItemMerchantReader(slice)
     }
     fn as_slice(&self) -> &'r [u8] {
         self.0
@@ -997,11 +997,11 @@ impl<'r> molecule::prelude::Reader<'r> for NodeMerchantReader<'r> {
     }
 }
 #[derive(Clone, Debug, Default)]
-pub struct NodeMerchantBuilder {
+pub struct NodeItemMerchantBuilder {
     pub(crate) count: Byte,
     pub(crate) item_pool: ResourceIdVec,
 }
-impl NodeMerchantBuilder {
+impl NodeItemMerchantBuilder {
     pub const FIELD_COUNT: usize = 2;
     pub fn count(mut self, v: Byte) -> Self {
         self.count = v;
@@ -1012,9 +1012,9 @@ impl NodeMerchantBuilder {
         self
     }
 }
-impl molecule::prelude::Builder for NodeMerchantBuilder {
-    type Entity = NodeMerchant;
-    const NAME: &'static str = "NodeMerchantBuilder";
+impl molecule::prelude::Builder for NodeItemMerchantBuilder {
+    type Entity = NodeItemMerchant;
+    const NAME: &'static str = "NodeItemMerchantBuilder";
     fn expected_length(&self) -> usize {
         molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
             + self.count.as_slice().len()
@@ -1039,7 +1039,267 @@ impl molecule::prelude::Builder for NodeMerchantBuilder {
         let mut inner = Vec::with_capacity(self.expected_length());
         self.write(&mut inner)
             .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        NodeMerchant::new_unchecked(inner.into())
+        NodeItemMerchant::new_unchecked(inner.into())
+    }
+}
+#[derive(Clone)]
+pub struct NodeCardMerchant(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for NodeCardMerchant {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl ::core::fmt::Debug for NodeCardMerchant {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl ::core::fmt::Display for NodeCardMerchant {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "count", self.count())?;
+        write!(f, ", {}: {}", "card_pool", self.card_pool())?;
+        let extra_count = self.count_extra_fields();
+        if extra_count != 0 {
+            write!(f, ", .. ({} fields)", extra_count)?;
+        }
+        write!(f, " }}")
+    }
+}
+impl ::core::default::Default for NodeCardMerchant {
+    fn default() -> Self {
+        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
+        NodeCardMerchant::new_unchecked(v)
+    }
+}
+impl NodeCardMerchant {
+    const DEFAULT_VALUE: [u8; 17] = [17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0];
+    pub const FIELD_COUNT: usize = 2;
+    pub fn total_size(&self) -> usize {
+        molecule::unpack_number(self.as_slice()) as usize
+    }
+    pub fn field_count(&self) -> usize {
+        if self.total_size() == molecule::NUMBER_SIZE {
+            0
+        } else {
+            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
+        }
+    }
+    pub fn count_extra_fields(&self) -> usize {
+        self.field_count() - Self::FIELD_COUNT
+    }
+    pub fn has_extra_fields(&self) -> bool {
+        Self::FIELD_COUNT != self.field_count()
+    }
+    pub fn count(&self) -> Byte {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[4..]) as usize;
+        let end = molecule::unpack_number(&slice[8..]) as usize;
+        Byte::new_unchecked(self.0.slice(start..end))
+    }
+    pub fn card_pool(&self) -> ResourceIdVec {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[8..]) as usize;
+        if self.has_extra_fields() {
+            let end = molecule::unpack_number(&slice[12..]) as usize;
+            ResourceIdVec::new_unchecked(self.0.slice(start..end))
+        } else {
+            ResourceIdVec::new_unchecked(self.0.slice(start..))
+        }
+    }
+    pub fn as_reader<'r>(&'r self) -> NodeCardMerchantReader<'r> {
+        NodeCardMerchantReader::new_unchecked(self.as_slice())
+    }
+}
+impl molecule::prelude::Entity for NodeCardMerchant {
+    type Builder = NodeCardMerchantBuilder;
+    const NAME: &'static str = "NodeCardMerchant";
+    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
+        NodeCardMerchant(data)
+    }
+    fn as_bytes(&self) -> molecule::bytes::Bytes {
+        self.0.clone()
+    }
+    fn as_slice(&self) -> &[u8] {
+        &self.0[..]
+    }
+    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        NodeCardMerchantReader::from_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        NodeCardMerchantReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn new_builder() -> Self::Builder {
+        ::core::default::Default::default()
+    }
+    fn as_builder(self) -> Self::Builder {
+        Self::new_builder()
+            .count(self.count())
+            .card_pool(self.card_pool())
+    }
+}
+#[derive(Clone, Copy)]
+pub struct NodeCardMerchantReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for NodeCardMerchantReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl<'r> ::core::fmt::Debug for NodeCardMerchantReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl<'r> ::core::fmt::Display for NodeCardMerchantReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "count", self.count())?;
+        write!(f, ", {}: {}", "card_pool", self.card_pool())?;
+        let extra_count = self.count_extra_fields();
+        if extra_count != 0 {
+            write!(f, ", .. ({} fields)", extra_count)?;
+        }
+        write!(f, " }}")
+    }
+}
+impl<'r> NodeCardMerchantReader<'r> {
+    pub const FIELD_COUNT: usize = 2;
+    pub fn total_size(&self) -> usize {
+        molecule::unpack_number(self.as_slice()) as usize
+    }
+    pub fn field_count(&self) -> usize {
+        if self.total_size() == molecule::NUMBER_SIZE {
+            0
+        } else {
+            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
+        }
+    }
+    pub fn count_extra_fields(&self) -> usize {
+        self.field_count() - Self::FIELD_COUNT
+    }
+    pub fn has_extra_fields(&self) -> bool {
+        Self::FIELD_COUNT != self.field_count()
+    }
+    pub fn count(&self) -> ByteReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[4..]) as usize;
+        let end = molecule::unpack_number(&slice[8..]) as usize;
+        ByteReader::new_unchecked(&self.as_slice()[start..end])
+    }
+    pub fn card_pool(&self) -> ResourceIdVecReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[8..]) as usize;
+        if self.has_extra_fields() {
+            let end = molecule::unpack_number(&slice[12..]) as usize;
+            ResourceIdVecReader::new_unchecked(&self.as_slice()[start..end])
+        } else {
+            ResourceIdVecReader::new_unchecked(&self.as_slice()[start..])
+        }
+    }
+}
+impl<'r> molecule::prelude::Reader<'r> for NodeCardMerchantReader<'r> {
+    type Entity = NodeCardMerchant;
+    const NAME: &'static str = "NodeCardMerchantReader";
+    fn to_entity(&self) -> Self::Entity {
+        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
+    }
+    fn new_unchecked(slice: &'r [u8]) -> Self {
+        NodeCardMerchantReader(slice)
+    }
+    fn as_slice(&self) -> &'r [u8] {
+        self.0
+    }
+    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
+        use molecule::verification_error as ve;
+        let slice_len = slice.len();
+        if slice_len < molecule::NUMBER_SIZE {
+            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE, slice_len);
+        }
+        let total_size = molecule::unpack_number(slice) as usize;
+        if slice_len != total_size {
+            return ve!(Self, TotalSizeNotMatch, total_size, slice_len);
+        }
+        if slice_len < molecule::NUMBER_SIZE * 2 {
+            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE * 2, slice_len);
+        }
+        let offset_first = molecule::unpack_number(&slice[molecule::NUMBER_SIZE..]) as usize;
+        if offset_first % molecule::NUMBER_SIZE != 0 || offset_first < molecule::NUMBER_SIZE * 2 {
+            return ve!(Self, OffsetsNotMatch);
+        }
+        if slice_len < offset_first {
+            return ve!(Self, HeaderIsBroken, offset_first, slice_len);
+        }
+        let field_count = offset_first / molecule::NUMBER_SIZE - 1;
+        if field_count < Self::FIELD_COUNT {
+            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
+        } else if !compatible && field_count > Self::FIELD_COUNT {
+            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
+        };
+        let mut offsets: Vec<usize> = slice[molecule::NUMBER_SIZE..offset_first]
+            .chunks_exact(molecule::NUMBER_SIZE)
+            .map(|x| molecule::unpack_number(x) as usize)
+            .collect();
+        offsets.push(total_size);
+        if offsets.windows(2).any(|i| i[0] > i[1]) {
+            return ve!(Self, OffsetsNotMatch);
+        }
+        ByteReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
+        ResourceIdVecReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, Default)]
+pub struct NodeCardMerchantBuilder {
+    pub(crate) count: Byte,
+    pub(crate) card_pool: ResourceIdVec,
+}
+impl NodeCardMerchantBuilder {
+    pub const FIELD_COUNT: usize = 2;
+    pub fn count(mut self, v: Byte) -> Self {
+        self.count = v;
+        self
+    }
+    pub fn card_pool(mut self, v: ResourceIdVec) -> Self {
+        self.card_pool = v;
+        self
+    }
+}
+impl molecule::prelude::Builder for NodeCardMerchantBuilder {
+    type Entity = NodeCardMerchant;
+    const NAME: &'static str = "NodeCardMerchantBuilder";
+    fn expected_length(&self) -> usize {
+        molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
+            + self.count.as_slice().len()
+            + self.card_pool.as_slice().len()
+    }
+    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
+        let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
+        let mut offsets = Vec::with_capacity(Self::FIELD_COUNT);
+        offsets.push(total_size);
+        total_size += self.count.as_slice().len();
+        offsets.push(total_size);
+        total_size += self.card_pool.as_slice().len();
+        writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
+        for offset in offsets.into_iter() {
+            writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
+        }
+        writer.write_all(self.count.as_slice())?;
+        writer.write_all(self.card_pool.as_slice())?;
+        Ok(())
+    }
+    fn build(&self) -> Self::Entity {
+        let mut inner = Vec::with_capacity(self.expected_length());
+        self.write(&mut inner)
+            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
+        NodeCardMerchant::new_unchecked(inner.into())
     }
 }
 #[derive(Clone)]
@@ -2102,7 +2362,7 @@ impl NodeInstance {
     const DEFAULT_VALUE: [u8; 21] = [
         0, 0, 0, 0, 17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
-    pub const ITEMS_COUNT: usize = 9;
+    pub const ITEMS_COUNT: usize = 10;
     pub fn item_id(&self) -> molecule::Number {
         molecule::unpack_number(self.as_slice())
     }
@@ -2112,12 +2372,13 @@ impl NodeInstance {
             0 => NodeEnemy::new_unchecked(inner).into(),
             1 => NodeTreasureChest::new_unchecked(inner).into(),
             2 => NodeRecoverPoint::new_unchecked(inner).into(),
-            3 => NodeMerchant::new_unchecked(inner).into(),
-            4 => NodeUnknown::new_unchecked(inner).into(),
-            5 => NodeCampsite::new_unchecked(inner).into(),
-            6 => NodeBarrier::new_unchecked(inner).into(),
-            7 => NodeStartingPoint::new_unchecked(inner).into(),
-            8 => NodeTargetingPoint::new_unchecked(inner).into(),
+            3 => NodeItemMerchant::new_unchecked(inner).into(),
+            4 => NodeCardMerchant::new_unchecked(inner).into(),
+            5 => NodeUnknown::new_unchecked(inner).into(),
+            6 => NodeCampsite::new_unchecked(inner).into(),
+            7 => NodeBarrier::new_unchecked(inner).into(),
+            8 => NodeStartingPoint::new_unchecked(inner).into(),
+            9 => NodeTargetingPoint::new_unchecked(inner).into(),
             _ => panic!("{}: invalid data", Self::NAME),
         }
     }
@@ -2174,7 +2435,7 @@ impl<'r> ::core::fmt::Display for NodeInstanceReader<'r> {
     }
 }
 impl<'r> NodeInstanceReader<'r> {
-    pub const ITEMS_COUNT: usize = 9;
+    pub const ITEMS_COUNT: usize = 10;
     pub fn item_id(&self) -> molecule::Number {
         molecule::unpack_number(self.as_slice())
     }
@@ -2184,12 +2445,13 @@ impl<'r> NodeInstanceReader<'r> {
             0 => NodeEnemyReader::new_unchecked(inner).into(),
             1 => NodeTreasureChestReader::new_unchecked(inner).into(),
             2 => NodeRecoverPointReader::new_unchecked(inner).into(),
-            3 => NodeMerchantReader::new_unchecked(inner).into(),
-            4 => NodeUnknownReader::new_unchecked(inner).into(),
-            5 => NodeCampsiteReader::new_unchecked(inner).into(),
-            6 => NodeBarrierReader::new_unchecked(inner).into(),
-            7 => NodeStartingPointReader::new_unchecked(inner).into(),
-            8 => NodeTargetingPointReader::new_unchecked(inner).into(),
+            3 => NodeItemMerchantReader::new_unchecked(inner).into(),
+            4 => NodeCardMerchantReader::new_unchecked(inner).into(),
+            5 => NodeUnknownReader::new_unchecked(inner).into(),
+            6 => NodeCampsiteReader::new_unchecked(inner).into(),
+            7 => NodeBarrierReader::new_unchecked(inner).into(),
+            8 => NodeStartingPointReader::new_unchecked(inner).into(),
+            9 => NodeTargetingPointReader::new_unchecked(inner).into(),
             _ => panic!("{}: invalid data", Self::NAME),
         }
     }
@@ -2218,12 +2480,13 @@ impl<'r> molecule::prelude::Reader<'r> for NodeInstanceReader<'r> {
             0 => NodeEnemyReader::verify(inner_slice, compatible),
             1 => NodeTreasureChestReader::verify(inner_slice, compatible),
             2 => NodeRecoverPointReader::verify(inner_slice, compatible),
-            3 => NodeMerchantReader::verify(inner_slice, compatible),
-            4 => NodeUnknownReader::verify(inner_slice, compatible),
-            5 => NodeCampsiteReader::verify(inner_slice, compatible),
-            6 => NodeBarrierReader::verify(inner_slice, compatible),
-            7 => NodeStartingPointReader::verify(inner_slice, compatible),
-            8 => NodeTargetingPointReader::verify(inner_slice, compatible),
+            3 => NodeItemMerchantReader::verify(inner_slice, compatible),
+            4 => NodeCardMerchantReader::verify(inner_slice, compatible),
+            5 => NodeUnknownReader::verify(inner_slice, compatible),
+            6 => NodeCampsiteReader::verify(inner_slice, compatible),
+            7 => NodeBarrierReader::verify(inner_slice, compatible),
+            8 => NodeStartingPointReader::verify(inner_slice, compatible),
+            9 => NodeTargetingPointReader::verify(inner_slice, compatible),
             _ => ve!(Self, UnknownItem, Self::ITEMS_COUNT, item_id),
         }?;
         Ok(())
@@ -2232,7 +2495,7 @@ impl<'r> molecule::prelude::Reader<'r> for NodeInstanceReader<'r> {
 #[derive(Clone, Debug, Default)]
 pub struct NodeInstanceBuilder(pub(crate) NodeInstanceUnion);
 impl NodeInstanceBuilder {
-    pub const ITEMS_COUNT: usize = 9;
+    pub const ITEMS_COUNT: usize = 10;
     pub fn set<I>(mut self, v: I) -> Self
     where
         I: ::core::convert::Into<NodeInstanceUnion>,
@@ -2263,7 +2526,8 @@ pub enum NodeInstanceUnion {
     NodeEnemy(NodeEnemy),
     NodeTreasureChest(NodeTreasureChest),
     NodeRecoverPoint(NodeRecoverPoint),
-    NodeMerchant(NodeMerchant),
+    NodeItemMerchant(NodeItemMerchant),
+    NodeCardMerchant(NodeCardMerchant),
     NodeUnknown(NodeUnknown),
     NodeCampsite(NodeCampsite),
     NodeBarrier(NodeBarrier),
@@ -2275,7 +2539,8 @@ pub enum NodeInstanceUnionReader<'r> {
     NodeEnemy(NodeEnemyReader<'r>),
     NodeTreasureChest(NodeTreasureChestReader<'r>),
     NodeRecoverPoint(NodeRecoverPointReader<'r>),
-    NodeMerchant(NodeMerchantReader<'r>),
+    NodeItemMerchant(NodeItemMerchantReader<'r>),
+    NodeCardMerchant(NodeCardMerchantReader<'r>),
     NodeUnknown(NodeUnknownReader<'r>),
     NodeCampsite(NodeCampsiteReader<'r>),
     NodeBarrier(NodeBarrierReader<'r>),
@@ -2299,8 +2564,11 @@ impl ::core::fmt::Display for NodeInstanceUnion {
             NodeInstanceUnion::NodeRecoverPoint(ref item) => {
                 write!(f, "{}::{}({})", Self::NAME, NodeRecoverPoint::NAME, item)
             }
-            NodeInstanceUnion::NodeMerchant(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, NodeMerchant::NAME, item)
+            NodeInstanceUnion::NodeItemMerchant(ref item) => {
+                write!(f, "{}::{}({})", Self::NAME, NodeItemMerchant::NAME, item)
+            }
+            NodeInstanceUnion::NodeCardMerchant(ref item) => {
+                write!(f, "{}::{}({})", Self::NAME, NodeCardMerchant::NAME, item)
             }
             NodeInstanceUnion::NodeUnknown(ref item) => {
                 write!(f, "{}::{}({})", Self::NAME, NodeUnknown::NAME, item)
@@ -2332,8 +2600,11 @@ impl<'r> ::core::fmt::Display for NodeInstanceUnionReader<'r> {
             NodeInstanceUnionReader::NodeRecoverPoint(ref item) => {
                 write!(f, "{}::{}({})", Self::NAME, NodeRecoverPoint::NAME, item)
             }
-            NodeInstanceUnionReader::NodeMerchant(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, NodeMerchant::NAME, item)
+            NodeInstanceUnionReader::NodeItemMerchant(ref item) => {
+                write!(f, "{}::{}({})", Self::NAME, NodeItemMerchant::NAME, item)
+            }
+            NodeInstanceUnionReader::NodeCardMerchant(ref item) => {
+                write!(f, "{}::{}({})", Self::NAME, NodeCardMerchant::NAME, item)
             }
             NodeInstanceUnionReader::NodeUnknown(ref item) => {
                 write!(f, "{}::{}({})", Self::NAME, NodeUnknown::NAME, item)
@@ -2359,7 +2630,8 @@ impl NodeInstanceUnion {
             NodeInstanceUnion::NodeEnemy(ref item) => write!(f, "{}", item),
             NodeInstanceUnion::NodeTreasureChest(ref item) => write!(f, "{}", item),
             NodeInstanceUnion::NodeRecoverPoint(ref item) => write!(f, "{}", item),
-            NodeInstanceUnion::NodeMerchant(ref item) => write!(f, "{}", item),
+            NodeInstanceUnion::NodeItemMerchant(ref item) => write!(f, "{}", item),
+            NodeInstanceUnion::NodeCardMerchant(ref item) => write!(f, "{}", item),
             NodeInstanceUnion::NodeUnknown(ref item) => write!(f, "{}", item),
             NodeInstanceUnion::NodeCampsite(ref item) => write!(f, "{}", item),
             NodeInstanceUnion::NodeBarrier(ref item) => write!(f, "{}", item),
@@ -2374,7 +2646,8 @@ impl<'r> NodeInstanceUnionReader<'r> {
             NodeInstanceUnionReader::NodeEnemy(ref item) => write!(f, "{}", item),
             NodeInstanceUnionReader::NodeTreasureChest(ref item) => write!(f, "{}", item),
             NodeInstanceUnionReader::NodeRecoverPoint(ref item) => write!(f, "{}", item),
-            NodeInstanceUnionReader::NodeMerchant(ref item) => write!(f, "{}", item),
+            NodeInstanceUnionReader::NodeItemMerchant(ref item) => write!(f, "{}", item),
+            NodeInstanceUnionReader::NodeCardMerchant(ref item) => write!(f, "{}", item),
             NodeInstanceUnionReader::NodeUnknown(ref item) => write!(f, "{}", item),
             NodeInstanceUnionReader::NodeCampsite(ref item) => write!(f, "{}", item),
             NodeInstanceUnionReader::NodeBarrier(ref item) => write!(f, "{}", item),
@@ -2398,9 +2671,14 @@ impl ::core::convert::From<NodeRecoverPoint> for NodeInstanceUnion {
         NodeInstanceUnion::NodeRecoverPoint(item)
     }
 }
-impl ::core::convert::From<NodeMerchant> for NodeInstanceUnion {
-    fn from(item: NodeMerchant) -> Self {
-        NodeInstanceUnion::NodeMerchant(item)
+impl ::core::convert::From<NodeItemMerchant> for NodeInstanceUnion {
+    fn from(item: NodeItemMerchant) -> Self {
+        NodeInstanceUnion::NodeItemMerchant(item)
+    }
+}
+impl ::core::convert::From<NodeCardMerchant> for NodeInstanceUnion {
+    fn from(item: NodeCardMerchant) -> Self {
+        NodeInstanceUnion::NodeCardMerchant(item)
     }
 }
 impl ::core::convert::From<NodeUnknown> for NodeInstanceUnion {
@@ -2443,9 +2721,14 @@ impl<'r> ::core::convert::From<NodeRecoverPointReader<'r>> for NodeInstanceUnion
         NodeInstanceUnionReader::NodeRecoverPoint(item)
     }
 }
-impl<'r> ::core::convert::From<NodeMerchantReader<'r>> for NodeInstanceUnionReader<'r> {
-    fn from(item: NodeMerchantReader<'r>) -> Self {
-        NodeInstanceUnionReader::NodeMerchant(item)
+impl<'r> ::core::convert::From<NodeItemMerchantReader<'r>> for NodeInstanceUnionReader<'r> {
+    fn from(item: NodeItemMerchantReader<'r>) -> Self {
+        NodeInstanceUnionReader::NodeItemMerchant(item)
+    }
+}
+impl<'r> ::core::convert::From<NodeCardMerchantReader<'r>> for NodeInstanceUnionReader<'r> {
+    fn from(item: NodeCardMerchantReader<'r>) -> Self {
+        NodeInstanceUnionReader::NodeCardMerchant(item)
     }
 }
 impl<'r> ::core::convert::From<NodeUnknownReader<'r>> for NodeInstanceUnionReader<'r> {
@@ -2480,7 +2763,8 @@ impl NodeInstanceUnion {
             NodeInstanceUnion::NodeEnemy(item) => item.as_bytes(),
             NodeInstanceUnion::NodeTreasureChest(item) => item.as_bytes(),
             NodeInstanceUnion::NodeRecoverPoint(item) => item.as_bytes(),
-            NodeInstanceUnion::NodeMerchant(item) => item.as_bytes(),
+            NodeInstanceUnion::NodeItemMerchant(item) => item.as_bytes(),
+            NodeInstanceUnion::NodeCardMerchant(item) => item.as_bytes(),
             NodeInstanceUnion::NodeUnknown(item) => item.as_bytes(),
             NodeInstanceUnion::NodeCampsite(item) => item.as_bytes(),
             NodeInstanceUnion::NodeBarrier(item) => item.as_bytes(),
@@ -2493,7 +2777,8 @@ impl NodeInstanceUnion {
             NodeInstanceUnion::NodeEnemy(item) => item.as_slice(),
             NodeInstanceUnion::NodeTreasureChest(item) => item.as_slice(),
             NodeInstanceUnion::NodeRecoverPoint(item) => item.as_slice(),
-            NodeInstanceUnion::NodeMerchant(item) => item.as_slice(),
+            NodeInstanceUnion::NodeItemMerchant(item) => item.as_slice(),
+            NodeInstanceUnion::NodeCardMerchant(item) => item.as_slice(),
             NodeInstanceUnion::NodeUnknown(item) => item.as_slice(),
             NodeInstanceUnion::NodeCampsite(item) => item.as_slice(),
             NodeInstanceUnion::NodeBarrier(item) => item.as_slice(),
@@ -2506,12 +2791,13 @@ impl NodeInstanceUnion {
             NodeInstanceUnion::NodeEnemy(_) => 0,
             NodeInstanceUnion::NodeTreasureChest(_) => 1,
             NodeInstanceUnion::NodeRecoverPoint(_) => 2,
-            NodeInstanceUnion::NodeMerchant(_) => 3,
-            NodeInstanceUnion::NodeUnknown(_) => 4,
-            NodeInstanceUnion::NodeCampsite(_) => 5,
-            NodeInstanceUnion::NodeBarrier(_) => 6,
-            NodeInstanceUnion::NodeStartingPoint(_) => 7,
-            NodeInstanceUnion::NodeTargetingPoint(_) => 8,
+            NodeInstanceUnion::NodeItemMerchant(_) => 3,
+            NodeInstanceUnion::NodeCardMerchant(_) => 4,
+            NodeInstanceUnion::NodeUnknown(_) => 5,
+            NodeInstanceUnion::NodeCampsite(_) => 6,
+            NodeInstanceUnion::NodeBarrier(_) => 7,
+            NodeInstanceUnion::NodeStartingPoint(_) => 8,
+            NodeInstanceUnion::NodeTargetingPoint(_) => 9,
         }
     }
     pub fn item_name(&self) -> &str {
@@ -2519,7 +2805,8 @@ impl NodeInstanceUnion {
             NodeInstanceUnion::NodeEnemy(_) => "NodeEnemy",
             NodeInstanceUnion::NodeTreasureChest(_) => "NodeTreasureChest",
             NodeInstanceUnion::NodeRecoverPoint(_) => "NodeRecoverPoint",
-            NodeInstanceUnion::NodeMerchant(_) => "NodeMerchant",
+            NodeInstanceUnion::NodeItemMerchant(_) => "NodeItemMerchant",
+            NodeInstanceUnion::NodeCardMerchant(_) => "NodeCardMerchant",
             NodeInstanceUnion::NodeUnknown(_) => "NodeUnknown",
             NodeInstanceUnion::NodeCampsite(_) => "NodeCampsite",
             NodeInstanceUnion::NodeBarrier(_) => "NodeBarrier",
@@ -2532,7 +2819,8 @@ impl NodeInstanceUnion {
             NodeInstanceUnion::NodeEnemy(item) => item.as_reader().into(),
             NodeInstanceUnion::NodeTreasureChest(item) => item.as_reader().into(),
             NodeInstanceUnion::NodeRecoverPoint(item) => item.as_reader().into(),
-            NodeInstanceUnion::NodeMerchant(item) => item.as_reader().into(),
+            NodeInstanceUnion::NodeItemMerchant(item) => item.as_reader().into(),
+            NodeInstanceUnion::NodeCardMerchant(item) => item.as_reader().into(),
             NodeInstanceUnion::NodeUnknown(item) => item.as_reader().into(),
             NodeInstanceUnion::NodeCampsite(item) => item.as_reader().into(),
             NodeInstanceUnion::NodeBarrier(item) => item.as_reader().into(),
@@ -2548,7 +2836,8 @@ impl<'r> NodeInstanceUnionReader<'r> {
             NodeInstanceUnionReader::NodeEnemy(item) => item.as_slice(),
             NodeInstanceUnionReader::NodeTreasureChest(item) => item.as_slice(),
             NodeInstanceUnionReader::NodeRecoverPoint(item) => item.as_slice(),
-            NodeInstanceUnionReader::NodeMerchant(item) => item.as_slice(),
+            NodeInstanceUnionReader::NodeItemMerchant(item) => item.as_slice(),
+            NodeInstanceUnionReader::NodeCardMerchant(item) => item.as_slice(),
             NodeInstanceUnionReader::NodeUnknown(item) => item.as_slice(),
             NodeInstanceUnionReader::NodeCampsite(item) => item.as_slice(),
             NodeInstanceUnionReader::NodeBarrier(item) => item.as_slice(),
@@ -2561,12 +2850,13 @@ impl<'r> NodeInstanceUnionReader<'r> {
             NodeInstanceUnionReader::NodeEnemy(_) => 0,
             NodeInstanceUnionReader::NodeTreasureChest(_) => 1,
             NodeInstanceUnionReader::NodeRecoverPoint(_) => 2,
-            NodeInstanceUnionReader::NodeMerchant(_) => 3,
-            NodeInstanceUnionReader::NodeUnknown(_) => 4,
-            NodeInstanceUnionReader::NodeCampsite(_) => 5,
-            NodeInstanceUnionReader::NodeBarrier(_) => 6,
-            NodeInstanceUnionReader::NodeStartingPoint(_) => 7,
-            NodeInstanceUnionReader::NodeTargetingPoint(_) => 8,
+            NodeInstanceUnionReader::NodeItemMerchant(_) => 3,
+            NodeInstanceUnionReader::NodeCardMerchant(_) => 4,
+            NodeInstanceUnionReader::NodeUnknown(_) => 5,
+            NodeInstanceUnionReader::NodeCampsite(_) => 6,
+            NodeInstanceUnionReader::NodeBarrier(_) => 7,
+            NodeInstanceUnionReader::NodeStartingPoint(_) => 8,
+            NodeInstanceUnionReader::NodeTargetingPoint(_) => 9,
         }
     }
     pub fn item_name(&self) -> &str {
@@ -2574,7 +2864,8 @@ impl<'r> NodeInstanceUnionReader<'r> {
             NodeInstanceUnionReader::NodeEnemy(_) => "NodeEnemy",
             NodeInstanceUnionReader::NodeTreasureChest(_) => "NodeTreasureChest",
             NodeInstanceUnionReader::NodeRecoverPoint(_) => "NodeRecoverPoint",
-            NodeInstanceUnionReader::NodeMerchant(_) => "NodeMerchant",
+            NodeInstanceUnionReader::NodeItemMerchant(_) => "NodeItemMerchant",
+            NodeInstanceUnionReader::NodeCardMerchant(_) => "NodeCardMerchant",
             NodeInstanceUnionReader::NodeUnknown(_) => "NodeUnknown",
             NodeInstanceUnionReader::NodeCampsite(_) => "NodeCampsite",
             NodeInstanceUnionReader::NodeBarrier(_) => "NodeBarrier",

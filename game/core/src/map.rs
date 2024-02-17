@@ -9,48 +9,8 @@ use crate::fight::pve::MapFightPVE;
 use crate::fight::traits::{FightLog, SimplePVE};
 use crate::systems::{GameSystem, SystemReturn};
 use crate::wrappings::{
-    randomized_selection, Context, Item, ItemClass, LevelNode, LevelPartition, Node, Point,
+    randomized_selection, Card, Context, Item, ItemClass, LevelNode, LevelPartition, Node, Point,
 };
-
-fn run_context<'a>(
-    player: &mut WarriorContext<'a>,
-    context: &Context,
-    system: &mut GameSystem<'a, impl RngCore>,
-) -> Result<Vec<FightLog>, Error> {
-    let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
-    let system_return =
-        system.call(context.system_id, &context.args, &mut system_contexts, None)?;
-    if let SystemReturn::FightLog(logs) = system_return {
-        Ok(logs)
-    } else {
-        return Err(Error::SceneUnexpectedSystemReturn);
-    }
-}
-
-fn collect_items<'a>(
-    player: &mut WarriorContext<'a>,
-    user_imported: Vec<usize>,
-    items: &'a Vec<Item>,
-    consume_gold: bool,
-) -> Result<Vec<()>, Error> {
-    user_imported
-        .into_iter()
-        .map(|index| {
-            let item = items.get(index).ok_or(Error::SceneUserImportOutOfIndex)?;
-            if consume_gold {
-                if item.price > player.gold {
-                    return Err(Error::SceneMerchantInsufficientGold);
-                }
-                player.gold -= item.price;
-            }
-            match item.class {
-                ItemClass::Equipment => player.equipment_list.push(item),
-                ItemClass::Props => player.props_list.push(item),
-            }
-            Ok(())
-        })
-        .collect::<Result<Vec<_>, _>>()
-}
 
 pub enum MoveResult<'a> {
     Fight(MapFightPVE<'a>),
@@ -220,8 +180,11 @@ impl<'a> MapSkeleton {
                 let fight = MapFightPVE::create(player, enemies)?;
                 return Ok(MoveResult::Fight(fight));
             }
-            Node::Merchant(items) => {
+            Node::ItemMerchant(items) => {
                 collect_items(player, user_imported, items, true)?;
+            }
+            Node::CardMerchant(cards) => {
+                purchase_cards(player, user_imported, cards)?;
             }
             Node::TreasureChest(items, pick_count) => {
                 if user_imported.len() > *pick_count as usize {
@@ -232,4 +195,63 @@ impl<'a> MapSkeleton {
         }
         Ok(MoveResult::MapLogs(map_logs))
     }
+}
+
+fn run_context<'a>(
+    player: &mut WarriorContext<'a>,
+    context: &Context,
+    system: &mut GameSystem<'a, impl RngCore>,
+) -> Result<Vec<FightLog>, Error> {
+    let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
+    let system_return =
+        system.call(context.system_id, &context.args, &mut system_contexts, None)?;
+    if let SystemReturn::FightLog(logs) = system_return {
+        Ok(logs)
+    } else {
+        return Err(Error::SceneUnexpectedSystemReturn);
+    }
+}
+
+fn purchase_cards<'a>(
+    player: &mut WarriorContext<'a>,
+    user_imported: Vec<usize>,
+    cards: &'a Vec<Card>,
+) -> Result<Vec<()>, Error> {
+    user_imported
+        .into_iter()
+        .map(|index| {
+            let card = cards.get(index).ok_or(Error::SceneUserImportOutOfIndex)?;
+            if card.price > player.gold {
+                return Err(Error::SceneMerchantInsufficientGold);
+            }
+            player.gold -= card.price;
+            player.deck.push(card);
+            Ok(())
+        })
+        .collect::<Result<Vec<_>, _>>()
+}
+
+fn collect_items<'a>(
+    player: &mut WarriorContext<'a>,
+    user_imported: Vec<usize>,
+    items: &'a Vec<Item>,
+    purchase: bool,
+) -> Result<Vec<()>, Error> {
+    user_imported
+        .into_iter()
+        .map(|index| {
+            let item = items.get(index).ok_or(Error::SceneUserImportOutOfIndex)?;
+            if purchase {
+                if item.price > player.gold {
+                    return Err(Error::SceneMerchantInsufficientGold);
+                }
+                player.gold -= item.price;
+            }
+            match item.class {
+                ItemClass::Equipment => player.equipment_list.push(item),
+                ItemClass::Props => player.props_list.push(item),
+            }
+            Ok(())
+        })
+        .collect::<Result<Vec<_>, _>>()
 }
