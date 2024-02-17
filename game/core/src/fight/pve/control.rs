@@ -25,12 +25,14 @@ impl<'a> MapFightPVE<'a> {
                     return Err(Error::SystemError);
                 }
                 self.player.deck.append(&mut grave_cards);
+                self.trigger_fight_log(FightLog::RecoverGraveDeck, system)?;
             }
             let card_index = system.rng().next_u32() as usize % self.player.deck.len();
             let card = self.player.deck.remove(card_index);
             self.player.hand_deck.push(card);
+            self.trigger_fight_log(FightLog::Draw(card_index), system)?;
         }
-        self.trigger_fight_log(FightLog::Draw(draw_count), system)
+        Ok(())
     }
 
     pub(super) fn collect_pending_effects(
@@ -151,6 +153,7 @@ impl<'a> MapFightPVE<'a> {
                         .for_each(|queue| queue.push(effect));
                 } else {
                     self.pending_instructions.push(Instruction::<'a> {
+                        effect_id: effect.id,
                         view,
                         enemy_offset,
                         context: effect.on_execution.as_ref().unwrap(),
@@ -169,6 +172,7 @@ impl<'a> MapFightPVE<'a> {
     ) -> Result<IterationOutput, Error> {
         self.last_output = IterationOutput::Continue;
         while let Some(value) = self.pending_instructions.first().cloned() {
+            self.trigger_fight_log(FightLog::CallEffectId(value.effect_id), system)?;
             let mut system_contexts = self.collect_system_contexts(
                 value.view,
                 value.context.target_position,

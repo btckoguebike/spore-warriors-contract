@@ -52,8 +52,8 @@ mod test {
         let mut battle = MapFightPVE::create(&player, None, &enemies).unwrap();
         let (output, logs) = battle.start(&mut game_system).unwrap();
         println!("===START===");
-        println!("[output] = {output:?}");
         println!("[logs] = {logs:?}");
+        println!("[output] = {output:?}");
         let (output, logs) = battle
             .run(
                 vec![IterationInput::HandCardUse(
@@ -63,9 +63,15 @@ mod test {
                 &mut game_system,
             )
             .unwrap();
-        println!("===RUN===");
-        println!("[output] = {output:?}");
+        println!("===PLAYER TURN===");
         println!("[logs] = {logs:?}");
+        println!("[output] = {output:?}");
+        let (output, logs) = battle
+            .run(vec![IterationInput::EnemyTurn], &mut game_system)
+            .unwrap();
+        println!("===ENEMY TURN===");
+        println!("[logs] = {logs:?}");
+        println!("[output] = {output:?}");
         Ok(())
     }
 }

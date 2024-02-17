@@ -142,6 +142,7 @@ impl Context {
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Effect {
+    pub id: u16,
     pub on_trigger: Option<Context>,
     pub on_execution: Option<Context>,
     pub on_discard: Option<Context>,
@@ -178,6 +179,7 @@ impl Effect {
             return Err(Error::ResourceEffectSetupConflict);
         }
         Ok(Self {
+            id: value.id().into(),
             on_trigger,
             on_execution,
             on_discard,
@@ -208,6 +210,7 @@ impl TryFrom<u8> for ItemClass {
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Item {
+    pub id: u16,
     pub class: ItemClass,
     pub quality: u8,
     pub weight: u8,
@@ -228,6 +231,7 @@ impl Item {
             rng
         )?;
         Ok(Self {
+            id: value.id().into(),
             class: u8::from(value.class()).try_into()?,
             quality: value.quality().into(),
             weight: randomized_byte(value.random_weight(), rng),
@@ -339,6 +343,7 @@ impl ActionStrategy {
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Enemy {
+    pub id: u16,
     pub rank: u8,
     pub hp: u16,
     pub armor: u8,
@@ -360,6 +365,7 @@ impl Enemy {
         let rewards = randomized_pool!(value.loot_pool(), resource_pool.loot_pool(), Loot, rng)?;
         let strategy = ActionStrategy::randomized(resource_pool, value.action_strategy(), rng)?;
         Ok(Self {
+            id: value.id().into(),
             rank: value.rank().into(),
             hp: value.hp().into(),
             armor: value.rank().into(),
@@ -458,6 +464,7 @@ impl SizedPoint {
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Card {
+    pub id: u16,
     pub class: u8,
     pub power_cost: u8,
     pub merchant_price: u16,
@@ -477,6 +484,7 @@ impl Card {
             rng
         )?;
         Ok(Self {
+            id: value.id().into(),
             class: value.class().into(),
             power_cost: value.cost().into(),
             merchant_price: randomized_number(value.price(), rng),
@@ -487,6 +495,7 @@ impl Card {
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Warrior {
+    pub id: u16,
     pub charactor_card: Card,
     pub hp: u16,
     pub gold: u16,
@@ -530,6 +539,7 @@ impl Warrior {
         let package_status =
             randomized_pool!(value.package_status(), resource_pool.item_pool(), Item, rng)?;
         Ok(Self {
+            id: value.id().into(),
             charactor_card: Card::randomized(resource_pool, charactor_card, rng)?,
             hp: value.hp().into(),
             gold: value.gold().into(),

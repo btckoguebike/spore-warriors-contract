@@ -20,6 +20,7 @@ enum FightView {
 
 #[derive(Clone)]
 struct Instruction<'a> {
+    effect_id: u16,
     enemy_offset: Option<usize>,
     context: &'a Context,
     view: FightView,
@@ -41,24 +42,27 @@ impl<'a> SimplePVE<'a> for MapFightPVE<'a> {
         potion: Option<&'a Potion>,
         enemies: &'a [Enemy],
     ) -> Result<Self, Error> {
-        let mut warrior_context = WarriorContext::new(player);
+        let mut player = WarriorContext::new(player);
         if let Some(potion) = potion {
-            warrior_context.hp += potion.hp as u16;
-            warrior_context.power += potion.power;
-            warrior_context.armor += potion.armor;
-            warrior_context.shield += potion.shield;
-            warrior_context.attack += potion.attack;
-            warrior_context.draw_count += potion.draw_count;
-            warrior_context
+            player.hp += potion.hp as u16;
+            player.power += potion.power;
+            player.armor += potion.armor;
+            player.shield += potion.shield;
+            player.attack += potion.attack;
+            player.draw_count += potion.draw_count;
+            player
                 .props_list
                 .append(&mut potion.package_status.iter().collect());
-            warrior_context
-                .deck
-                .append(&mut potion.deck_status.iter().collect());
+            player.deck.append(&mut potion.deck_status.iter().collect());
         }
+        let opponents = enemies
+            .iter()
+            .enumerate()
+            .map(|(i, enemy)| EnemyContext::new(enemy, i + 1))
+            .collect();
         Ok(Self {
-            player: warrior_context,
-            opponents: enemies.iter().map(EnemyContext::new).collect(),
+            player,
+            opponents,
             round: 0,
             fight_logs: vec![],
             last_output: IterationOutput::Continue,
@@ -81,6 +85,13 @@ impl<'a> SimplePVE<'a> for MapFightPVE<'a> {
                     .for_each(|effect| equipment_effects.push(effect));
             }
         });
+        self.trigger_fight_log(
+            FightLog::CharactorSet(
+                self.player.snapshot(),
+                self.opponents.iter().map(|v| v.snapshot()).collect(),
+            ),
+            system,
+        )?;
         self.round = 1;
         self.trigger_fight_log(FightLog::PlayerTurn(self.round), system)?;
         self.player_draw(self.player.draw_count, system)?;
@@ -101,6 +112,14 @@ impl<'a> SimplePVE<'a> for MapFightPVE<'a> {
         for operation in operations {
             self.iterate(operation, system)?;
         }
+        #[cfg(feature = "debug")]
+        self.trigger_fight_log(
+            FightLog::CharactorSet(
+                self.player.snapshot(),
+                self.opponents.iter().map(|v| v.snapshot()).collect(),
+            ),
+            system,
+        )?;
         let logs = self.fight_logs.drain(..).collect();
         Ok((self.last_output, logs))
     }

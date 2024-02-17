@@ -27,6 +27,21 @@ pub trait CtxAdaptor {
     fn change_draw_count(&mut self, diff: i8);
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
+pub struct EnemySnapshot {
+    pub id: u16,
+    pub offset: usize,
+    pub hp: u16,
+    pub armor: u8,
+    pub shield: u8,
+    pub attack: u8,
+    pub attack_weak: u8,
+    pub defense: u8,
+    pub defense_weak: u8,
+    pub pending_effects: Vec<u16>,
+}
+
 pub struct EnemyContext<'e> {
     pub enemy: &'e Enemy,
     pub offset: usize,
@@ -42,10 +57,10 @@ pub struct EnemyContext<'e> {
 }
 
 impl<'e> EnemyContext<'e> {
-    pub fn new(enemy: &'e Enemy) -> Self {
+    pub fn new(enemy: &'e Enemy, offset: usize) -> Self {
         Self {
             enemy,
-            offset: 0,
+            offset,
             hp: enemy.hp,
             armor: enemy.armor,
             shield: enemy.shield,
@@ -90,6 +105,21 @@ impl<'e> EnemyContext<'e> {
             self.strategy.push(randomized_effects);
         });
     }
+
+    pub fn snapshot(&self) -> EnemySnapshot {
+        EnemySnapshot {
+            id: self.enemy.id,
+            offset: self.offset,
+            hp: self.hp,
+            armor: self.armor,
+            shield: self.shield,
+            attack: self.attack,
+            attack_weak: self.attack_weak,
+            defense: self.defense,
+            defense_weak: self.defense_weak,
+            pending_effects: self.pending_effects.iter().map(|v| v.id).collect(),
+        }
+    }
 }
 
 impl<'e> CtxAdaptor for EnemyContext<'e> {
@@ -132,6 +162,29 @@ impl<'e> CtxAdaptor for EnemyContext<'e> {
     fn change_draw_count(&mut self, _diff: i8) {
         unimplemented!("draw_count adaptor")
     }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
+pub struct WarriorSnapshot {
+    pub id: u16,
+    pub offset: usize,
+    pub hp: u16,
+    pub power: u8,
+    pub armor: u8,
+    pub shield: u8,
+    pub attack: u8,
+    pub attack_weak: u8,
+    pub defense: u8,
+    pub defense_weak: u8,
+    pub draw_count: u8,
+    pub special_card: u16,
+    pub props_list: Vec<u16>,
+    pub hand_deck: Vec<u16>,
+    pub deck: Vec<u16>,
+    pub grave_deck: Vec<u16>,
+    pub pending_deck: Vec<u16>,
+    pub pending_effects: Vec<u16>,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -181,6 +234,29 @@ impl<'w> WarriorContext<'w> {
             grave_deck: vec![],
             pending_deck: vec![],
             pending_effects: vec![],
+        }
+    }
+
+    pub fn snapshot(&self) -> WarriorSnapshot {
+        WarriorSnapshot {
+            id: self.warrior.id,
+            offset: self.offset,
+            hp: self.hp,
+            power: self.power,
+            armor: self.armor,
+            shield: self.shield,
+            attack: self.attack,
+            attack_weak: self.attack_weak,
+            defense: self.defense,
+            defense_weak: self.defense_weak,
+            draw_count: self.draw_count,
+            special_card: self.special_card.id,
+            props_list: self.props_list.iter().map(|v| v.id).collect(),
+            deck: self.deck.iter().map(|v| v.id).collect(),
+            hand_deck: self.hand_deck.iter().map(|v| v.id).collect(),
+            grave_deck: self.grave_deck.iter().map(|v| v.id).collect(),
+            pending_deck: self.pending_deck.iter().map(|v| v.id).collect(),
+            pending_effects: self.pending_effects.iter().map(|v| v.id).collect(),
         }
     }
 }

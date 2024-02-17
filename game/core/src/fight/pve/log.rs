@@ -80,6 +80,7 @@ impl<'a> MapFightPVE<'a> {
                     _ => return Err(Error::BattleSystemInvalidReturn),
                 };
                 self.pending_instructions.push(Instruction::<'a> {
+                    effect_id: effect.id,
                     enemy_offset,
                     context,
                     view,

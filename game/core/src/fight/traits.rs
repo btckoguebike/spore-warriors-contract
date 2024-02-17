@@ -2,6 +2,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use rand::RngCore;
 
+use crate::contexts::{EnemySnapshot, WarriorSnapshot};
 use crate::errors::Error;
 use crate::systems::GameSystem;
 use crate::wrappings::{Enemy, Potion, Warrior};
@@ -41,15 +42,20 @@ pub enum IterationOutput {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub enum FightLog {
+    CharactorSet(WarriorSnapshot, Vec<EnemySnapshot>),
     EnemyTurn(u8),
     PlayerTurn(u8),
     PowerCost(u8),
     SpecialCardUse,
     HandCardUse(usize),
     ItemUse(usize),
-    Draw(u8),
+    Draw(usize),
+    DiscardHandDeck,
+    RecoverGraveDeck,
+    RecoverPower,
+    CallEffectId(u16),
     SystemDamage(usize, u16),
 }
 

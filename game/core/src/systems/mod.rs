@@ -8,7 +8,6 @@ use crate::errors::Error;
 use crate::fight::traits::FightLog;
 use crate::wrappings::{SystemId, Value};
 
-#[derive(PartialEq)]
 pub enum SystemReturn {
     Discarded,
     Triggered,
