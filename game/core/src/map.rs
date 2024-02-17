@@ -12,15 +12,21 @@ use crate::wrappings::{
     randomized_selection, Card, Context, Item, ItemClass, LevelNode, LevelPartition, Node, Point,
 };
 
-pub enum MoveResult<'a> {
-    Fight(MapFightPVE<'a>),
+pub struct Phantom<'a> {
+    _i: &'a u8,
+}
+
+pub enum MoveResult<'a, T: SimplePVE<'a>> {
+    Fight(T),
     MapLogs(Vec<FightLog>),
     Complete,
-    Null,
+    Skip,
+    _Phantom(Phantom<'a>),
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct MapSkeleton {
+    id: u16,
     width: i16,
     height: i16,
     skeleton: Vec<LevelNode>,
@@ -61,6 +67,7 @@ impl<'a> MapSkeleton {
             return Err(Error::ScenePlayerPointInvalid);
         }
         Ok(Self {
+            id: scene.id().into(),
             width: u8::from(scene.width()) as i16,
             height: u8::from(scene.height()) as i16,
             skeleton,
@@ -68,25 +75,17 @@ impl<'a> MapSkeleton {
         })
     }
 
+    pub fn profile(&self) -> (u16, u8, u8, &Vec<LevelNode>) {
+        (self.id, self.width as u8, self.height as u8, &self.skeleton)
+    }
+
     pub fn contains(&self, point: &Point) -> bool {
         (point.x as i16) < self.width && (point.y as i16) < self.height
     }
 
-    pub fn width(&self) -> u8 {
-        self.width as u8
-    }
-
-    pub fn height(&self) -> u8 {
-        self.height as u8
-    }
-
-    pub fn current_point(&self) -> (u8, u8) {
+    pub fn player_point(&self) -> (u8, u8) {
         let Point { x, y } = self.player_point;
         (x, y)
-    }
-
-    pub fn node_skeleton(&self) -> &Vec<LevelNode> {
-        &self.skeleton
     }
 
     pub fn movable_range(&self, motion: u8) -> Vec<Point> {
@@ -144,13 +143,12 @@ impl<'a> MapSkeleton {
         &'a mut self,
         player: &'a mut WarriorContext<'a>,
         player_point: Point,
-        motion: u8,
         user_imported: Vec<usize>,
         system: &mut GameSystem<'a, impl RngCore>,
-    ) -> Result<MoveResult<'a>, Error> {
+    ) -> Result<MoveResult<impl SimplePVE>, Error> {
         self.player_point = player_point;
-        let Some(level) = self.peak_upcoming_movment(player_point, motion)? else {
-            return Ok(MoveResult::Null);
+        let Some(level) = self.peak_upcoming_movment(player_point, player.warrior.motion)? else {
+            return Ok(MoveResult::Skip);
         };
         let mut map_logs = vec![];
         match &level.node {
