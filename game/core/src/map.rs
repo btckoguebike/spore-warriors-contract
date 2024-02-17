@@ -31,18 +31,25 @@ fn collect_items<'a>(
     player: &mut WarriorContext<'a>,
     user_imported: Vec<usize>,
     items: &'a Vec<Item>,
+    consume_gold: bool,
 ) -> Result<Vec<()>, Error> {
     user_imported
         .into_iter()
         .map(|index| {
             let item = items.get(index).ok_or(Error::SceneUserImportOutOfIndex)?;
+            if consume_gold {
+                if item.price > player.gold {
+                    return Err(Error::SceneMerchantInsufficientGold);
+                }
+                player.gold -= item.price;
+            }
             match item.class {
                 ItemClass::Equipment => player.equipment_list.push(item),
                 ItemClass::Props => player.props_list.push(item),
             }
             Ok(())
         })
-        .collect::<Result<Vec<_>, Error>>()
+        .collect::<Result<Vec<_>, _>>()
 }
 
 pub enum MoveResult<'a> {
@@ -214,19 +221,13 @@ impl<'a> MapSkeleton {
                 return Ok(MoveResult::Fight(fight));
             }
             Node::Merchant(items) => {
-                if user_imported.is_empty() {
-                    return Err(Error::SceneUnexpectedUserImported);
-                }
-                collect_items(player, user_imported, items)?;
+                collect_items(player, user_imported, items, true)?;
             }
             Node::TreasureChest(items, pick_count) => {
-                if user_imported.is_empty() {
-                    return Err(Error::SceneUnexpectedUserImported);
-                }
                 if user_imported.len() > *pick_count as usize {
                     return Err(Error::SceneTreasureChestOutOfBound);
                 }
-                collect_items(player, user_imported, items)?;
+                collect_items(player, user_imported, items, false)?;
             }
         }
         Ok(MoveResult::MapLogs(map_logs))

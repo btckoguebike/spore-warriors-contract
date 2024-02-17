@@ -22,7 +22,6 @@ pub enum Error {
     ScenePlayerPointInvalid,
     SceneInvalidMove,
     SceneUnexpectedSystemReturn,
-    SceneUnexpectedUserImported,
     SceneUserImportOutOfIndex,
     SceneMerchantInsufficientGold,
     SceneTreasureChestOutOfBound,
