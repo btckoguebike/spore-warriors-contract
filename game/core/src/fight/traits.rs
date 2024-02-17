@@ -2,10 +2,10 @@ extern crate alloc;
 use alloc::vec::Vec;
 use rand::RngCore;
 
-use crate::contexts::{EnemySnapshot, WarriorSnapshot};
+use crate::contexts::{EnemySnapshot, WarriorContext, WarriorSnapshot};
 use crate::errors::Error;
 use crate::systems::GameSystem;
-use crate::wrappings::{Enemy, Potion, Warrior};
+use crate::wrappings::Enemy;
 
 #[derive(Clone)]
 pub enum Target {
@@ -55,6 +55,7 @@ pub enum FightLog {
     DiscardHandDeck,
     RecoverGraveDeck,
     RecoverPower,
+    RecoverHp(u16),
     CallEffectId(u16),
     SystemDamage(usize, u16),
 }
@@ -63,11 +64,7 @@ pub trait SimplePVE<'a>
 where
     Self: Sized,
 {
-    fn create(
-        player: &'a Warrior,
-        potion: Option<&'a Potion>,
-        enemies: &'a [Enemy],
-    ) -> Result<Self, Error>;
+    fn create(player: &'a mut WarriorContext<'a>, enemies: &'a [Enemy]) -> Result<Self, Error>;
 
     fn start(
         &mut self,

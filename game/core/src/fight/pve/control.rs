@@ -114,7 +114,7 @@ impl<'a> MapFightPVE<'a> {
                 self.opponents
                     .iter_mut()
                     .for_each(|v| system_contexts.push(v));
-                system_contexts.push(&mut self.player);
+                system_contexts.push(self.player);
             }
             (FightView::Player, RequireTarget::RandomOpponent) => {
                 let offset = system.rng().next_u32() as usize % self.opponents.len();
@@ -124,9 +124,7 @@ impl<'a> MapFightPVE<'a> {
             (FightView::Player, RequireTarget::Owner)
             | (FightView::Enemy, RequireTarget::Opponent)
             | (FightView::Enemy, RequireTarget::RandomOpponent)
-            | (FightView::Enemy, RequireTarget::AllOpponents) => {
-                system_contexts.push(&mut self.player)
-            }
+            | (FightView::Enemy, RequireTarget::AllOpponents) => system_contexts.push(self.player),
         };
         Ok(system_contexts)
     }

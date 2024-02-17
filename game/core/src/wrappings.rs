@@ -380,7 +380,7 @@ impl Enemy {
     }
 }
 
-#[derive(PartialEq, Eq, Default)]
+#[derive(PartialEq, Eq, Default, Clone, Copy)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct Point {
     pub x: u8,
@@ -602,7 +602,11 @@ impl LevelNode {
                     Node::Enemy(randomized_enemies)
                 }
                 generated::NodeInstanceUnion::NodeRecoverPoint(value) => {
-                    Node::RecoverPoint(value.hp_percent().into())
+                    let percent: u8 = value.hp_percent().into();
+                    if percent > 100 {
+                        return Err(Error::ResourceBrokenHpPercent);
+                    }
+                    Node::RecoverPoint(percent)
                 }
                 generated::NodeInstanceUnion::NodeMerchant(value) => {
                     let goods =

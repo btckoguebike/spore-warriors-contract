@@ -6,6 +6,7 @@ mod test {
     use molecule::prelude::Entity;
     use rand::rngs::SmallRng;
     use rand::SeedableRng;
+    use spore_warriors_core::contexts::WarriorContext;
     use spore_warriors_core::fight::pve::MapFightPVE;
     use spore_warriors_core::fight::traits::{IterationInput, Selection, SimplePVE};
     use spore_warriors_core::map::MapSkeleton;
@@ -29,11 +30,24 @@ mod test {
             let warrior = RESOURCE_POOL.warrior_pool().get_unchecked(0);
             Warrior::randomized(&RESOURCE_POOL, warrior, rng).unwrap()
         };
+        let mut player_context = WarriorContext::new(&player, None);
+        let mut game_system = GameSystem::new(&RESOURCE_POOL, rng);
         let point = Point::from_xy(1, 0);
-        let map = MapSkeleton::randomized(&RESOURCE_POOL, &player, point, rng).unwrap();
+        let mut map = MapSkeleton::randomized(point, &mut game_system).unwrap();
         println!("[map] = {map:?}");
-        println!("[avaliable_range] = {:?}", map.movable_range());
-        println!("[node] = {:?}", map.peak_upcoming_movment((1, 1).into()));
+        println!("[avaliable_range] = {:?}", map.movable_range(player.motion));
+        println!(
+            "[node] = {:?}",
+            map.peak_upcoming_movment((1, 1).into(), player.motion)
+        );
+        map.move_to(
+            &mut player_context,
+            point,
+            player.motion,
+            vec![],
+            &mut game_system,
+        )
+        .unwrap();
         Ok(())
     }
 
@@ -44,12 +58,13 @@ mod test {
             let warrior = RESOURCE_POOL.warrior_pool().get_unchecked(0);
             Warrior::randomized(&RESOURCE_POOL, warrior, rng).unwrap()
         };
+        let mut player_context = WarriorContext::new(&player, None);
         let enemies = {
             let enemy = RESOURCE_POOL.enemy_pool().get_unchecked(0);
             vec![Enemy::randomized(&RESOURCE_POOL, enemy, rng).unwrap()]
         };
         let mut game_system = GameSystem::new(&RESOURCE_POOL, rng);
-        let mut battle = MapFightPVE::create(&player, None, &enemies).unwrap();
+        let mut battle = MapFightPVE::create(&mut player_context, &enemies).unwrap();
         let (output, logs) = battle.start(&mut game_system).unwrap();
         println!("===START===");
         println!("[logs] = {logs:?}");

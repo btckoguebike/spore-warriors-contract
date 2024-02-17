@@ -6,7 +6,7 @@ use crate::contexts::{EnemyContext, WarriorContext};
 use crate::errors::Error;
 use crate::fight::traits::{FightLog, IterationInput, IterationOutput, Selection, SimplePVE};
 use crate::systems::{GameSystem, SystemInput};
-use crate::wrappings::{Context, Enemy, ItemClass, Potion, RequireTarget, Warrior};
+use crate::wrappings::{Context, Enemy, ItemClass, RequireTarget};
 
 mod control;
 mod iteration;
@@ -28,7 +28,7 @@ struct Instruction<'a> {
 }
 
 pub struct MapFightPVE<'a> {
-    player: WarriorContext<'a>,
+    player: &'a mut WarriorContext<'a>,
     opponents: Vec<EnemyContext<'a>>,
     round: u8,
     fight_logs: Vec<FightLog>,
@@ -37,24 +37,7 @@ pub struct MapFightPVE<'a> {
 }
 
 impl<'a> SimplePVE<'a> for MapFightPVE<'a> {
-    fn create(
-        player: &'a Warrior,
-        potion: Option<&'a Potion>,
-        enemies: &'a [Enemy],
-    ) -> Result<Self, Error> {
-        let mut player = WarriorContext::new(player);
-        if let Some(potion) = potion {
-            player.hp += potion.hp as u16;
-            player.power += potion.power;
-            player.armor += potion.armor;
-            player.shield += potion.shield;
-            player.attack += potion.attack;
-            player.draw_count += potion.draw_count;
-            player
-                .props_list
-                .append(&mut potion.package_status.iter().collect());
-            player.deck.append(&mut potion.deck_status.iter().collect());
-        }
+    fn create(player: &'a mut WarriorContext<'a>, enemies: &'a [Enemy]) -> Result<Self, Error> {
         let opponents = enemies
             .iter()
             .enumerate()

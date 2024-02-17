@@ -11,6 +11,7 @@ pub enum Error {
     ResourceBrokenEnemyStrategy,
     ResourceBrokenSystemId,
     ResourceBrokenPlayerDeck,
+    ResourceBrokenHpPercent,
 
     ResourceEffectMultiTargetInEffectPool,
     ResourceEffectSetupConflict,
@@ -19,6 +20,12 @@ pub enum Error {
 
     ScenePlayerPointBeyondMap,
     ScenePlayerPointInvalid,
+    SceneInvalidMove,
+    SceneUnexpectedSystemReturn,
+    SceneUnexpectedUserImported,
+    SceneUserImportOutOfIndex,
+    SceneMerchantInsufficientGold,
+    SceneTreasureChestOutOfBound,
 
     BattleNotStarted,
     BattleRepeatStart,

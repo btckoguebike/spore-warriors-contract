@@ -4,7 +4,7 @@ use core::cmp::{max, min};
 use rand::RngCore;
 
 use crate::errors::Error;
-use crate::wrappings::{Card, Effect, Enemy, Item, ItemClass, Warrior};
+use crate::wrappings::{Card, Effect, Enemy, Item, ItemClass, Potion, Warrior};
 
 macro_rules! change_value {
     ($this:ident.$field:ident, $diff:ident, $conv:ty, $ori:ty) => {{
@@ -201,6 +201,7 @@ pub struct WarriorContext<'w> {
     pub defense_weak: u8,
     pub draw_count: u8,
     pub special_card: &'w Card,
+    pub equipment_list: Vec<&'w Item>,
     pub props_list: Vec<&'w Item>,
     pub hand_deck: Vec<&'w Card>,
     pub deck: Vec<&'w Card>,
@@ -210,8 +211,8 @@ pub struct WarriorContext<'w> {
 }
 
 impl<'w> WarriorContext<'w> {
-    pub fn new(warrior: &'w Warrior) -> Self {
-        Self {
+    pub fn new(warrior: &'w Warrior, potion: Option<&'w Potion>) -> Self {
+        let mut player = Self {
             warrior,
             offset: 0,
             hp: warrior.hp,
@@ -224,6 +225,11 @@ impl<'w> WarriorContext<'w> {
             defense_weak: warrior.defense_weak,
             draw_count: warrior.draw_count,
             special_card: &warrior.charactor_card,
+            equipment_list: warrior
+                .package_status
+                .iter()
+                .filter(|v| v.class == ItemClass::Equipment)
+                .collect(),
             props_list: warrior
                 .package_status
                 .iter()
@@ -234,7 +240,20 @@ impl<'w> WarriorContext<'w> {
             grave_deck: vec![],
             pending_deck: vec![],
             pending_effects: vec![],
-        }
+        };
+        if let Some(potion) = potion {
+            player.hp += potion.hp as u16;
+            player.power += potion.power;
+            player.armor += potion.armor;
+            player.shield += potion.shield;
+            player.attack += potion.attack;
+            player.draw_count += potion.draw_count;
+            player
+                .props_list
+                .append(&mut potion.package_status.iter().collect());
+            player.deck.append(&mut potion.deck_status.iter().collect());
+        };
+        player
     }
 
     pub fn snapshot(&self) -> WarriorSnapshot {

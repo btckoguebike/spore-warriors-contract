@@ -1,29 +1,72 @@
 extern crate alloc;
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use core::cmp::{max, min};
 use rand::RngCore;
-use spore_warriors_generated as generated;
 
-use crate::contexts::WarriorContext;
+use crate::contexts::{CtxAdaptor, WarriorContext};
 use crate::errors::Error;
-use crate::wrappings::{randomized_selection, LevelNode, LevelPartition, Node, Point, Warrior};
+use crate::fight::pve::MapFightPVE;
+use crate::fight::traits::{FightLog, SimplePVE};
+use crate::systems::{GameSystem, SystemReturn};
+use crate::wrappings::{
+    randomized_selection, Context, Item, ItemClass, LevelNode, LevelPartition, Node, Point,
+};
+
+fn run_context<'a>(
+    player: &mut WarriorContext<'a>,
+    context: &Context,
+    system: &mut GameSystem<'a, impl RngCore>,
+) -> Result<Vec<FightLog>, Error> {
+    let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
+    let system_return =
+        system.call(context.system_id, &context.args, &mut system_contexts, None)?;
+    if let SystemReturn::FightLog(logs) = system_return {
+        Ok(logs)
+    } else {
+        return Err(Error::SceneUnexpectedSystemReturn);
+    }
+}
+
+fn collect_items<'a>(
+    player: &mut WarriorContext<'a>,
+    user_imported: Vec<usize>,
+    items: &'a Vec<Item>,
+) -> Result<Vec<()>, Error> {
+    user_imported
+        .into_iter()
+        .map(|index| {
+            let item = items.get(index).ok_or(Error::SceneUserImportOutOfIndex)?;
+            match item.class {
+                ItemClass::Equipment => player.equipment_list.push(item),
+                ItemClass::Props => player.props_list.push(item),
+            }
+            Ok(())
+        })
+        .collect::<Result<Vec<_>, Error>>()
+}
+
+pub enum MoveResult<'a> {
+    Fight(MapFightPVE<'a>),
+    MapLogs(Vec<FightLog>),
+    Complete,
+    Null,
+}
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub struct MapSkeleton<'a> {
+pub struct MapSkeleton {
     width: i16,
     height: i16,
     skeleton: Vec<LevelNode>,
-    player: WarriorContext<'a>,
     player_point: Point,
 }
 
-impl<'p> MapSkeleton<'p> {
+impl<'a> MapSkeleton {
     pub fn randomized(
-        resource_pool: &generated::ResourcePool,
-        player: &'p Warrior,
         player_point: Point,
-        rng: &mut impl RngCore,
+        system: &mut GameSystem<'a, impl RngCore>,
     ) -> Result<Self, Error> {
+        let resource_pool = system.resource_pool();
+        let rng = system.rng();
         let scene_pool = resource_pool.scene_pool();
         let scene = randomized_selection(scene_pool.len(), scene_pool, 1, rng)
             .first()
@@ -41,7 +84,6 @@ impl<'p> MapSkeleton<'p> {
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .for_each(|mut level| skeleton.append(&mut level.nodes));
-
         let good_start = skeleton.iter().any(|level| {
             if let Node::StartingPoint = level.node {
                 return level.point.contains(&player_point);
@@ -51,12 +93,10 @@ impl<'p> MapSkeleton<'p> {
         if !good_start {
             return Err(Error::ScenePlayerPointInvalid);
         }
-
         Ok(Self {
             width: u8::from(scene.width()) as i16,
             height: u8::from(scene.height()) as i16,
             skeleton,
-            player: WarriorContext::new(player),
             player_point,
         })
     }
@@ -82,8 +122,8 @@ impl<'p> MapSkeleton<'p> {
         &self.skeleton
     }
 
-    pub fn movable_range(&self) -> Vec<Point> {
-        let motion = self.player.warrior.motion as i16;
+    pub fn movable_range(&self, motion: u8) -> Vec<Point> {
+        let motion = motion as i16;
         let mut points = Vec::<Point>::new();
         (1..motion).for_each(|y_step| {
             let y = y_step;
@@ -110,11 +150,15 @@ impl<'p> MapSkeleton<'p> {
             .collect()
     }
 
-    pub fn peak_upcoming_movment(&self, peak_point: Point) -> Result<Option<&LevelNode>, Error> {
+    pub fn peak_upcoming_movment(
+        &self,
+        peak_point: Point,
+        motion: u8,
+    ) -> Result<Option<&LevelNode>, Error> {
         if !self.contains(&peak_point) {
             return Err(Error::ScenePlayerPointBeyondMap);
         }
-        let movable_range = self.movable_range();
+        let movable_range = self.movable_range(motion);
         let nodes = self.filter_nonempty_nodes(&movable_range);
         let mut peaked_node = None;
         if nodes.is_empty() {
@@ -129,7 +173,62 @@ impl<'p> MapSkeleton<'p> {
         Ok(peaked_node)
     }
 
-    pub fn unchecked_move(&mut self, player_point: Point) {
+    pub fn move_to(
+        &'a mut self,
+        player: &'a mut WarriorContext<'a>,
+        player_point: Point,
+        motion: u8,
+        user_imported: Vec<usize>,
+        system: &mut GameSystem<'a, impl RngCore>,
+    ) -> Result<MoveResult<'a>, Error> {
         self.player_point = player_point;
+        let Some(level) = self.peak_upcoming_movment(player_point, motion)? else {
+            return Ok(MoveResult::Null);
+        };
+        let mut map_logs = vec![];
+        match &level.node {
+            Node::Barrier | Node::StartingPoint => return Err(Error::SceneInvalidMove),
+            Node::TargetingPoint => return Ok(MoveResult::Complete),
+            Node::RecoverPoint(percent) => {
+                let max_hp = player.warrior.hp;
+                let hp_recover = min(max_hp * (*percent / 100u8) as u16, max_hp - player.hp);
+                player.hp += hp_recover;
+                map_logs.push(FightLog::RecoverHp(hp_recover));
+            }
+            Node::Campsite(context) => {
+                let mut logs = run_context(player, context, system)?;
+                map_logs.append(&mut logs);
+            }
+            Node::Unknown(contexts) => {
+                contexts
+                    .iter()
+                    .map(|context| {
+                        let mut logs = run_context(player, context, system)?;
+                        map_logs.append(&mut logs);
+                        Ok(())
+                    })
+                    .collect::<Result<_, _>>()?;
+            }
+            Node::Enemy(enemies) => {
+                let fight = MapFightPVE::create(player, enemies)?;
+                return Ok(MoveResult::Fight(fight));
+            }
+            Node::Merchant(items) => {
+                if user_imported.is_empty() {
+                    return Err(Error::SceneUnexpectedUserImported);
+                }
+                collect_items(player, user_imported, items)?;
+            }
+            Node::TreasureChest(items, pick_count) => {
+                if user_imported.is_empty() {
+                    return Err(Error::SceneUnexpectedUserImported);
+                }
+                if user_imported.len() > *pick_count as usize {
+                    return Err(Error::SceneTreasureChestOutOfBound);
+                }
+                collect_items(player, user_imported, items)?;
+            }
+        }
+        Ok(MoveResult::MapLogs(map_logs))
     }
 }
