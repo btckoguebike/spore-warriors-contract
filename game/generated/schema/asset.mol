@@ -20,7 +20,7 @@ table Asset {
 vector AssetVec <Asset>;
 
 table ResourcePool {
-    effect_pool: EffectVec,
+    system_pool: SystemVec,
     card_pool: CardVec,
     item_pool: ItemVec,
     action_pool: ActionVec,

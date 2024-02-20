@@ -1,5 +1,4 @@
 array Number [byte; 2];
-array SystemId [byte; 2];
 array ResourceId [byte; 2];
 array Seed [byte; 8];
 array Hash [byte; 32];
@@ -22,19 +21,16 @@ table RandomByte {
 }
 
 union Value {
-    ResourceId,
-    SystemId,
     Number,
     RandomNumber,
 }
 
 vector ValueVec <Value>;
 
-table Context {
-    target_position: byte,
-    system_id: SystemId,
+table System {
+    id: ResourceId,
     args: ValueVec,
+    target_type: byte,
 }
 
-vector ContextVec <Context>;
-option ContextOpt (Context);
+vector SystemVec <System>;

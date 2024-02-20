@@ -27,11 +27,11 @@ table NodeCardMerchant {
 
 table NodeUnknown {
     count: byte,
-    system_pool: ContextVec,
+    system_pool: ResourceIdVec,
 }
 
 table NodeCampsite {
-    card_context: Context,
+    card_system: ResourceId,
 }
 
 table NodeBarrier {}

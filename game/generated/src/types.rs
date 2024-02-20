@@ -179,183 +179,6 @@ impl molecule::prelude::Builder for NumberBuilder {
     }
 }
 #[derive(Clone)]
-pub struct SystemId(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for SystemId {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl ::core::fmt::Debug for SystemId {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl ::core::fmt::Display for SystemId {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        let raw_data = hex_string(&self.raw_data());
-        write!(f, "{}(0x{})", Self::NAME, raw_data)
-    }
-}
-impl ::core::default::Default for SystemId {
-    fn default() -> Self {
-        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        SystemId::new_unchecked(v)
-    }
-}
-impl SystemId {
-    const DEFAULT_VALUE: [u8; 2] = [0, 0];
-    pub const TOTAL_SIZE: usize = 2;
-    pub const ITEM_SIZE: usize = 1;
-    pub const ITEM_COUNT: usize = 2;
-    pub fn nth0(&self) -> Byte {
-        Byte::new_unchecked(self.0.slice(0..1))
-    }
-    pub fn nth1(&self) -> Byte {
-        Byte::new_unchecked(self.0.slice(1..2))
-    }
-    pub fn raw_data(&self) -> molecule::bytes::Bytes {
-        self.as_bytes()
-    }
-    pub fn as_reader<'r>(&'r self) -> SystemIdReader<'r> {
-        SystemIdReader::new_unchecked(self.as_slice())
-    }
-}
-impl molecule::prelude::Entity for SystemId {
-    type Builder = SystemIdBuilder;
-    const NAME: &'static str = "SystemId";
-    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        SystemId(data)
-    }
-    fn as_bytes(&self) -> molecule::bytes::Bytes {
-        self.0.clone()
-    }
-    fn as_slice(&self) -> &[u8] {
-        &self.0[..]
-    }
-    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        SystemIdReader::from_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        SystemIdReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn new_builder() -> Self::Builder {
-        ::core::default::Default::default()
-    }
-    fn as_builder(self) -> Self::Builder {
-        Self::new_builder().set([self.nth0(), self.nth1()])
-    }
-}
-#[derive(Clone, Copy)]
-pub struct SystemIdReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for SystemIdReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl<'r> ::core::fmt::Debug for SystemIdReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl<'r> ::core::fmt::Display for SystemIdReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        let raw_data = hex_string(&self.raw_data());
-        write!(f, "{}(0x{})", Self::NAME, raw_data)
-    }
-}
-impl<'r> SystemIdReader<'r> {
-    pub const TOTAL_SIZE: usize = 2;
-    pub const ITEM_SIZE: usize = 1;
-    pub const ITEM_COUNT: usize = 2;
-    pub fn nth0(&self) -> ByteReader<'r> {
-        ByteReader::new_unchecked(&self.as_slice()[0..1])
-    }
-    pub fn nth1(&self) -> ByteReader<'r> {
-        ByteReader::new_unchecked(&self.as_slice()[1..2])
-    }
-    pub fn raw_data(&self) -> &'r [u8] {
-        self.as_slice()
-    }
-}
-impl<'r> molecule::prelude::Reader<'r> for SystemIdReader<'r> {
-    type Entity = SystemId;
-    const NAME: &'static str = "SystemIdReader";
-    fn to_entity(&self) -> Self::Entity {
-        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
-    }
-    fn new_unchecked(slice: &'r [u8]) -> Self {
-        SystemIdReader(slice)
-    }
-    fn as_slice(&self) -> &'r [u8] {
-        self.0
-    }
-    fn verify(slice: &[u8], _compatible: bool) -> molecule::error::VerificationResult<()> {
-        use molecule::verification_error as ve;
-        let slice_len = slice.len();
-        if slice_len != Self::TOTAL_SIZE {
-            return ve!(Self, TotalSizeNotMatch, Self::TOTAL_SIZE, slice_len);
-        }
-        Ok(())
-    }
-}
-#[derive(Clone)]
-pub struct SystemIdBuilder(pub(crate) [Byte; 2]);
-impl ::core::fmt::Debug for SystemIdBuilder {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:?})", Self::NAME, &self.0[..])
-    }
-}
-impl ::core::default::Default for SystemIdBuilder {
-    fn default() -> Self {
-        SystemIdBuilder([Byte::default(), Byte::default()])
-    }
-}
-impl SystemIdBuilder {
-    pub const TOTAL_SIZE: usize = 2;
-    pub const ITEM_SIZE: usize = 1;
-    pub const ITEM_COUNT: usize = 2;
-    pub fn set(mut self, v: [Byte; 2]) -> Self {
-        self.0 = v;
-        self
-    }
-    pub fn nth0(mut self, v: Byte) -> Self {
-        self.0[0] = v;
-        self
-    }
-    pub fn nth1(mut self, v: Byte) -> Self {
-        self.0[1] = v;
-        self
-    }
-}
-impl molecule::prelude::Builder for SystemIdBuilder {
-    type Entity = SystemId;
-    const NAME: &'static str = "SystemIdBuilder";
-    fn expected_length(&self) -> usize {
-        Self::TOTAL_SIZE
-    }
-    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
-        writer.write_all(self.0[0].as_slice())?;
-        writer.write_all(self.0[1].as_slice())?;
-        Ok(())
-    }
-    fn build(&self) -> Self::Entity {
-        let mut inner = Vec::with_capacity(self.expected_length());
-        self.write(&mut inner)
-            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        SystemId::new_unchecked(inner.into())
-    }
-}
-#[derive(Clone)]
 pub struct ResourceId(molecule::bytes::Bytes);
 impl ::core::fmt::LowerHex for ResourceId {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
@@ -3132,17 +2955,15 @@ impl ::core::default::Default for Value {
 }
 impl Value {
     const DEFAULT_VALUE: [u8; 6] = [0, 0, 0, 0, 0, 0];
-    pub const ITEMS_COUNT: usize = 4;
+    pub const ITEMS_COUNT: usize = 2;
     pub fn item_id(&self) -> molecule::Number {
         molecule::unpack_number(self.as_slice())
     }
     pub fn to_enum(&self) -> ValueUnion {
         let inner = self.0.slice(molecule::NUMBER_SIZE..);
         match self.item_id() {
-            0 => ResourceId::new_unchecked(inner).into(),
-            1 => SystemId::new_unchecked(inner).into(),
-            2 => Number::new_unchecked(inner).into(),
-            3 => RandomNumber::new_unchecked(inner).into(),
+            0 => Number::new_unchecked(inner).into(),
+            1 => RandomNumber::new_unchecked(inner).into(),
             _ => panic!("{}: invalid data", Self::NAME),
         }
     }
@@ -3199,17 +3020,15 @@ impl<'r> ::core::fmt::Display for ValueReader<'r> {
     }
 }
 impl<'r> ValueReader<'r> {
-    pub const ITEMS_COUNT: usize = 4;
+    pub const ITEMS_COUNT: usize = 2;
     pub fn item_id(&self) -> molecule::Number {
         molecule::unpack_number(self.as_slice())
     }
     pub fn to_enum(&self) -> ValueUnionReader<'r> {
         let inner = &self.as_slice()[molecule::NUMBER_SIZE..];
         match self.item_id() {
-            0 => ResourceIdReader::new_unchecked(inner).into(),
-            1 => SystemIdReader::new_unchecked(inner).into(),
-            2 => NumberReader::new_unchecked(inner).into(),
-            3 => RandomNumberReader::new_unchecked(inner).into(),
+            0 => NumberReader::new_unchecked(inner).into(),
+            1 => RandomNumberReader::new_unchecked(inner).into(),
             _ => panic!("{}: invalid data", Self::NAME),
         }
     }
@@ -3235,10 +3054,8 @@ impl<'r> molecule::prelude::Reader<'r> for ValueReader<'r> {
         let item_id = molecule::unpack_number(slice);
         let inner_slice = &slice[molecule::NUMBER_SIZE..];
         match item_id {
-            0 => ResourceIdReader::verify(inner_slice, compatible),
-            1 => SystemIdReader::verify(inner_slice, compatible),
-            2 => NumberReader::verify(inner_slice, compatible),
-            3 => RandomNumberReader::verify(inner_slice, compatible),
+            0 => NumberReader::verify(inner_slice, compatible),
+            1 => RandomNumberReader::verify(inner_slice, compatible),
             _ => ve!(Self, UnknownItem, Self::ITEMS_COUNT, item_id),
         }?;
         Ok(())
@@ -3247,7 +3064,7 @@ impl<'r> molecule::prelude::Reader<'r> for ValueReader<'r> {
 #[derive(Clone, Debug, Default)]
 pub struct ValueBuilder(pub(crate) ValueUnion);
 impl ValueBuilder {
-    pub const ITEMS_COUNT: usize = 4;
+    pub const ITEMS_COUNT: usize = 2;
     pub fn set<I>(mut self, v: I) -> Self
     where
         I: ::core::convert::Into<ValueUnion>,
@@ -3275,32 +3092,22 @@ impl molecule::prelude::Builder for ValueBuilder {
 }
 #[derive(Debug, Clone)]
 pub enum ValueUnion {
-    ResourceId(ResourceId),
-    SystemId(SystemId),
     Number(Number),
     RandomNumber(RandomNumber),
 }
 #[derive(Debug, Clone, Copy)]
 pub enum ValueUnionReader<'r> {
-    ResourceId(ResourceIdReader<'r>),
-    SystemId(SystemIdReader<'r>),
     Number(NumberReader<'r>),
     RandomNumber(RandomNumberReader<'r>),
 }
 impl ::core::default::Default for ValueUnion {
     fn default() -> Self {
-        ValueUnion::ResourceId(::core::default::Default::default())
+        ValueUnion::Number(::core::default::Default::default())
     }
 }
 impl ::core::fmt::Display for ValueUnion {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         match self {
-            ValueUnion::ResourceId(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, ResourceId::NAME, item)
-            }
-            ValueUnion::SystemId(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, SystemId::NAME, item)
-            }
             ValueUnion::Number(ref item) => {
                 write!(f, "{}::{}({})", Self::NAME, Number::NAME, item)
             }
@@ -3313,12 +3120,6 @@ impl ::core::fmt::Display for ValueUnion {
 impl<'r> ::core::fmt::Display for ValueUnionReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         match self {
-            ValueUnionReader::ResourceId(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, ResourceId::NAME, item)
-            }
-            ValueUnionReader::SystemId(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, SystemId::NAME, item)
-            }
             ValueUnionReader::Number(ref item) => {
                 write!(f, "{}::{}({})", Self::NAME, Number::NAME, item)
             }
@@ -3331,8 +3132,6 @@ impl<'r> ::core::fmt::Display for ValueUnionReader<'r> {
 impl ValueUnion {
     pub(crate) fn display_inner(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         match self {
-            ValueUnion::ResourceId(ref item) => write!(f, "{}", item),
-            ValueUnion::SystemId(ref item) => write!(f, "{}", item),
             ValueUnion::Number(ref item) => write!(f, "{}", item),
             ValueUnion::RandomNumber(ref item) => write!(f, "{}", item),
         }
@@ -3341,21 +3140,9 @@ impl ValueUnion {
 impl<'r> ValueUnionReader<'r> {
     pub(crate) fn display_inner(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         match self {
-            ValueUnionReader::ResourceId(ref item) => write!(f, "{}", item),
-            ValueUnionReader::SystemId(ref item) => write!(f, "{}", item),
             ValueUnionReader::Number(ref item) => write!(f, "{}", item),
             ValueUnionReader::RandomNumber(ref item) => write!(f, "{}", item),
         }
-    }
-}
-impl ::core::convert::From<ResourceId> for ValueUnion {
-    fn from(item: ResourceId) -> Self {
-        ValueUnion::ResourceId(item)
-    }
-}
-impl ::core::convert::From<SystemId> for ValueUnion {
-    fn from(item: SystemId) -> Self {
-        ValueUnion::SystemId(item)
     }
 }
 impl ::core::convert::From<Number> for ValueUnion {
@@ -3366,16 +3153,6 @@ impl ::core::convert::From<Number> for ValueUnion {
 impl ::core::convert::From<RandomNumber> for ValueUnion {
     fn from(item: RandomNumber) -> Self {
         ValueUnion::RandomNumber(item)
-    }
-}
-impl<'r> ::core::convert::From<ResourceIdReader<'r>> for ValueUnionReader<'r> {
-    fn from(item: ResourceIdReader<'r>) -> Self {
-        ValueUnionReader::ResourceId(item)
-    }
-}
-impl<'r> ::core::convert::From<SystemIdReader<'r>> for ValueUnionReader<'r> {
-    fn from(item: SystemIdReader<'r>) -> Self {
-        ValueUnionReader::SystemId(item)
     }
 }
 impl<'r> ::core::convert::From<NumberReader<'r>> for ValueUnionReader<'r> {
@@ -3392,40 +3169,30 @@ impl ValueUnion {
     pub const NAME: &'static str = "ValueUnion";
     pub fn as_bytes(&self) -> molecule::bytes::Bytes {
         match self {
-            ValueUnion::ResourceId(item) => item.as_bytes(),
-            ValueUnion::SystemId(item) => item.as_bytes(),
             ValueUnion::Number(item) => item.as_bytes(),
             ValueUnion::RandomNumber(item) => item.as_bytes(),
         }
     }
     pub fn as_slice(&self) -> &[u8] {
         match self {
-            ValueUnion::ResourceId(item) => item.as_slice(),
-            ValueUnion::SystemId(item) => item.as_slice(),
             ValueUnion::Number(item) => item.as_slice(),
             ValueUnion::RandomNumber(item) => item.as_slice(),
         }
     }
     pub fn item_id(&self) -> molecule::Number {
         match self {
-            ValueUnion::ResourceId(_) => 0,
-            ValueUnion::SystemId(_) => 1,
-            ValueUnion::Number(_) => 2,
-            ValueUnion::RandomNumber(_) => 3,
+            ValueUnion::Number(_) => 0,
+            ValueUnion::RandomNumber(_) => 1,
         }
     }
     pub fn item_name(&self) -> &str {
         match self {
-            ValueUnion::ResourceId(_) => "ResourceId",
-            ValueUnion::SystemId(_) => "SystemId",
             ValueUnion::Number(_) => "Number",
             ValueUnion::RandomNumber(_) => "RandomNumber",
         }
     }
     pub fn as_reader<'r>(&'r self) -> ValueUnionReader<'r> {
         match self {
-            ValueUnion::ResourceId(item) => item.as_reader().into(),
-            ValueUnion::SystemId(item) => item.as_reader().into(),
             ValueUnion::Number(item) => item.as_reader().into(),
             ValueUnion::RandomNumber(item) => item.as_reader().into(),
         }
@@ -3435,24 +3202,18 @@ impl<'r> ValueUnionReader<'r> {
     pub const NAME: &'r str = "ValueUnionReader";
     pub fn as_slice(&self) -> &'r [u8] {
         match self {
-            ValueUnionReader::ResourceId(item) => item.as_slice(),
-            ValueUnionReader::SystemId(item) => item.as_slice(),
             ValueUnionReader::Number(item) => item.as_slice(),
             ValueUnionReader::RandomNumber(item) => item.as_slice(),
         }
     }
     pub fn item_id(&self) -> molecule::Number {
         match self {
-            ValueUnionReader::ResourceId(_) => 0,
-            ValueUnionReader::SystemId(_) => 1,
-            ValueUnionReader::Number(_) => 2,
-            ValueUnionReader::RandomNumber(_) => 3,
+            ValueUnionReader::Number(_) => 0,
+            ValueUnionReader::RandomNumber(_) => 1,
         }
     }
     pub fn item_name(&self) -> &str {
         match self {
-            ValueUnionReader::ResourceId(_) => "ResourceId",
-            ValueUnionReader::SystemId(_) => "SystemId",
             ValueUnionReader::Number(_) => "Number",
             ValueUnionReader::RandomNumber(_) => "RandomNumber",
         }
@@ -3799,8 +3560,8 @@ impl<'t: 'r, 'r> ::core::iter::ExactSizeIterator for ValueVecReaderIterator<'t, 
     }
 }
 #[derive(Clone)]
-pub struct Context(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for Context {
+pub struct System(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for System {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         use molecule::hex_string;
         if f.alternate() {
@@ -3809,17 +3570,17 @@ impl ::core::fmt::LowerHex for Context {
         write!(f, "{}", hex_string(self.as_slice()))
     }
 }
-impl ::core::fmt::Debug for Context {
+impl ::core::fmt::Debug for System {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{}({:#x})", Self::NAME, self)
     }
 }
-impl ::core::fmt::Display for Context {
+impl ::core::fmt::Display for System {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "target_position", self.target_position())?;
-        write!(f, ", {}: {}", "system_id", self.system_id())?;
+        write!(f, "{}: {}", "id", self.id())?;
         write!(f, ", {}: {}", "args", self.args())?;
+        write!(f, ", {}: {}", "target_type", self.target_type())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -3827,15 +3588,15 @@ impl ::core::fmt::Display for Context {
         write!(f, " }}")
     }
 }
-impl ::core::default::Default for Context {
+impl ::core::default::Default for System {
     fn default() -> Self {
         let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        Context::new_unchecked(v)
+        System::new_unchecked(v)
     }
 }
-impl Context {
+impl System {
     const DEFAULT_VALUE: [u8; 23] = [
-        23, 0, 0, 0, 16, 0, 0, 0, 17, 0, 0, 0, 19, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
+        23, 0, 0, 0, 16, 0, 0, 0, 18, 0, 0, 0, 22, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0,
     ];
     pub const FIELD_COUNT: usize = 3;
     pub fn total_size(&self) -> usize {
@@ -3854,37 +3615,37 @@ impl Context {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn target_position(&self) -> Byte {
+    pub fn id(&self) -> ResourceId {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         let end = molecule::unpack_number(&slice[8..]) as usize;
-        Byte::new_unchecked(self.0.slice(start..end))
+        ResourceId::new_unchecked(self.0.slice(start..end))
     }
-    pub fn system_id(&self) -> SystemId {
+    pub fn args(&self) -> ValueVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         let end = molecule::unpack_number(&slice[12..]) as usize;
-        SystemId::new_unchecked(self.0.slice(start..end))
+        ValueVec::new_unchecked(self.0.slice(start..end))
     }
-    pub fn args(&self) -> ValueVec {
+    pub fn target_type(&self) -> Byte {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[12..]) as usize;
         if self.has_extra_fields() {
             let end = molecule::unpack_number(&slice[16..]) as usize;
-            ValueVec::new_unchecked(self.0.slice(start..end))
+            Byte::new_unchecked(self.0.slice(start..end))
         } else {
-            ValueVec::new_unchecked(self.0.slice(start..))
+            Byte::new_unchecked(self.0.slice(start..))
         }
     }
-    pub fn as_reader<'r>(&'r self) -> ContextReader<'r> {
-        ContextReader::new_unchecked(self.as_slice())
+    pub fn as_reader<'r>(&'r self) -> SystemReader<'r> {
+        SystemReader::new_unchecked(self.as_slice())
     }
 }
-impl molecule::prelude::Entity for Context {
-    type Builder = ContextBuilder;
-    const NAME: &'static str = "Context";
+impl molecule::prelude::Entity for System {
+    type Builder = SystemBuilder;
+    const NAME: &'static str = "System";
     fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        Context(data)
+        System(data)
     }
     fn as_bytes(&self) -> molecule::bytes::Bytes {
         self.0.clone()
@@ -3893,24 +3654,24 @@ impl molecule::prelude::Entity for Context {
         &self.0[..]
     }
     fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        ContextReader::from_slice(slice).map(|reader| reader.to_entity())
+        SystemReader::from_slice(slice).map(|reader| reader.to_entity())
     }
     fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        ContextReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+        SystemReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
     }
     fn new_builder() -> Self::Builder {
         ::core::default::Default::default()
     }
     fn as_builder(self) -> Self::Builder {
         Self::new_builder()
-            .target_position(self.target_position())
-            .system_id(self.system_id())
+            .id(self.id())
             .args(self.args())
+            .target_type(self.target_type())
     }
 }
 #[derive(Clone, Copy)]
-pub struct ContextReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for ContextReader<'r> {
+pub struct SystemReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for SystemReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         use molecule::hex_string;
         if f.alternate() {
@@ -3919,17 +3680,17 @@ impl<'r> ::core::fmt::LowerHex for ContextReader<'r> {
         write!(f, "{}", hex_string(self.as_slice()))
     }
 }
-impl<'r> ::core::fmt::Debug for ContextReader<'r> {
+impl<'r> ::core::fmt::Debug for SystemReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{}({:#x})", Self::NAME, self)
     }
 }
-impl<'r> ::core::fmt::Display for ContextReader<'r> {
+impl<'r> ::core::fmt::Display for SystemReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "target_position", self.target_position())?;
-        write!(f, ", {}: {}", "system_id", self.system_id())?;
+        write!(f, "{}: {}", "id", self.id())?;
         write!(f, ", {}: {}", "args", self.args())?;
+        write!(f, ", {}: {}", "target_type", self.target_type())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -3937,7 +3698,7 @@ impl<'r> ::core::fmt::Display for ContextReader<'r> {
         write!(f, " }}")
     }
 }
-impl<'r> ContextReader<'r> {
+impl<'r> SystemReader<'r> {
     pub const FIELD_COUNT: usize = 3;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
@@ -3955,37 +3716,37 @@ impl<'r> ContextReader<'r> {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn target_position(&self) -> ByteReader<'r> {
+    pub fn id(&self) -> ResourceIdReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         let end = molecule::unpack_number(&slice[8..]) as usize;
-        ByteReader::new_unchecked(&self.as_slice()[start..end])
+        ResourceIdReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn system_id(&self) -> SystemIdReader<'r> {
+    pub fn args(&self) -> ValueVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         let end = molecule::unpack_number(&slice[12..]) as usize;
-        SystemIdReader::new_unchecked(&self.as_slice()[start..end])
+        ValueVecReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn args(&self) -> ValueVecReader<'r> {
+    pub fn target_type(&self) -> ByteReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[12..]) as usize;
         if self.has_extra_fields() {
             let end = molecule::unpack_number(&slice[16..]) as usize;
-            ValueVecReader::new_unchecked(&self.as_slice()[start..end])
+            ByteReader::new_unchecked(&self.as_slice()[start..end])
         } else {
-            ValueVecReader::new_unchecked(&self.as_slice()[start..])
+            ByteReader::new_unchecked(&self.as_slice()[start..])
         }
     }
 }
-impl<'r> molecule::prelude::Reader<'r> for ContextReader<'r> {
-    type Entity = Context;
-    const NAME: &'static str = "ContextReader";
+impl<'r> molecule::prelude::Reader<'r> for SystemReader<'r> {
+    type Entity = System;
+    const NAME: &'static str = "SystemReader";
     fn to_entity(&self) -> Self::Entity {
         Self::Entity::new_unchecked(self.as_slice().to_owned().into())
     }
     fn new_unchecked(slice: &'r [u8]) -> Self {
-        ContextReader(slice)
+        SystemReader(slice)
     }
     fn as_slice(&self) -> &'r [u8] {
         self.0
@@ -4024,70 +3785,70 @@ impl<'r> molecule::prelude::Reader<'r> for ContextReader<'r> {
         if offsets.windows(2).any(|i| i[0] > i[1]) {
             return ve!(Self, OffsetsNotMatch);
         }
-        ByteReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
-        SystemIdReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
-        ValueVecReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
+        ResourceIdReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
+        ValueVecReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
+        ByteReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
         Ok(())
     }
 }
 #[derive(Clone, Debug, Default)]
-pub struct ContextBuilder {
-    pub(crate) target_position: Byte,
-    pub(crate) system_id: SystemId,
+pub struct SystemBuilder {
+    pub(crate) id: ResourceId,
     pub(crate) args: ValueVec,
+    pub(crate) target_type: Byte,
 }
-impl ContextBuilder {
+impl SystemBuilder {
     pub const FIELD_COUNT: usize = 3;
-    pub fn target_position(mut self, v: Byte) -> Self {
-        self.target_position = v;
-        self
-    }
-    pub fn system_id(mut self, v: SystemId) -> Self {
-        self.system_id = v;
+    pub fn id(mut self, v: ResourceId) -> Self {
+        self.id = v;
         self
     }
     pub fn args(mut self, v: ValueVec) -> Self {
         self.args = v;
         self
     }
+    pub fn target_type(mut self, v: Byte) -> Self {
+        self.target_type = v;
+        self
+    }
 }
-impl molecule::prelude::Builder for ContextBuilder {
-    type Entity = Context;
-    const NAME: &'static str = "ContextBuilder";
+impl molecule::prelude::Builder for SystemBuilder {
+    type Entity = System;
+    const NAME: &'static str = "SystemBuilder";
     fn expected_length(&self) -> usize {
         molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
-            + self.target_position.as_slice().len()
-            + self.system_id.as_slice().len()
+            + self.id.as_slice().len()
             + self.args.as_slice().len()
+            + self.target_type.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
         let mut offsets = Vec::with_capacity(Self::FIELD_COUNT);
         offsets.push(total_size);
-        total_size += self.target_position.as_slice().len();
-        offsets.push(total_size);
-        total_size += self.system_id.as_slice().len();
+        total_size += self.id.as_slice().len();
         offsets.push(total_size);
         total_size += self.args.as_slice().len();
+        offsets.push(total_size);
+        total_size += self.target_type.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
         }
-        writer.write_all(self.target_position.as_slice())?;
-        writer.write_all(self.system_id.as_slice())?;
+        writer.write_all(self.id.as_slice())?;
         writer.write_all(self.args.as_slice())?;
+        writer.write_all(self.target_type.as_slice())?;
         Ok(())
     }
     fn build(&self) -> Self::Entity {
         let mut inner = Vec::with_capacity(self.expected_length());
         self.write(&mut inner)
             .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        Context::new_unchecked(inner.into())
+        System::new_unchecked(inner.into())
     }
 }
 #[derive(Clone)]
-pub struct ContextVec(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for ContextVec {
+pub struct SystemVec(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for SystemVec {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         use molecule::hex_string;
         if f.alternate() {
@@ -4096,12 +3857,12 @@ impl ::core::fmt::LowerHex for ContextVec {
         write!(f, "{}", hex_string(self.as_slice()))
     }
 }
-impl ::core::fmt::Debug for ContextVec {
+impl ::core::fmt::Debug for SystemVec {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{}({:#x})", Self::NAME, self)
     }
 }
-impl ::core::fmt::Display for ContextVec {
+impl ::core::fmt::Display for SystemVec {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} [", Self::NAME)?;
         for i in 0..self.len() {
@@ -4114,13 +3875,13 @@ impl ::core::fmt::Display for ContextVec {
         write!(f, "]")
     }
 }
-impl ::core::default::Default for ContextVec {
+impl ::core::default::Default for SystemVec {
     fn default() -> Self {
         let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        ContextVec::new_unchecked(v)
+        SystemVec::new_unchecked(v)
     }
 }
-impl ContextVec {
+impl SystemVec {
     const DEFAULT_VALUE: [u8; 4] = [4, 0, 0, 0];
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
@@ -4138,34 +3899,34 @@ impl ContextVec {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    pub fn get(&self, idx: usize) -> Option<Context> {
+    pub fn get(&self, idx: usize) -> Option<System> {
         if idx >= self.len() {
             None
         } else {
             Some(self.get_unchecked(idx))
         }
     }
-    pub fn get_unchecked(&self, idx: usize) -> Context {
+    pub fn get_unchecked(&self, idx: usize) -> System {
         let slice = self.as_slice();
         let start_idx = molecule::NUMBER_SIZE * (1 + idx);
         let start = molecule::unpack_number(&slice[start_idx..]) as usize;
         if idx == self.len() - 1 {
-            Context::new_unchecked(self.0.slice(start..))
+            System::new_unchecked(self.0.slice(start..))
         } else {
             let end_idx = start_idx + molecule::NUMBER_SIZE;
             let end = molecule::unpack_number(&slice[end_idx..]) as usize;
-            Context::new_unchecked(self.0.slice(start..end))
+            System::new_unchecked(self.0.slice(start..end))
         }
     }
-    pub fn as_reader<'r>(&'r self) -> ContextVecReader<'r> {
-        ContextVecReader::new_unchecked(self.as_slice())
+    pub fn as_reader<'r>(&'r self) -> SystemVecReader<'r> {
+        SystemVecReader::new_unchecked(self.as_slice())
     }
 }
-impl molecule::prelude::Entity for ContextVec {
-    type Builder = ContextVecBuilder;
-    const NAME: &'static str = "ContextVec";
+impl molecule::prelude::Entity for SystemVec {
+    type Builder = SystemVecBuilder;
+    const NAME: &'static str = "SystemVec";
     fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        ContextVec(data)
+        SystemVec(data)
     }
     fn as_bytes(&self) -> molecule::bytes::Bytes {
         self.0.clone()
@@ -4174,10 +3935,10 @@ impl molecule::prelude::Entity for ContextVec {
         &self.0[..]
     }
     fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        ContextVecReader::from_slice(slice).map(|reader| reader.to_entity())
+        SystemVecReader::from_slice(slice).map(|reader| reader.to_entity())
     }
     fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        ContextVecReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+        SystemVecReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
     }
     fn new_builder() -> Self::Builder {
         ::core::default::Default::default()
@@ -4187,8 +3948,8 @@ impl molecule::prelude::Entity for ContextVec {
     }
 }
 #[derive(Clone, Copy)]
-pub struct ContextVecReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for ContextVecReader<'r> {
+pub struct SystemVecReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for SystemVecReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         use molecule::hex_string;
         if f.alternate() {
@@ -4197,12 +3958,12 @@ impl<'r> ::core::fmt::LowerHex for ContextVecReader<'r> {
         write!(f, "{}", hex_string(self.as_slice()))
     }
 }
-impl<'r> ::core::fmt::Debug for ContextVecReader<'r> {
+impl<'r> ::core::fmt::Debug for SystemVecReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{}({:#x})", Self::NAME, self)
     }
 }
-impl<'r> ::core::fmt::Display for ContextVecReader<'r> {
+impl<'r> ::core::fmt::Display for SystemVecReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} [", Self::NAME)?;
         for i in 0..self.len() {
@@ -4215,7 +3976,7 @@ impl<'r> ::core::fmt::Display for ContextVecReader<'r> {
         write!(f, "]")
     }
 }
-impl<'r> ContextVecReader<'r> {
+impl<'r> SystemVecReader<'r> {
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -4232,34 +3993,34 @@ impl<'r> ContextVecReader<'r> {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    pub fn get(&self, idx: usize) -> Option<ContextReader<'r>> {
+    pub fn get(&self, idx: usize) -> Option<SystemReader<'r>> {
         if idx >= self.len() {
             None
         } else {
             Some(self.get_unchecked(idx))
         }
     }
-    pub fn get_unchecked(&self, idx: usize) -> ContextReader<'r> {
+    pub fn get_unchecked(&self, idx: usize) -> SystemReader<'r> {
         let slice = self.as_slice();
         let start_idx = molecule::NUMBER_SIZE * (1 + idx);
         let start = molecule::unpack_number(&slice[start_idx..]) as usize;
         if idx == self.len() - 1 {
-            ContextReader::new_unchecked(&self.as_slice()[start..])
+            SystemReader::new_unchecked(&self.as_slice()[start..])
         } else {
             let end_idx = start_idx + molecule::NUMBER_SIZE;
             let end = molecule::unpack_number(&slice[end_idx..]) as usize;
-            ContextReader::new_unchecked(&self.as_slice()[start..end])
+            SystemReader::new_unchecked(&self.as_slice()[start..end])
         }
     }
 }
-impl<'r> molecule::prelude::Reader<'r> for ContextVecReader<'r> {
-    type Entity = ContextVec;
-    const NAME: &'static str = "ContextVecReader";
+impl<'r> molecule::prelude::Reader<'r> for SystemVecReader<'r> {
+    type Entity = SystemVec;
+    const NAME: &'static str = "SystemVecReader";
     fn to_entity(&self) -> Self::Entity {
         Self::Entity::new_unchecked(self.as_slice().to_owned().into())
     }
     fn new_unchecked(slice: &'r [u8]) -> Self {
-        ContextVecReader(slice)
+        SystemVecReader(slice)
     }
     fn as_slice(&self) -> &'r [u8] {
         self.0
@@ -4303,37 +4064,37 @@ impl<'r> molecule::prelude::Reader<'r> for ContextVecReader<'r> {
         for pair in offsets.windows(2) {
             let start = pair[0];
             let end = pair[1];
-            ContextReader::verify(&slice[start..end], compatible)?;
+            SystemReader::verify(&slice[start..end], compatible)?;
         }
         Ok(())
     }
 }
 #[derive(Clone, Debug, Default)]
-pub struct ContextVecBuilder(pub(crate) Vec<Context>);
-impl ContextVecBuilder {
-    pub fn set(mut self, v: Vec<Context>) -> Self {
+pub struct SystemVecBuilder(pub(crate) Vec<System>);
+impl SystemVecBuilder {
+    pub fn set(mut self, v: Vec<System>) -> Self {
         self.0 = v;
         self
     }
-    pub fn push(mut self, v: Context) -> Self {
+    pub fn push(mut self, v: System) -> Self {
         self.0.push(v);
         self
     }
-    pub fn extend<T: ::core::iter::IntoIterator<Item = Context>>(mut self, iter: T) -> Self {
+    pub fn extend<T: ::core::iter::IntoIterator<Item = System>>(mut self, iter: T) -> Self {
         for elem in iter {
             self.0.push(elem);
         }
         self
     }
-    pub fn replace(&mut self, index: usize, v: Context) -> Option<Context> {
+    pub fn replace(&mut self, index: usize, v: System) -> Option<System> {
         self.0
             .get_mut(index)
             .map(|item| ::core::mem::replace(item, v))
     }
 }
-impl molecule::prelude::Builder for ContextVecBuilder {
-    type Entity = ContextVec;
-    const NAME: &'static str = "ContextVecBuilder";
+impl molecule::prelude::Builder for SystemVecBuilder {
+    type Entity = SystemVec;
+    const NAME: &'static str = "SystemVecBuilder";
     fn expected_length(&self) -> usize {
         molecule::NUMBER_SIZE * (self.0.len() + 1)
             + self
@@ -4373,12 +4134,12 @@ impl molecule::prelude::Builder for ContextVecBuilder {
         let mut inner = Vec::with_capacity(self.expected_length());
         self.write(&mut inner)
             .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        ContextVec::new_unchecked(inner.into())
+        SystemVec::new_unchecked(inner.into())
     }
 }
-pub struct ContextVecIterator(ContextVec, usize, usize);
-impl ::core::iter::Iterator for ContextVecIterator {
-    type Item = Context;
+pub struct SystemVecIterator(SystemVec, usize, usize);
+impl ::core::iter::Iterator for SystemVecIterator {
+    type Item = System;
     fn next(&mut self) -> Option<Self::Item> {
         if self.1 >= self.2 {
             None
@@ -4389,27 +4150,27 @@ impl ::core::iter::Iterator for ContextVecIterator {
         }
     }
 }
-impl ::core::iter::ExactSizeIterator for ContextVecIterator {
+impl ::core::iter::ExactSizeIterator for SystemVecIterator {
     fn len(&self) -> usize {
         self.2 - self.1
     }
 }
-impl ::core::iter::IntoIterator for ContextVec {
-    type Item = Context;
-    type IntoIter = ContextVecIterator;
+impl ::core::iter::IntoIterator for SystemVec {
+    type Item = System;
+    type IntoIter = SystemVecIterator;
     fn into_iter(self) -> Self::IntoIter {
         let len = self.len();
-        ContextVecIterator(self, 0, len)
+        SystemVecIterator(self, 0, len)
     }
 }
-impl<'r> ContextVecReader<'r> {
-    pub fn iter<'t>(&'t self) -> ContextVecReaderIterator<'t, 'r> {
-        ContextVecReaderIterator(&self, 0, self.len())
+impl<'r> SystemVecReader<'r> {
+    pub fn iter<'t>(&'t self) -> SystemVecReaderIterator<'t, 'r> {
+        SystemVecReaderIterator(&self, 0, self.len())
     }
 }
-pub struct ContextVecReaderIterator<'t, 'r>(&'t ContextVecReader<'r>, usize, usize);
-impl<'t: 'r, 'r> ::core::iter::Iterator for ContextVecReaderIterator<'t, 'r> {
-    type Item = ContextReader<'t>;
+pub struct SystemVecReaderIterator<'t, 'r>(&'t SystemVecReader<'r>, usize, usize);
+impl<'t: 'r, 'r> ::core::iter::Iterator for SystemVecReaderIterator<'t, 'r> {
+    type Item = SystemReader<'t>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.1 >= self.2 {
             None
@@ -4420,172 +4181,8 @@ impl<'t: 'r, 'r> ::core::iter::Iterator for ContextVecReaderIterator<'t, 'r> {
         }
     }
 }
-impl<'t: 'r, 'r> ::core::iter::ExactSizeIterator for ContextVecReaderIterator<'t, 'r> {
+impl<'t: 'r, 'r> ::core::iter::ExactSizeIterator for SystemVecReaderIterator<'t, 'r> {
     fn len(&self) -> usize {
         self.2 - self.1
-    }
-}
-#[derive(Clone)]
-pub struct ContextOpt(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for ContextOpt {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl ::core::fmt::Debug for ContextOpt {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl ::core::fmt::Display for ContextOpt {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        if let Some(v) = self.to_opt() {
-            write!(f, "{}(Some({}))", Self::NAME, v)
-        } else {
-            write!(f, "{}(None)", Self::NAME)
-        }
-    }
-}
-impl ::core::default::Default for ContextOpt {
-    fn default() -> Self {
-        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        ContextOpt::new_unchecked(v)
-    }
-}
-impl ContextOpt {
-    const DEFAULT_VALUE: [u8; 0] = [];
-    pub fn is_none(&self) -> bool {
-        self.0.is_empty()
-    }
-    pub fn is_some(&self) -> bool {
-        !self.0.is_empty()
-    }
-    pub fn to_opt(&self) -> Option<Context> {
-        if self.is_none() {
-            None
-        } else {
-            Some(Context::new_unchecked(self.0.clone()))
-        }
-    }
-    pub fn as_reader<'r>(&'r self) -> ContextOptReader<'r> {
-        ContextOptReader::new_unchecked(self.as_slice())
-    }
-}
-impl molecule::prelude::Entity for ContextOpt {
-    type Builder = ContextOptBuilder;
-    const NAME: &'static str = "ContextOpt";
-    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        ContextOpt(data)
-    }
-    fn as_bytes(&self) -> molecule::bytes::Bytes {
-        self.0.clone()
-    }
-    fn as_slice(&self) -> &[u8] {
-        &self.0[..]
-    }
-    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        ContextOptReader::from_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        ContextOptReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn new_builder() -> Self::Builder {
-        ::core::default::Default::default()
-    }
-    fn as_builder(self) -> Self::Builder {
-        Self::new_builder().set(self.to_opt())
-    }
-}
-#[derive(Clone, Copy)]
-pub struct ContextOptReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for ContextOptReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl<'r> ::core::fmt::Debug for ContextOptReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl<'r> ::core::fmt::Display for ContextOptReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        if let Some(v) = self.to_opt() {
-            write!(f, "{}(Some({}))", Self::NAME, v)
-        } else {
-            write!(f, "{}(None)", Self::NAME)
-        }
-    }
-}
-impl<'r> ContextOptReader<'r> {
-    pub fn is_none(&self) -> bool {
-        self.0.is_empty()
-    }
-    pub fn is_some(&self) -> bool {
-        !self.0.is_empty()
-    }
-    pub fn to_opt(&self) -> Option<ContextReader<'r>> {
-        if self.is_none() {
-            None
-        } else {
-            Some(ContextReader::new_unchecked(self.as_slice()))
-        }
-    }
-}
-impl<'r> molecule::prelude::Reader<'r> for ContextOptReader<'r> {
-    type Entity = ContextOpt;
-    const NAME: &'static str = "ContextOptReader";
-    fn to_entity(&self) -> Self::Entity {
-        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
-    }
-    fn new_unchecked(slice: &'r [u8]) -> Self {
-        ContextOptReader(slice)
-    }
-    fn as_slice(&self) -> &'r [u8] {
-        self.0
-    }
-    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
-        if !slice.is_empty() {
-            ContextReader::verify(&slice[..], compatible)?;
-        }
-        Ok(())
-    }
-}
-#[derive(Clone, Debug, Default)]
-pub struct ContextOptBuilder(pub(crate) Option<Context>);
-impl ContextOptBuilder {
-    pub fn set(mut self, v: Option<Context>) -> Self {
-        self.0 = v;
-        self
-    }
-}
-impl molecule::prelude::Builder for ContextOptBuilder {
-    type Entity = ContextOpt;
-    const NAME: &'static str = "ContextOptBuilder";
-    fn expected_length(&self) -> usize {
-        self.0
-            .as_ref()
-            .map(|ref inner| inner.as_slice().len())
-            .unwrap_or(0)
-    }
-    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
-        self.0
-            .as_ref()
-            .map(|ref inner| writer.write_all(inner.as_slice()))
-            .unwrap_or(Ok(()))
-    }
-    fn build(&self) -> Self::Entity {
-        let mut inner = Vec::with_capacity(self.expected_length());
-        self.write(&mut inner)
-            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        ContextOpt::new_unchecked(inner.into())
     }
 }

@@ -3,658 +3,6 @@
 use super::types::*;
 use molecule::prelude::*;
 #[derive(Clone)]
-pub struct Effect(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for Effect {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl ::core::fmt::Debug for Effect {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl ::core::fmt::Display for Effect {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "id", self.id())?;
-        write!(f, ", {}: {}", "trigger", self.trigger())?;
-        write!(f, ", {}: {}", "execution", self.execution())?;
-        write!(f, ", {}: {}", "discard", self.discard())?;
-        let extra_count = self.count_extra_fields();
-        if extra_count != 0 {
-            write!(f, ", .. ({} fields)", extra_count)?;
-        }
-        write!(f, " }}")
-    }
-}
-impl ::core::default::Default for Effect {
-    fn default() -> Self {
-        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        Effect::new_unchecked(v)
-    }
-}
-impl Effect {
-    const DEFAULT_VALUE: [u8; 22] = [
-        22, 0, 0, 0, 20, 0, 0, 0, 22, 0, 0, 0, 22, 0, 0, 0, 22, 0, 0, 0, 0, 0,
-    ];
-    pub const FIELD_COUNT: usize = 4;
-    pub fn total_size(&self) -> usize {
-        molecule::unpack_number(self.as_slice()) as usize
-    }
-    pub fn field_count(&self) -> usize {
-        if self.total_size() == molecule::NUMBER_SIZE {
-            0
-        } else {
-            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
-        }
-    }
-    pub fn count_extra_fields(&self) -> usize {
-        self.field_count() - Self::FIELD_COUNT
-    }
-    pub fn has_extra_fields(&self) -> bool {
-        Self::FIELD_COUNT != self.field_count()
-    }
-    pub fn id(&self) -> ResourceId {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[4..]) as usize;
-        let end = molecule::unpack_number(&slice[8..]) as usize;
-        ResourceId::new_unchecked(self.0.slice(start..end))
-    }
-    pub fn trigger(&self) -> ContextOpt {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[8..]) as usize;
-        let end = molecule::unpack_number(&slice[12..]) as usize;
-        ContextOpt::new_unchecked(self.0.slice(start..end))
-    }
-    pub fn execution(&self) -> ContextOpt {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[12..]) as usize;
-        let end = molecule::unpack_number(&slice[16..]) as usize;
-        ContextOpt::new_unchecked(self.0.slice(start..end))
-    }
-    pub fn discard(&self) -> ContextOpt {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[16..]) as usize;
-        if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[20..]) as usize;
-            ContextOpt::new_unchecked(self.0.slice(start..end))
-        } else {
-            ContextOpt::new_unchecked(self.0.slice(start..))
-        }
-    }
-    pub fn as_reader<'r>(&'r self) -> EffectReader<'r> {
-        EffectReader::new_unchecked(self.as_slice())
-    }
-}
-impl molecule::prelude::Entity for Effect {
-    type Builder = EffectBuilder;
-    const NAME: &'static str = "Effect";
-    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        Effect(data)
-    }
-    fn as_bytes(&self) -> molecule::bytes::Bytes {
-        self.0.clone()
-    }
-    fn as_slice(&self) -> &[u8] {
-        &self.0[..]
-    }
-    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        EffectReader::from_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        EffectReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn new_builder() -> Self::Builder {
-        ::core::default::Default::default()
-    }
-    fn as_builder(self) -> Self::Builder {
-        Self::new_builder()
-            .id(self.id())
-            .trigger(self.trigger())
-            .execution(self.execution())
-            .discard(self.discard())
-    }
-}
-#[derive(Clone, Copy)]
-pub struct EffectReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for EffectReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl<'r> ::core::fmt::Debug for EffectReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl<'r> ::core::fmt::Display for EffectReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "id", self.id())?;
-        write!(f, ", {}: {}", "trigger", self.trigger())?;
-        write!(f, ", {}: {}", "execution", self.execution())?;
-        write!(f, ", {}: {}", "discard", self.discard())?;
-        let extra_count = self.count_extra_fields();
-        if extra_count != 0 {
-            write!(f, ", .. ({} fields)", extra_count)?;
-        }
-        write!(f, " }}")
-    }
-}
-impl<'r> EffectReader<'r> {
-    pub const FIELD_COUNT: usize = 4;
-    pub fn total_size(&self) -> usize {
-        molecule::unpack_number(self.as_slice()) as usize
-    }
-    pub fn field_count(&self) -> usize {
-        if self.total_size() == molecule::NUMBER_SIZE {
-            0
-        } else {
-            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
-        }
-    }
-    pub fn count_extra_fields(&self) -> usize {
-        self.field_count() - Self::FIELD_COUNT
-    }
-    pub fn has_extra_fields(&self) -> bool {
-        Self::FIELD_COUNT != self.field_count()
-    }
-    pub fn id(&self) -> ResourceIdReader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[4..]) as usize;
-        let end = molecule::unpack_number(&slice[8..]) as usize;
-        ResourceIdReader::new_unchecked(&self.as_slice()[start..end])
-    }
-    pub fn trigger(&self) -> ContextOptReader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[8..]) as usize;
-        let end = molecule::unpack_number(&slice[12..]) as usize;
-        ContextOptReader::new_unchecked(&self.as_slice()[start..end])
-    }
-    pub fn execution(&self) -> ContextOptReader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[12..]) as usize;
-        let end = molecule::unpack_number(&slice[16..]) as usize;
-        ContextOptReader::new_unchecked(&self.as_slice()[start..end])
-    }
-    pub fn discard(&self) -> ContextOptReader<'r> {
-        let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[16..]) as usize;
-        if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[20..]) as usize;
-            ContextOptReader::new_unchecked(&self.as_slice()[start..end])
-        } else {
-            ContextOptReader::new_unchecked(&self.as_slice()[start..])
-        }
-    }
-}
-impl<'r> molecule::prelude::Reader<'r> for EffectReader<'r> {
-    type Entity = Effect;
-    const NAME: &'static str = "EffectReader";
-    fn to_entity(&self) -> Self::Entity {
-        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
-    }
-    fn new_unchecked(slice: &'r [u8]) -> Self {
-        EffectReader(slice)
-    }
-    fn as_slice(&self) -> &'r [u8] {
-        self.0
-    }
-    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
-        use molecule::verification_error as ve;
-        let slice_len = slice.len();
-        if slice_len < molecule::NUMBER_SIZE {
-            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE, slice_len);
-        }
-        let total_size = molecule::unpack_number(slice) as usize;
-        if slice_len != total_size {
-            return ve!(Self, TotalSizeNotMatch, total_size, slice_len);
-        }
-        if slice_len < molecule::NUMBER_SIZE * 2 {
-            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE * 2, slice_len);
-        }
-        let offset_first = molecule::unpack_number(&slice[molecule::NUMBER_SIZE..]) as usize;
-        if offset_first % molecule::NUMBER_SIZE != 0 || offset_first < molecule::NUMBER_SIZE * 2 {
-            return ve!(Self, OffsetsNotMatch);
-        }
-        if slice_len < offset_first {
-            return ve!(Self, HeaderIsBroken, offset_first, slice_len);
-        }
-        let field_count = offset_first / molecule::NUMBER_SIZE - 1;
-        if field_count < Self::FIELD_COUNT {
-            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
-        } else if !compatible && field_count > Self::FIELD_COUNT {
-            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
-        };
-        let mut offsets: Vec<usize> = slice[molecule::NUMBER_SIZE..offset_first]
-            .chunks_exact(molecule::NUMBER_SIZE)
-            .map(|x| molecule::unpack_number(x) as usize)
-            .collect();
-        offsets.push(total_size);
-        if offsets.windows(2).any(|i| i[0] > i[1]) {
-            return ve!(Self, OffsetsNotMatch);
-        }
-        ResourceIdReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
-        ContextOptReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
-        ContextOptReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
-        ContextOptReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
-        Ok(())
-    }
-}
-#[derive(Clone, Debug, Default)]
-pub struct EffectBuilder {
-    pub(crate) id: ResourceId,
-    pub(crate) trigger: ContextOpt,
-    pub(crate) execution: ContextOpt,
-    pub(crate) discard: ContextOpt,
-}
-impl EffectBuilder {
-    pub const FIELD_COUNT: usize = 4;
-    pub fn id(mut self, v: ResourceId) -> Self {
-        self.id = v;
-        self
-    }
-    pub fn trigger(mut self, v: ContextOpt) -> Self {
-        self.trigger = v;
-        self
-    }
-    pub fn execution(mut self, v: ContextOpt) -> Self {
-        self.execution = v;
-        self
-    }
-    pub fn discard(mut self, v: ContextOpt) -> Self {
-        self.discard = v;
-        self
-    }
-}
-impl molecule::prelude::Builder for EffectBuilder {
-    type Entity = Effect;
-    const NAME: &'static str = "EffectBuilder";
-    fn expected_length(&self) -> usize {
-        molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
-            + self.id.as_slice().len()
-            + self.trigger.as_slice().len()
-            + self.execution.as_slice().len()
-            + self.discard.as_slice().len()
-    }
-    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
-        let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
-        let mut offsets = Vec::with_capacity(Self::FIELD_COUNT);
-        offsets.push(total_size);
-        total_size += self.id.as_slice().len();
-        offsets.push(total_size);
-        total_size += self.trigger.as_slice().len();
-        offsets.push(total_size);
-        total_size += self.execution.as_slice().len();
-        offsets.push(total_size);
-        total_size += self.discard.as_slice().len();
-        writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
-        for offset in offsets.into_iter() {
-            writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
-        }
-        writer.write_all(self.id.as_slice())?;
-        writer.write_all(self.trigger.as_slice())?;
-        writer.write_all(self.execution.as_slice())?;
-        writer.write_all(self.discard.as_slice())?;
-        Ok(())
-    }
-    fn build(&self) -> Self::Entity {
-        let mut inner = Vec::with_capacity(self.expected_length());
-        self.write(&mut inner)
-            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        Effect::new_unchecked(inner.into())
-    }
-}
-#[derive(Clone)]
-pub struct EffectVec(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for EffectVec {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl ::core::fmt::Debug for EffectVec {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl ::core::fmt::Display for EffectVec {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{} [", Self::NAME)?;
-        for i in 0..self.len() {
-            if i == 0 {
-                write!(f, "{}", self.get_unchecked(i))?;
-            } else {
-                write!(f, ", {}", self.get_unchecked(i))?;
-            }
-        }
-        write!(f, "]")
-    }
-}
-impl ::core::default::Default for EffectVec {
-    fn default() -> Self {
-        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        EffectVec::new_unchecked(v)
-    }
-}
-impl EffectVec {
-    const DEFAULT_VALUE: [u8; 4] = [4, 0, 0, 0];
-    pub fn total_size(&self) -> usize {
-        molecule::unpack_number(self.as_slice()) as usize
-    }
-    pub fn item_count(&self) -> usize {
-        if self.total_size() == molecule::NUMBER_SIZE {
-            0
-        } else {
-            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
-        }
-    }
-    pub fn len(&self) -> usize {
-        self.item_count()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-    pub fn get(&self, idx: usize) -> Option<Effect> {
-        if idx >= self.len() {
-            None
-        } else {
-            Some(self.get_unchecked(idx))
-        }
-    }
-    pub fn get_unchecked(&self, idx: usize) -> Effect {
-        let slice = self.as_slice();
-        let start_idx = molecule::NUMBER_SIZE * (1 + idx);
-        let start = molecule::unpack_number(&slice[start_idx..]) as usize;
-        if idx == self.len() - 1 {
-            Effect::new_unchecked(self.0.slice(start..))
-        } else {
-            let end_idx = start_idx + molecule::NUMBER_SIZE;
-            let end = molecule::unpack_number(&slice[end_idx..]) as usize;
-            Effect::new_unchecked(self.0.slice(start..end))
-        }
-    }
-    pub fn as_reader<'r>(&'r self) -> EffectVecReader<'r> {
-        EffectVecReader::new_unchecked(self.as_slice())
-    }
-}
-impl molecule::prelude::Entity for EffectVec {
-    type Builder = EffectVecBuilder;
-    const NAME: &'static str = "EffectVec";
-    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        EffectVec(data)
-    }
-    fn as_bytes(&self) -> molecule::bytes::Bytes {
-        self.0.clone()
-    }
-    fn as_slice(&self) -> &[u8] {
-        &self.0[..]
-    }
-    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        EffectVecReader::from_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        EffectVecReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn new_builder() -> Self::Builder {
-        ::core::default::Default::default()
-    }
-    fn as_builder(self) -> Self::Builder {
-        Self::new_builder().extend(self.into_iter())
-    }
-}
-#[derive(Clone, Copy)]
-pub struct EffectVecReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for EffectVecReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl<'r> ::core::fmt::Debug for EffectVecReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl<'r> ::core::fmt::Display for EffectVecReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{} [", Self::NAME)?;
-        for i in 0..self.len() {
-            if i == 0 {
-                write!(f, "{}", self.get_unchecked(i))?;
-            } else {
-                write!(f, ", {}", self.get_unchecked(i))?;
-            }
-        }
-        write!(f, "]")
-    }
-}
-impl<'r> EffectVecReader<'r> {
-    pub fn total_size(&self) -> usize {
-        molecule::unpack_number(self.as_slice()) as usize
-    }
-    pub fn item_count(&self) -> usize {
-        if self.total_size() == molecule::NUMBER_SIZE {
-            0
-        } else {
-            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
-        }
-    }
-    pub fn len(&self) -> usize {
-        self.item_count()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-    pub fn get(&self, idx: usize) -> Option<EffectReader<'r>> {
-        if idx >= self.len() {
-            None
-        } else {
-            Some(self.get_unchecked(idx))
-        }
-    }
-    pub fn get_unchecked(&self, idx: usize) -> EffectReader<'r> {
-        let slice = self.as_slice();
-        let start_idx = molecule::NUMBER_SIZE * (1 + idx);
-        let start = molecule::unpack_number(&slice[start_idx..]) as usize;
-        if idx == self.len() - 1 {
-            EffectReader::new_unchecked(&self.as_slice()[start..])
-        } else {
-            let end_idx = start_idx + molecule::NUMBER_SIZE;
-            let end = molecule::unpack_number(&slice[end_idx..]) as usize;
-            EffectReader::new_unchecked(&self.as_slice()[start..end])
-        }
-    }
-}
-impl<'r> molecule::prelude::Reader<'r> for EffectVecReader<'r> {
-    type Entity = EffectVec;
-    const NAME: &'static str = "EffectVecReader";
-    fn to_entity(&self) -> Self::Entity {
-        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
-    }
-    fn new_unchecked(slice: &'r [u8]) -> Self {
-        EffectVecReader(slice)
-    }
-    fn as_slice(&self) -> &'r [u8] {
-        self.0
-    }
-    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
-        use molecule::verification_error as ve;
-        let slice_len = slice.len();
-        if slice_len < molecule::NUMBER_SIZE {
-            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE, slice_len);
-        }
-        let total_size = molecule::unpack_number(slice) as usize;
-        if slice_len != total_size {
-            return ve!(Self, TotalSizeNotMatch, total_size, slice_len);
-        }
-        if slice_len == molecule::NUMBER_SIZE {
-            return Ok(());
-        }
-        if slice_len < molecule::NUMBER_SIZE * 2 {
-            return ve!(
-                Self,
-                TotalSizeNotMatch,
-                molecule::NUMBER_SIZE * 2,
-                slice_len
-            );
-        }
-        let offset_first = molecule::unpack_number(&slice[molecule::NUMBER_SIZE..]) as usize;
-        if offset_first % molecule::NUMBER_SIZE != 0 || offset_first < molecule::NUMBER_SIZE * 2 {
-            return ve!(Self, OffsetsNotMatch);
-        }
-        if slice_len < offset_first {
-            return ve!(Self, HeaderIsBroken, offset_first, slice_len);
-        }
-        let mut offsets: Vec<usize> = slice[molecule::NUMBER_SIZE..offset_first]
-            .chunks_exact(molecule::NUMBER_SIZE)
-            .map(|x| molecule::unpack_number(x) as usize)
-            .collect();
-        offsets.push(total_size);
-        if offsets.windows(2).any(|i| i[0] > i[1]) {
-            return ve!(Self, OffsetsNotMatch);
-        }
-        for pair in offsets.windows(2) {
-            let start = pair[0];
-            let end = pair[1];
-            EffectReader::verify(&slice[start..end], compatible)?;
-        }
-        Ok(())
-    }
-}
-#[derive(Clone, Debug, Default)]
-pub struct EffectVecBuilder(pub(crate) Vec<Effect>);
-impl EffectVecBuilder {
-    pub fn set(mut self, v: Vec<Effect>) -> Self {
-        self.0 = v;
-        self
-    }
-    pub fn push(mut self, v: Effect) -> Self {
-        self.0.push(v);
-        self
-    }
-    pub fn extend<T: ::core::iter::IntoIterator<Item = Effect>>(mut self, iter: T) -> Self {
-        for elem in iter {
-            self.0.push(elem);
-        }
-        self
-    }
-    pub fn replace(&mut self, index: usize, v: Effect) -> Option<Effect> {
-        self.0
-            .get_mut(index)
-            .map(|item| ::core::mem::replace(item, v))
-    }
-}
-impl molecule::prelude::Builder for EffectVecBuilder {
-    type Entity = EffectVec;
-    const NAME: &'static str = "EffectVecBuilder";
-    fn expected_length(&self) -> usize {
-        molecule::NUMBER_SIZE * (self.0.len() + 1)
-            + self
-                .0
-                .iter()
-                .map(|inner| inner.as_slice().len())
-                .sum::<usize>()
-    }
-    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
-        let item_count = self.0.len();
-        if item_count == 0 {
-            writer.write_all(&molecule::pack_number(
-                molecule::NUMBER_SIZE as molecule::Number,
-            ))?;
-        } else {
-            let (total_size, offsets) = self.0.iter().fold(
-                (
-                    molecule::NUMBER_SIZE * (item_count + 1),
-                    Vec::with_capacity(item_count),
-                ),
-                |(start, mut offsets), inner| {
-                    offsets.push(start);
-                    (start + inner.as_slice().len(), offsets)
-                },
-            );
-            writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
-            for offset in offsets.into_iter() {
-                writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
-            }
-            for inner in self.0.iter() {
-                writer.write_all(inner.as_slice())?;
-            }
-        }
-        Ok(())
-    }
-    fn build(&self) -> Self::Entity {
-        let mut inner = Vec::with_capacity(self.expected_length());
-        self.write(&mut inner)
-            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        EffectVec::new_unchecked(inner.into())
-    }
-}
-pub struct EffectVecIterator(EffectVec, usize, usize);
-impl ::core::iter::Iterator for EffectVecIterator {
-    type Item = Effect;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.1 >= self.2 {
-            None
-        } else {
-            let ret = self.0.get_unchecked(self.1);
-            self.1 += 1;
-            Some(ret)
-        }
-    }
-}
-impl ::core::iter::ExactSizeIterator for EffectVecIterator {
-    fn len(&self) -> usize {
-        self.2 - self.1
-    }
-}
-impl ::core::iter::IntoIterator for EffectVec {
-    type Item = Effect;
-    type IntoIter = EffectVecIterator;
-    fn into_iter(self) -> Self::IntoIter {
-        let len = self.len();
-        EffectVecIterator(self, 0, len)
-    }
-}
-impl<'r> EffectVecReader<'r> {
-    pub fn iter<'t>(&'t self) -> EffectVecReaderIterator<'t, 'r> {
-        EffectVecReaderIterator(&self, 0, self.len())
-    }
-}
-pub struct EffectVecReaderIterator<'t, 'r>(&'t EffectVecReader<'r>, usize, usize);
-impl<'t: 'r, 'r> ::core::iter::Iterator for EffectVecReaderIterator<'t, 'r> {
-    type Item = EffectReader<'t>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.1 >= self.2 {
-            None
-        } else {
-            let ret = self.0.get_unchecked(self.1);
-            self.1 += 1;
-            Some(ret)
-        }
-    }
-}
-impl<'t: 'r, 'r> ::core::iter::ExactSizeIterator for EffectVecReaderIterator<'t, 'r> {
-    fn len(&self) -> usize {
-        self.2 - self.1
-    }
-}
-#[derive(Clone)]
 pub struct Card(molecule::bytes::Bytes);
 impl ::core::fmt::LowerHex for Card {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
@@ -677,7 +25,7 @@ impl ::core::fmt::Display for Card {
         write!(f, ", {}: {}", "class", self.class())?;
         write!(f, ", {}: {}", "cost", self.cost())?;
         write!(f, ", {}: {}", "price", self.price())?;
-        write!(f, ", {}: {}", "effect_pool", self.effect_pool())?;
+        write!(f, ", {}: {}", "system_pool", self.system_pool())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -737,7 +85,7 @@ impl Card {
         let end = molecule::unpack_number(&slice[20..]) as usize;
         RandomNumber::new_unchecked(self.0.slice(start..end))
     }
-    pub fn effect_pool(&self) -> ResourceIdVec {
+    pub fn system_pool(&self) -> ResourceIdVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[20..]) as usize;
         if self.has_extra_fields() {
@@ -778,7 +126,7 @@ impl molecule::prelude::Entity for Card {
             .class(self.class())
             .cost(self.cost())
             .price(self.price())
-            .effect_pool(self.effect_pool())
+            .system_pool(self.system_pool())
     }
 }
 #[derive(Clone, Copy)]
@@ -804,7 +152,7 @@ impl<'r> ::core::fmt::Display for CardReader<'r> {
         write!(f, ", {}: {}", "class", self.class())?;
         write!(f, ", {}: {}", "cost", self.cost())?;
         write!(f, ", {}: {}", "price", self.price())?;
-        write!(f, ", {}: {}", "effect_pool", self.effect_pool())?;
+        write!(f, ", {}: {}", "system_pool", self.system_pool())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -854,7 +202,7 @@ impl<'r> CardReader<'r> {
         let end = molecule::unpack_number(&slice[20..]) as usize;
         RandomNumberReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn effect_pool(&self) -> ResourceIdVecReader<'r> {
+    pub fn system_pool(&self) -> ResourceIdVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[20..]) as usize;
         if self.has_extra_fields() {
@@ -925,7 +273,7 @@ pub struct CardBuilder {
     pub(crate) class: Byte,
     pub(crate) cost: Byte,
     pub(crate) price: RandomNumber,
-    pub(crate) effect_pool: ResourceIdVec,
+    pub(crate) system_pool: ResourceIdVec,
 }
 impl CardBuilder {
     pub const FIELD_COUNT: usize = 5;
@@ -945,8 +293,8 @@ impl CardBuilder {
         self.price = v;
         self
     }
-    pub fn effect_pool(mut self, v: ResourceIdVec) -> Self {
-        self.effect_pool = v;
+    pub fn system_pool(mut self, v: ResourceIdVec) -> Self {
+        self.system_pool = v;
         self
     }
 }
@@ -959,7 +307,7 @@ impl molecule::prelude::Builder for CardBuilder {
             + self.class.as_slice().len()
             + self.cost.as_slice().len()
             + self.price.as_slice().len()
-            + self.effect_pool.as_slice().len()
+            + self.system_pool.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
@@ -973,7 +321,7 @@ impl molecule::prelude::Builder for CardBuilder {
         offsets.push(total_size);
         total_size += self.price.as_slice().len();
         offsets.push(total_size);
-        total_size += self.effect_pool.as_slice().len();
+        total_size += self.system_pool.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
@@ -982,7 +330,7 @@ impl molecule::prelude::Builder for CardBuilder {
         writer.write_all(self.class.as_slice())?;
         writer.write_all(self.cost.as_slice())?;
         writer.write_all(self.price.as_slice())?;
-        writer.write_all(self.effect_pool.as_slice())?;
+        writer.write_all(self.system_pool.as_slice())?;
         Ok(())
     }
     fn build(&self) -> Self::Entity {
@@ -1356,7 +704,7 @@ impl ::core::fmt::Display for Item {
         write!(f, ", {}: {}", "quality", self.quality())?;
         write!(f, ", {}: {}", "random_weight", self.random_weight())?;
         write!(f, ", {}: {}", "price", self.price())?;
-        write!(f, ", {}: {}", "effect_pool", self.effect_pool())?;
+        write!(f, ", {}: {}", "system_pool", self.system_pool())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -1423,7 +771,7 @@ impl Item {
         let end = molecule::unpack_number(&slice[24..]) as usize;
         RandomNumber::new_unchecked(self.0.slice(start..end))
     }
-    pub fn effect_pool(&self) -> ResourceIdVec {
+    pub fn system_pool(&self) -> ResourceIdVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[24..]) as usize;
         if self.has_extra_fields() {
@@ -1465,7 +813,7 @@ impl molecule::prelude::Entity for Item {
             .quality(self.quality())
             .random_weight(self.random_weight())
             .price(self.price())
-            .effect_pool(self.effect_pool())
+            .system_pool(self.system_pool())
     }
 }
 #[derive(Clone, Copy)]
@@ -1492,7 +840,7 @@ impl<'r> ::core::fmt::Display for ItemReader<'r> {
         write!(f, ", {}: {}", "quality", self.quality())?;
         write!(f, ", {}: {}", "random_weight", self.random_weight())?;
         write!(f, ", {}: {}", "price", self.price())?;
-        write!(f, ", {}: {}", "effect_pool", self.effect_pool())?;
+        write!(f, ", {}: {}", "system_pool", self.system_pool())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -1548,7 +896,7 @@ impl<'r> ItemReader<'r> {
         let end = molecule::unpack_number(&slice[24..]) as usize;
         RandomNumberReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn effect_pool(&self) -> ResourceIdVecReader<'r> {
+    pub fn system_pool(&self) -> ResourceIdVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[24..]) as usize;
         if self.has_extra_fields() {
@@ -1621,7 +969,7 @@ pub struct ItemBuilder {
     pub(crate) quality: Byte,
     pub(crate) random_weight: RandomByte,
     pub(crate) price: RandomNumber,
-    pub(crate) effect_pool: ResourceIdVec,
+    pub(crate) system_pool: ResourceIdVec,
 }
 impl ItemBuilder {
     pub const FIELD_COUNT: usize = 6;
@@ -1645,8 +993,8 @@ impl ItemBuilder {
         self.price = v;
         self
     }
-    pub fn effect_pool(mut self, v: ResourceIdVec) -> Self {
-        self.effect_pool = v;
+    pub fn system_pool(mut self, v: ResourceIdVec) -> Self {
+        self.system_pool = v;
         self
     }
 }
@@ -1660,7 +1008,7 @@ impl molecule::prelude::Builder for ItemBuilder {
             + self.quality.as_slice().len()
             + self.random_weight.as_slice().len()
             + self.price.as_slice().len()
-            + self.effect_pool.as_slice().len()
+            + self.system_pool.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
@@ -1676,7 +1024,7 @@ impl molecule::prelude::Builder for ItemBuilder {
         offsets.push(total_size);
         total_size += self.price.as_slice().len();
         offsets.push(total_size);
-        total_size += self.effect_pool.as_slice().len();
+        total_size += self.system_pool.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
@@ -1686,7 +1034,7 @@ impl molecule::prelude::Builder for ItemBuilder {
         writer.write_all(self.quality.as_slice())?;
         writer.write_all(self.random_weight.as_slice())?;
         writer.write_all(self.price.as_slice())?;
-        writer.write_all(self.effect_pool.as_slice())?;
+        writer.write_all(self.system_pool.as_slice())?;
         Ok(())
     }
     fn build(&self) -> Self::Entity {
@@ -2057,7 +1405,7 @@ impl ::core::fmt::Display for Action {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "id", self.id())?;
         write!(f, ", {}: {}", "random", self.random())?;
-        write!(f, ", {}: {}", "effect_pool", self.effect_pool())?;
+        write!(f, ", {}: {}", "system_pool", self.system_pool())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -2104,7 +1452,7 @@ impl Action {
         let end = molecule::unpack_number(&slice[12..]) as usize;
         Byte::new_unchecked(self.0.slice(start..end))
     }
-    pub fn effect_pool(&self) -> ResourceIdVec {
+    pub fn system_pool(&self) -> ResourceIdVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[12..]) as usize;
         if self.has_extra_fields() {
@@ -2143,7 +1491,7 @@ impl molecule::prelude::Entity for Action {
         Self::new_builder()
             .id(self.id())
             .random(self.random())
-            .effect_pool(self.effect_pool())
+            .system_pool(self.system_pool())
     }
 }
 #[derive(Clone, Copy)]
@@ -2167,7 +1515,7 @@ impl<'r> ::core::fmt::Display for ActionReader<'r> {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "id", self.id())?;
         write!(f, ", {}: {}", "random", self.random())?;
-        write!(f, ", {}: {}", "effect_pool", self.effect_pool())?;
+        write!(f, ", {}: {}", "system_pool", self.system_pool())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -2205,7 +1553,7 @@ impl<'r> ActionReader<'r> {
         let end = molecule::unpack_number(&slice[12..]) as usize;
         ByteReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn effect_pool(&self) -> ResourceIdVecReader<'r> {
+    pub fn system_pool(&self) -> ResourceIdVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[12..]) as usize;
         if self.has_extra_fields() {
@@ -2272,7 +1620,7 @@ impl<'r> molecule::prelude::Reader<'r> for ActionReader<'r> {
 pub struct ActionBuilder {
     pub(crate) id: ResourceId,
     pub(crate) random: Byte,
-    pub(crate) effect_pool: ResourceIdVec,
+    pub(crate) system_pool: ResourceIdVec,
 }
 impl ActionBuilder {
     pub const FIELD_COUNT: usize = 3;
@@ -2284,8 +1632,8 @@ impl ActionBuilder {
         self.random = v;
         self
     }
-    pub fn effect_pool(mut self, v: ResourceIdVec) -> Self {
-        self.effect_pool = v;
+    pub fn system_pool(mut self, v: ResourceIdVec) -> Self {
+        self.system_pool = v;
         self
     }
 }
@@ -2296,7 +1644,7 @@ impl molecule::prelude::Builder for ActionBuilder {
         molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
             + self.id.as_slice().len()
             + self.random.as_slice().len()
-            + self.effect_pool.as_slice().len()
+            + self.system_pool.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
@@ -2306,14 +1654,14 @@ impl molecule::prelude::Builder for ActionBuilder {
         offsets.push(total_size);
         total_size += self.random.as_slice().len();
         offsets.push(total_size);
-        total_size += self.effect_pool.as_slice().len();
+        total_size += self.system_pool.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
         }
         writer.write_all(self.id.as_slice())?;
         writer.write_all(self.random.as_slice())?;
-        writer.write_all(self.effect_pool.as_slice())?;
+        writer.write_all(self.system_pool.as_slice())?;
         Ok(())
     }
     fn build(&self) -> Self::Entity {
@@ -3118,7 +2466,7 @@ impl ::core::default::Default for Score {
 }
 impl Score {
     const DEFAULT_VALUE: [u8; 27] = [
-        0, 0, 0, 0, 23, 0, 0, 0, 16, 0, 0, 0, 17, 0, 0, 0, 19, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
+        0, 0, 0, 0, 23, 0, 0, 0, 16, 0, 0, 0, 18, 0, 0, 0, 22, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0,
     ];
     pub const ITEMS_COUNT: usize = 2;
     pub fn item_id(&self) -> molecule::Number {
@@ -3127,7 +2475,7 @@ impl Score {
     pub fn to_enum(&self) -> ScoreUnion {
         let inner = self.0.slice(molecule::NUMBER_SIZE..);
         match self.item_id() {
-            0 => Context::new_unchecked(inner).into(),
+            0 => System::new_unchecked(inner).into(),
             1 => RandomNumber::new_unchecked(inner).into(),
             _ => panic!("{}: invalid data", Self::NAME),
         }
@@ -3192,7 +2540,7 @@ impl<'r> ScoreReader<'r> {
     pub fn to_enum(&self) -> ScoreUnionReader<'r> {
         let inner = &self.as_slice()[molecule::NUMBER_SIZE..];
         match self.item_id() {
-            0 => ContextReader::new_unchecked(inner).into(),
+            0 => SystemReader::new_unchecked(inner).into(),
             1 => RandomNumberReader::new_unchecked(inner).into(),
             _ => panic!("{}: invalid data", Self::NAME),
         }
@@ -3219,7 +2567,7 @@ impl<'r> molecule::prelude::Reader<'r> for ScoreReader<'r> {
         let item_id = molecule::unpack_number(slice);
         let inner_slice = &slice[molecule::NUMBER_SIZE..];
         match item_id {
-            0 => ContextReader::verify(inner_slice, compatible),
+            0 => SystemReader::verify(inner_slice, compatible),
             1 => RandomNumberReader::verify(inner_slice, compatible),
             _ => ve!(Self, UnknownItem, Self::ITEMS_COUNT, item_id),
         }?;
@@ -3257,24 +2605,24 @@ impl molecule::prelude::Builder for ScoreBuilder {
 }
 #[derive(Debug, Clone)]
 pub enum ScoreUnion {
-    Context(Context),
+    System(System),
     RandomNumber(RandomNumber),
 }
 #[derive(Debug, Clone, Copy)]
 pub enum ScoreUnionReader<'r> {
-    Context(ContextReader<'r>),
+    System(SystemReader<'r>),
     RandomNumber(RandomNumberReader<'r>),
 }
 impl ::core::default::Default for ScoreUnion {
     fn default() -> Self {
-        ScoreUnion::Context(::core::default::Default::default())
+        ScoreUnion::System(::core::default::Default::default())
     }
 }
 impl ::core::fmt::Display for ScoreUnion {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         match self {
-            ScoreUnion::Context(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, Context::NAME, item)
+            ScoreUnion::System(ref item) => {
+                write!(f, "{}::{}({})", Self::NAME, System::NAME, item)
             }
             ScoreUnion::RandomNumber(ref item) => {
                 write!(f, "{}::{}({})", Self::NAME, RandomNumber::NAME, item)
@@ -3285,8 +2633,8 @@ impl ::core::fmt::Display for ScoreUnion {
 impl<'r> ::core::fmt::Display for ScoreUnionReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         match self {
-            ScoreUnionReader::Context(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, Context::NAME, item)
+            ScoreUnionReader::System(ref item) => {
+                write!(f, "{}::{}({})", Self::NAME, System::NAME, item)
             }
             ScoreUnionReader::RandomNumber(ref item) => {
                 write!(f, "{}::{}({})", Self::NAME, RandomNumber::NAME, item)
@@ -3297,7 +2645,7 @@ impl<'r> ::core::fmt::Display for ScoreUnionReader<'r> {
 impl ScoreUnion {
     pub(crate) fn display_inner(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         match self {
-            ScoreUnion::Context(ref item) => write!(f, "{}", item),
+            ScoreUnion::System(ref item) => write!(f, "{}", item),
             ScoreUnion::RandomNumber(ref item) => write!(f, "{}", item),
         }
     }
@@ -3305,14 +2653,14 @@ impl ScoreUnion {
 impl<'r> ScoreUnionReader<'r> {
     pub(crate) fn display_inner(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         match self {
-            ScoreUnionReader::Context(ref item) => write!(f, "{}", item),
+            ScoreUnionReader::System(ref item) => write!(f, "{}", item),
             ScoreUnionReader::RandomNumber(ref item) => write!(f, "{}", item),
         }
     }
 }
-impl ::core::convert::From<Context> for ScoreUnion {
-    fn from(item: Context) -> Self {
-        ScoreUnion::Context(item)
+impl ::core::convert::From<System> for ScoreUnion {
+    fn from(item: System) -> Self {
+        ScoreUnion::System(item)
     }
 }
 impl ::core::convert::From<RandomNumber> for ScoreUnion {
@@ -3320,9 +2668,9 @@ impl ::core::convert::From<RandomNumber> for ScoreUnion {
         ScoreUnion::RandomNumber(item)
     }
 }
-impl<'r> ::core::convert::From<ContextReader<'r>> for ScoreUnionReader<'r> {
-    fn from(item: ContextReader<'r>) -> Self {
-        ScoreUnionReader::Context(item)
+impl<'r> ::core::convert::From<SystemReader<'r>> for ScoreUnionReader<'r> {
+    fn from(item: SystemReader<'r>) -> Self {
+        ScoreUnionReader::System(item)
     }
 }
 impl<'r> ::core::convert::From<RandomNumberReader<'r>> for ScoreUnionReader<'r> {
@@ -3334,31 +2682,31 @@ impl ScoreUnion {
     pub const NAME: &'static str = "ScoreUnion";
     pub fn as_bytes(&self) -> molecule::bytes::Bytes {
         match self {
-            ScoreUnion::Context(item) => item.as_bytes(),
+            ScoreUnion::System(item) => item.as_bytes(),
             ScoreUnion::RandomNumber(item) => item.as_bytes(),
         }
     }
     pub fn as_slice(&self) -> &[u8] {
         match self {
-            ScoreUnion::Context(item) => item.as_slice(),
+            ScoreUnion::System(item) => item.as_slice(),
             ScoreUnion::RandomNumber(item) => item.as_slice(),
         }
     }
     pub fn item_id(&self) -> molecule::Number {
         match self {
-            ScoreUnion::Context(_) => 0,
+            ScoreUnion::System(_) => 0,
             ScoreUnion::RandomNumber(_) => 1,
         }
     }
     pub fn item_name(&self) -> &str {
         match self {
-            ScoreUnion::Context(_) => "Context",
+            ScoreUnion::System(_) => "System",
             ScoreUnion::RandomNumber(_) => "RandomNumber",
         }
     }
     pub fn as_reader<'r>(&'r self) -> ScoreUnionReader<'r> {
         match self {
-            ScoreUnion::Context(item) => item.as_reader().into(),
+            ScoreUnion::System(item) => item.as_reader().into(),
             ScoreUnion::RandomNumber(item) => item.as_reader().into(),
         }
     }
@@ -3367,19 +2715,19 @@ impl<'r> ScoreUnionReader<'r> {
     pub const NAME: &'r str = "ScoreUnionReader";
     pub fn as_slice(&self) -> &'r [u8] {
         match self {
-            ScoreUnionReader::Context(item) => item.as_slice(),
+            ScoreUnionReader::System(item) => item.as_slice(),
             ScoreUnionReader::RandomNumber(item) => item.as_slice(),
         }
     }
     pub fn item_id(&self) -> molecule::Number {
         match self {
-            ScoreUnionReader::Context(_) => 0,
+            ScoreUnionReader::System(_) => 0,
             ScoreUnionReader::RandomNumber(_) => 1,
         }
     }
     pub fn item_name(&self) -> &str {
         match self {
-            ScoreUnionReader::Context(_) => "Context",
+            ScoreUnionReader::System(_) => "System",
             ScoreUnionReader::RandomNumber(_) => "RandomNumber",
         }
     }
@@ -3426,7 +2774,7 @@ impl Loot {
     const DEFAULT_VALUE: [u8; 90] = [
         90, 0, 0, 0, 28, 0, 0, 0, 30, 0, 0, 0, 46, 0, 0, 0, 73, 0, 0, 0, 90, 0, 0, 0, 90, 0, 0, 0,
         0, 0, 16, 0, 0, 0, 12, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 16, 0, 0,
-        0, 17, 0, 0, 0, 19, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0,
+        0, 18, 0, 0, 0, 22, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0,
         0, 0, 0, 0,
     ];
     pub const FIELD_COUNT: usize = 6;

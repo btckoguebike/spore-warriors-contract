@@ -1337,7 +1337,7 @@ impl ::core::default::Default for NodeUnknown {
     }
 }
 impl NodeUnknown {
-    const DEFAULT_VALUE: [u8; 17] = [17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 4, 0, 0, 0];
+    const DEFAULT_VALUE: [u8; 17] = [17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0];
     pub const FIELD_COUNT: usize = 2;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
@@ -1361,14 +1361,14 @@ impl NodeUnknown {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         Byte::new_unchecked(self.0.slice(start..end))
     }
-    pub fn system_pool(&self) -> ContextVec {
+    pub fn system_pool(&self) -> ResourceIdVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         if self.has_extra_fields() {
             let end = molecule::unpack_number(&slice[12..]) as usize;
-            ContextVec::new_unchecked(self.0.slice(start..end))
+            ResourceIdVec::new_unchecked(self.0.slice(start..end))
         } else {
-            ContextVec::new_unchecked(self.0.slice(start..))
+            ResourceIdVec::new_unchecked(self.0.slice(start..))
         }
     }
     pub fn as_reader<'r>(&'r self) -> NodeUnknownReader<'r> {
@@ -1454,14 +1454,14 @@ impl<'r> NodeUnknownReader<'r> {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         ByteReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn system_pool(&self) -> ContextVecReader<'r> {
+    pub fn system_pool(&self) -> ResourceIdVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         if self.has_extra_fields() {
             let end = molecule::unpack_number(&slice[12..]) as usize;
-            ContextVecReader::new_unchecked(&self.as_slice()[start..end])
+            ResourceIdVecReader::new_unchecked(&self.as_slice()[start..end])
         } else {
-            ContextVecReader::new_unchecked(&self.as_slice()[start..])
+            ResourceIdVecReader::new_unchecked(&self.as_slice()[start..])
         }
     }
 }
@@ -1512,14 +1512,14 @@ impl<'r> molecule::prelude::Reader<'r> for NodeUnknownReader<'r> {
             return ve!(Self, OffsetsNotMatch);
         }
         ByteReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
-        ContextVecReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
+        ResourceIdVecReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
         Ok(())
     }
 }
 #[derive(Clone, Debug, Default)]
 pub struct NodeUnknownBuilder {
     pub(crate) count: Byte,
-    pub(crate) system_pool: ContextVec,
+    pub(crate) system_pool: ResourceIdVec,
 }
 impl NodeUnknownBuilder {
     pub const FIELD_COUNT: usize = 2;
@@ -1527,7 +1527,7 @@ impl NodeUnknownBuilder {
         self.count = v;
         self
     }
-    pub fn system_pool(mut self, v: ContextVec) -> Self {
+    pub fn system_pool(mut self, v: ResourceIdVec) -> Self {
         self.system_pool = v;
         self
     }
@@ -1581,7 +1581,7 @@ impl ::core::fmt::Debug for NodeCampsite {
 impl ::core::fmt::Display for NodeCampsite {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "card_context", self.card_context())?;
+        write!(f, "{}: {}", "card_system", self.card_system())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -1596,10 +1596,7 @@ impl ::core::default::Default for NodeCampsite {
     }
 }
 impl NodeCampsite {
-    const DEFAULT_VALUE: [u8; 31] = [
-        31, 0, 0, 0, 8, 0, 0, 0, 23, 0, 0, 0, 16, 0, 0, 0, 17, 0, 0, 0, 19, 0, 0, 0, 0, 0, 0, 4, 0,
-        0, 0,
-    ];
+    const DEFAULT_VALUE: [u8; 10] = [10, 0, 0, 0, 8, 0, 0, 0, 0, 0];
     pub const FIELD_COUNT: usize = 1;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
@@ -1617,14 +1614,14 @@ impl NodeCampsite {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn card_context(&self) -> Context {
+    pub fn card_system(&self) -> ResourceId {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         if self.has_extra_fields() {
             let end = molecule::unpack_number(&slice[8..]) as usize;
-            Context::new_unchecked(self.0.slice(start..end))
+            ResourceId::new_unchecked(self.0.slice(start..end))
         } else {
-            Context::new_unchecked(self.0.slice(start..))
+            ResourceId::new_unchecked(self.0.slice(start..))
         }
     }
     pub fn as_reader<'r>(&'r self) -> NodeCampsiteReader<'r> {
@@ -1653,7 +1650,7 @@ impl molecule::prelude::Entity for NodeCampsite {
         ::core::default::Default::default()
     }
     fn as_builder(self) -> Self::Builder {
-        Self::new_builder().card_context(self.card_context())
+        Self::new_builder().card_system(self.card_system())
     }
 }
 #[derive(Clone, Copy)]
@@ -1675,7 +1672,7 @@ impl<'r> ::core::fmt::Debug for NodeCampsiteReader<'r> {
 impl<'r> ::core::fmt::Display for NodeCampsiteReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "card_context", self.card_context())?;
+        write!(f, "{}: {}", "card_system", self.card_system())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
             write!(f, ", .. ({} fields)", extra_count)?;
@@ -1701,14 +1698,14 @@ impl<'r> NodeCampsiteReader<'r> {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn card_context(&self) -> ContextReader<'r> {
+    pub fn card_system(&self) -> ResourceIdReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         if self.has_extra_fields() {
             let end = molecule::unpack_number(&slice[8..]) as usize;
-            ContextReader::new_unchecked(&self.as_slice()[start..end])
+            ResourceIdReader::new_unchecked(&self.as_slice()[start..end])
         } else {
-            ContextReader::new_unchecked(&self.as_slice()[start..])
+            ResourceIdReader::new_unchecked(&self.as_slice()[start..])
         }
     }
 }
@@ -1758,18 +1755,18 @@ impl<'r> molecule::prelude::Reader<'r> for NodeCampsiteReader<'r> {
         if offsets.windows(2).any(|i| i[0] > i[1]) {
             return ve!(Self, OffsetsNotMatch);
         }
-        ContextReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
+        ResourceIdReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
         Ok(())
     }
 }
 #[derive(Clone, Debug, Default)]
 pub struct NodeCampsiteBuilder {
-    pub(crate) card_context: Context,
+    pub(crate) card_system: ResourceId,
 }
 impl NodeCampsiteBuilder {
     pub const FIELD_COUNT: usize = 1;
-    pub fn card_context(mut self, v: Context) -> Self {
-        self.card_context = v;
+    pub fn card_system(mut self, v: ResourceId) -> Self {
+        self.card_system = v;
         self
     }
 }
@@ -1777,18 +1774,18 @@ impl molecule::prelude::Builder for NodeCampsiteBuilder {
     type Entity = NodeCampsite;
     const NAME: &'static str = "NodeCampsiteBuilder";
     fn expected_length(&self) -> usize {
-        molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1) + self.card_context.as_slice().len()
+        molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1) + self.card_system.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
         let mut offsets = Vec::with_capacity(Self::FIELD_COUNT);
         offsets.push(total_size);
-        total_size += self.card_context.as_slice().len();
+        total_size += self.card_system.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
         }
-        writer.write_all(self.card_context.as_slice())?;
+        writer.write_all(self.card_system.as_slice())?;
         Ok(())
     }
     fn build(&self) -> Self::Entity {

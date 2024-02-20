@@ -40,12 +40,6 @@ mod casting {
         }
     }
 
-    impl From<SystemId> for u16 {
-        fn from(value: SystemId) -> Self {
-            Self::from_le_bytes(value.as_slice().try_into().unwrap())
-        }
-    }
-
     impl From<Seed> for u64 {
         fn from(value: Seed) -> Self {
             Self::from_le_bytes(value.as_slice().try_into().unwrap())

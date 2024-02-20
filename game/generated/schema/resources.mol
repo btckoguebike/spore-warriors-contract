@@ -1,22 +1,12 @@
 import types;
 
-// effect on charactor after operation
-table Effect {
-    id: ResourceId,
-    trigger: ContextOpt,  // empty = immediate
-    execution: ContextOpt,
-    discard: ContextOpt,
-}
-
-vector EffectVec <Effect>;
-
 // card object
 table Card {
     id: ResourceId,
     class: byte,
     cost: byte,
     price: RandomNumber,
-    effect_pool: ResourceIdVec,
+    system_pool: ResourceIdVec,
 }
 
 vector CardVec <Card>;
@@ -28,7 +18,7 @@ table Item {
     quality: byte,
     random_weight: RandomByte,
     price: RandomNumber,
-    effect_pool: ResourceIdVec,
+    system_pool: ResourceIdVec,
 }
 
 vector ItemVec <Item>;
@@ -37,7 +27,7 @@ vector ItemVec <Item>;
 table Action {
     id: ResourceId,
     random: byte,
-    effect_pool: ResourceIdVec,
+    system_pool: ResourceIdVec,
 }
 
 vector ActionVec <Action>;
@@ -51,7 +41,7 @@ table Package {
 option PackageOpt (Package);
 
 union Score {
-    Context,
+    System,
     RandomNumber,
 }
 

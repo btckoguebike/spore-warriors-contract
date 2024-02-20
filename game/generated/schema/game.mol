@@ -6,7 +6,7 @@ import asset;
 
 table OperationSet {
     seed_list: SeedVec,
-    operation_list: ContextVec,
+    operation_list: SystemVec,
 }
 
 vector OperationSetVec <OperationSet>;

@@ -1251,7 +1251,7 @@ impl ::core::fmt::Debug for ResourcePool {
 impl ::core::fmt::Display for ResourcePool {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "effect_pool", self.effect_pool())?;
+        write!(f, "{}: {}", "system_pool", self.system_pool())?;
         write!(f, ", {}: {}", "card_pool", self.card_pool())?;
         write!(f, ", {}: {}", "item_pool", self.item_pool())?;
         write!(f, ", {}: {}", "action_pool", self.action_pool())?;
@@ -1297,11 +1297,11 @@ impl ResourcePool {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn effect_pool(&self) -> EffectVec {
+    pub fn system_pool(&self) -> SystemVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         let end = molecule::unpack_number(&slice[8..]) as usize;
-        EffectVec::new_unchecked(self.0.slice(start..end))
+        SystemVec::new_unchecked(self.0.slice(start..end))
     }
     pub fn card_pool(&self) -> CardVec {
         let slice = self.as_slice();
@@ -1388,7 +1388,7 @@ impl molecule::prelude::Entity for ResourcePool {
     }
     fn as_builder(self) -> Self::Builder {
         Self::new_builder()
-            .effect_pool(self.effect_pool())
+            .system_pool(self.system_pool())
             .card_pool(self.card_pool())
             .item_pool(self.item_pool())
             .action_pool(self.action_pool())
@@ -1419,7 +1419,7 @@ impl<'r> ::core::fmt::Debug for ResourcePoolReader<'r> {
 impl<'r> ::core::fmt::Display for ResourcePoolReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
-        write!(f, "{}: {}", "effect_pool", self.effect_pool())?;
+        write!(f, "{}: {}", "system_pool", self.system_pool())?;
         write!(f, ", {}: {}", "card_pool", self.card_pool())?;
         write!(f, ", {}: {}", "item_pool", self.item_pool())?;
         write!(f, ", {}: {}", "action_pool", self.action_pool())?;
@@ -1454,11 +1454,11 @@ impl<'r> ResourcePoolReader<'r> {
     pub fn has_extra_fields(&self) -> bool {
         Self::FIELD_COUNT != self.field_count()
     }
-    pub fn effect_pool(&self) -> EffectVecReader<'r> {
+    pub fn system_pool(&self) -> SystemVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[4..]) as usize;
         let end = molecule::unpack_number(&slice[8..]) as usize;
-        EffectVecReader::new_unchecked(&self.as_slice()[start..end])
+        SystemVecReader::new_unchecked(&self.as_slice()[start..end])
     }
     pub fn card_pool(&self) -> CardVecReader<'r> {
         let slice = self.as_slice();
@@ -1565,7 +1565,7 @@ impl<'r> molecule::prelude::Reader<'r> for ResourcePoolReader<'r> {
         if offsets.windows(2).any(|i| i[0] > i[1]) {
             return ve!(Self, OffsetsNotMatch);
         }
-        EffectVecReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
+        SystemVecReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
         CardVecReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
         ItemVecReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
         ActionVecReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
@@ -1580,7 +1580,7 @@ impl<'r> molecule::prelude::Reader<'r> for ResourcePoolReader<'r> {
 }
 #[derive(Clone, Debug, Default)]
 pub struct ResourcePoolBuilder {
-    pub(crate) effect_pool: EffectVec,
+    pub(crate) system_pool: SystemVec,
     pub(crate) card_pool: CardVec,
     pub(crate) item_pool: ItemVec,
     pub(crate) action_pool: ActionVec,
@@ -1593,8 +1593,8 @@ pub struct ResourcePoolBuilder {
 }
 impl ResourcePoolBuilder {
     pub const FIELD_COUNT: usize = 10;
-    pub fn effect_pool(mut self, v: EffectVec) -> Self {
-        self.effect_pool = v;
+    pub fn system_pool(mut self, v: SystemVec) -> Self {
+        self.system_pool = v;
         self
     }
     pub fn card_pool(mut self, v: CardVec) -> Self {
@@ -1639,7 +1639,7 @@ impl molecule::prelude::Builder for ResourcePoolBuilder {
     const NAME: &'static str = "ResourcePoolBuilder";
     fn expected_length(&self) -> usize {
         molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
-            + self.effect_pool.as_slice().len()
+            + self.system_pool.as_slice().len()
             + self.card_pool.as_slice().len()
             + self.item_pool.as_slice().len()
             + self.action_pool.as_slice().len()
@@ -1654,7 +1654,7 @@ impl molecule::prelude::Builder for ResourcePoolBuilder {
         let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
         let mut offsets = Vec::with_capacity(Self::FIELD_COUNT);
         offsets.push(total_size);
-        total_size += self.effect_pool.as_slice().len();
+        total_size += self.system_pool.as_slice().len();
         offsets.push(total_size);
         total_size += self.card_pool.as_slice().len();
         offsets.push(total_size);
@@ -1677,7 +1677,7 @@ impl molecule::prelude::Builder for ResourcePoolBuilder {
         for offset in offsets.into_iter() {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
         }
-        writer.write_all(self.effect_pool.as_slice())?;
+        writer.write_all(self.system_pool.as_slice())?;
         writer.write_all(self.card_pool.as_slice())?;
         writer.write_all(self.item_pool.as_slice())?;
         writer.write_all(self.action_pool.as_slice())?;

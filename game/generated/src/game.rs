@@ -67,14 +67,14 @@ impl OperationSet {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         SeedVec::new_unchecked(self.0.slice(start..end))
     }
-    pub fn operation_list(&self) -> ContextVec {
+    pub fn operation_list(&self) -> SystemVec {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         if self.has_extra_fields() {
             let end = molecule::unpack_number(&slice[12..]) as usize;
-            ContextVec::new_unchecked(self.0.slice(start..end))
+            SystemVec::new_unchecked(self.0.slice(start..end))
         } else {
-            ContextVec::new_unchecked(self.0.slice(start..))
+            SystemVec::new_unchecked(self.0.slice(start..))
         }
     }
     pub fn as_reader<'r>(&'r self) -> OperationSetReader<'r> {
@@ -160,14 +160,14 @@ impl<'r> OperationSetReader<'r> {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         SeedVecReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn operation_list(&self) -> ContextVecReader<'r> {
+    pub fn operation_list(&self) -> SystemVecReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         if self.has_extra_fields() {
             let end = molecule::unpack_number(&slice[12..]) as usize;
-            ContextVecReader::new_unchecked(&self.as_slice()[start..end])
+            SystemVecReader::new_unchecked(&self.as_slice()[start..end])
         } else {
-            ContextVecReader::new_unchecked(&self.as_slice()[start..])
+            SystemVecReader::new_unchecked(&self.as_slice()[start..])
         }
     }
 }
@@ -218,14 +218,14 @@ impl<'r> molecule::prelude::Reader<'r> for OperationSetReader<'r> {
             return ve!(Self, OffsetsNotMatch);
         }
         SeedVecReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
-        ContextVecReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
+        SystemVecReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
         Ok(())
     }
 }
 #[derive(Clone, Debug, Default)]
 pub struct OperationSetBuilder {
     pub(crate) seed_list: SeedVec,
-    pub(crate) operation_list: ContextVec,
+    pub(crate) operation_list: SystemVec,
 }
 impl OperationSetBuilder {
     pub const FIELD_COUNT: usize = 2;
@@ -233,7 +233,7 @@ impl OperationSetBuilder {
         self.seed_list = v;
         self
     }
-    pub fn operation_list(mut self, v: ContextVec) -> Self {
+    pub fn operation_list(mut self, v: SystemVec) -> Self {
         self.operation_list = v;
         self
     }
