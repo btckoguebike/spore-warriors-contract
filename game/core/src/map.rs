@@ -2,14 +2,15 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 use core::cmp::{max, min};
 use rand::RngCore;
+use spore_warriors_generated as generated;
 
-use crate::contexts::{CtxAdaptor, WarriorContext};
+use crate::contexts::{CardContext, CtxAdaptor, WarriorContext};
 use crate::errors::Error;
 use crate::fight::pve::MapFightPVE;
 use crate::fight::traits::{FightLog, SimplePVE};
-use crate::systems::{GameSystem, SystemReturn};
+use crate::systems::{SystemController, SystemReturn};
 use crate::wrappings::{
-    randomized_selection, Card, Context, Item, ItemClass, LevelNode, LevelPartition, Node, Point,
+    randomized_selection, Card, Item, ItemClass, LevelNode, LevelPartition, Node, Point, System,
 };
 
 pub struct Phantom<'a> {
@@ -36,10 +37,9 @@ pub struct MapSkeleton {
 impl<'a> MapSkeleton {
     pub fn randomized(
         player_point: Point,
-        system: &mut GameSystem<'a, impl RngCore>,
+        resource_pool: &generated::ResourcePool,
+        rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
-        let resource_pool = system.resource_pool();
-        let rng = system.rng();
         let scene_pool = resource_pool.scene_pool();
         let scene = randomized_selection(scene_pool.len(), scene_pool, 1, rng)
             .first()
@@ -144,7 +144,7 @@ impl<'a> MapSkeleton {
         player: &'a mut WarriorContext<'a>,
         player_point: Point,
         user_imported: Vec<usize>,
-        system: &mut GameSystem<'a, impl RngCore>,
+        system: &mut SystemController<'a, impl RngCore>,
     ) -> Result<MoveResult<impl SimplePVE>, Error> {
         self.player_point = player_point;
         let Some(level) = self.peak_upcoming_movment(player_point, player.warrior.motion)? else {
@@ -197,13 +197,12 @@ impl<'a> MapSkeleton {
 
 fn run_context<'a>(
     player: &mut WarriorContext<'a>,
-    context: &Context,
-    system: &mut GameSystem<'a, impl RngCore>,
+    system: &System,
+    controller: &mut SystemController<'a, impl RngCore>,
 ) -> Result<Vec<FightLog>, Error> {
     let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
-    let system_return =
-        system.call(context.system_id, &context.args, &mut system_contexts, None)?;
-    if let SystemReturn::FightLog(logs) = system_return {
+    let system_return = controller.call(&system, &mut system_contexts, None)?;
+    if let SystemReturn::SystemLog(logs) = system_return {
         Ok(logs)
     } else {
         return Err(Error::SceneUnexpectedSystemReturn);
@@ -223,7 +222,9 @@ fn purchase_cards<'a>(
                 return Err(Error::SceneMerchantInsufficientGold);
             }
             player.gold -= card.price;
-            player.deck.push(card);
+            player
+                .deck
+                .push(CardContext::new(card, player.deck.len() + 11));
             Ok(())
         })
         .collect::<Result<Vec<_>, _>>()

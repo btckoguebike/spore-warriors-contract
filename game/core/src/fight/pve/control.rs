@@ -6,14 +6,14 @@ use crate::contexts::CtxAdaptor;
 use crate::errors::Error;
 use crate::fight::pve::{FightView, Instruction, MapFightPVE};
 use crate::fight::traits::{FightLog, IterationOutput};
-use crate::systems::{GameSystem, SystemReturn};
-use crate::wrappings::{Effect, RequireTarget};
+use crate::systems::{SystemController, SystemInput, SystemReturn};
+use crate::wrappings::RequireTarget;
 
 impl<'a> MapFightPVE<'a> {
     pub(super) fn player_draw(
         &mut self,
         draw_count: u8,
-        system: &mut GameSystem<'a, impl RngCore>,
+        controller: &mut SystemController<'a, impl RngCore>,
     ) -> Result<(), Error> {
         if draw_count == 0 {
             return Err(Error::BattleUnexpectedDrawCount);
@@ -25,77 +25,28 @@ impl<'a> MapFightPVE<'a> {
                     return Err(Error::SystemError);
                 }
                 self.player.deck.append(&mut grave_cards);
-                self.trigger_fight_log(FightLog::RecoverGraveDeck, system)?;
+                self.trigger_log(FightLog::RecoverGraveDeck)?;
             }
-            let card_index = system.rng().next_u32() as usize % self.player.deck.len();
+            let card_index = controller.rng().next_u32() as usize % self.player.deck.len();
             let card = self.player.deck.remove(card_index);
             self.player.hand_deck.push(card);
-            self.trigger_fight_log(FightLog::Draw(card_index), system)?;
+            self.trigger_log(FightLog::Draw(card_index))?;
         }
         Ok(())
-    }
-
-    pub(super) fn collect_pending_effects(
-        &mut self,
-        view: FightView,
-        target: RequireTarget,
-        enemy_offset: Option<usize>,
-        system: &mut GameSystem<'a, impl RngCore>,
-    ) -> Result<Vec<&mut Vec<&'a Effect>>, Error> {
-        let pending_queue = match (view, target) {
-            (FightView::Player, RequireTarget::Owner)
-            | (FightView::Enemy, RequireTarget::Opponent)
-            | (FightView::Enemy, RequireTarget::AllOpponents)
-            | (FightView::Enemy, RequireTarget::RandomOpponent) => {
-                vec![&mut self.player.pending_effects]
-            }
-            (FightView::Player, RequireTarget::Opponent)
-            | (FightView::Enemy, RequireTarget::Owner) => {
-                let Some(offset) = enemy_offset else {
-                    return Err(Error::BattleUserSelectionMissing);
-                };
-                let enemy = self
-                    .opponents
-                    .get_mut(offset)
-                    .ok_or(Error::BattleSelectionError)?;
-                vec![&mut enemy.pending_effects]
-            }
-            (FightView::Player, RequireTarget::AllOpponents) => self
-                .opponents
-                .iter_mut()
-                .map(|enemy| &mut enemy.pending_effects)
-                .collect(),
-            (FightView::Player, RequireTarget::AllCharactors)
-            | (FightView::Enemy, RequireTarget::AllCharactors) => {
-                let mut queue = self
-                    .opponents
-                    .iter_mut()
-                    .map(|enemy| &mut enemy.pending_effects)
-                    .collect::<Vec<_>>();
-                queue.append(&mut vec![&mut self.player.pending_effects]);
-                queue
-            }
-            (FightView::Player, RequireTarget::RandomOpponent) => {
-                let offset = system.rng().next_u32() as usize % self.opponents.len();
-                let enemy = self.opponents.get_mut(offset).unwrap();
-                vec![&mut enemy.pending_effects]
-            }
-        };
-        Ok(pending_queue)
     }
 
     pub(super) fn collect_system_contexts(
         &mut self,
         view: FightView,
         target: RequireTarget,
-        enemy_offset: Option<usize>,
-        system: &mut GameSystem<'a, impl RngCore>,
-    ) -> Result<Vec<&mut dyn CtxAdaptor>, Error> {
-        let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![];
+        offset: Option<usize>,
+        controller: &mut SystemController<'a, impl RngCore>,
+    ) -> Result<Vec<&mut dyn CtxAdaptor<'a>>, Error> {
+        let mut system_contexts: Vec<&mut dyn CtxAdaptor<'a>> = vec![];
         match (view, target) {
             (FightView::Player, RequireTarget::Opponent)
             | (FightView::Enemy, RequireTarget::Owner) => {
-                let Some(offset) = enemy_offset else {
+                let Some(offset) = offset else {
                     return Err(Error::BattleSelectionError);
                 };
                 let enemy = self
@@ -117,7 +68,7 @@ impl<'a> MapFightPVE<'a> {
                 system_contexts.push(self.player);
             }
             (FightView::Player, RequireTarget::RandomOpponent) => {
-                let offset = system.rng().next_u32() as usize % self.opponents.len();
+                let offset = controller.rng().next_u32() as usize % self.opponents.len();
                 let enemy = self.opponents.get_mut(offset).unwrap();
                 system_contexts.push(enemy);
             }
@@ -129,81 +80,53 @@ impl<'a> MapFightPVE<'a> {
         Ok(system_contexts)
     }
 
-    pub(super) fn operate_positive_effects(
-        &mut self,
-        view: FightView,
-        effects: &[&'a Effect],
-        enemy_offset: Option<usize>,
-        system: &mut GameSystem<'a, impl RngCore>,
-    ) -> Result<IterationOutput, Error> {
-        effects
-            .iter()
-            .map(|effect| {
-                if let Some(ref trigger) = effect.on_trigger {
-                    let mut pending_effects = self.collect_pending_effects(
-                        view,
-                        trigger.target_position,
-                        enemy_offset,
-                        system,
-                    )?;
-                    pending_effects
-                        .iter_mut()
-                        .for_each(|queue| queue.push(effect));
-                } else {
-                    self.pending_instructions.push(Instruction::<'a> {
-                        effect_id: effect.id,
-                        view,
-                        enemy_offset,
-                        context: effect.on_execution.as_ref().unwrap(),
-                        system_input: None,
-                    });
-                };
-                Ok(())
-            })
-            .collect::<Result<_, _>>()?;
-        self.operate_pending_instructions(system)
-    }
-
     pub(super) fn operate_pending_instructions(
         &mut self,
-        system: &mut GameSystem<'a, impl RngCore>,
+        controller: &mut SystemController<'a, impl RngCore>,
     ) -> Result<IterationOutput, Error> {
+        let mut game_over = false;
         self.last_output = IterationOutput::Continue;
-        while let Some(value) = self.pending_instructions.first().cloned() {
-            self.trigger_fight_log(FightLog::CallEffectId(value.effect_id), system)?;
-            let mut system_contexts = self.collect_system_contexts(
-                value.view,
-                value.context.target_position,
-                value.enemy_offset,
+        while !self.pending_instructions.is_empty() {
+            let Instruction {
+                view,
                 system,
-            )?;
-            let system_return = system.call(
-                value.context.system_id,
-                &value.context.args,
-                &mut system_contexts,
-                value.system_input,
-            )?;
-            if self.player.hp == 0 {
-                self.last_output = IterationOutput::GameLose;
-                break;
+                offset,
+                mut system_input,
+            } = self.pending_instructions.remove(0);
+            self.trigger_log(FightLog::CallSystemId(system.id.into()))?;
+            let mut system_contexts =
+                self.collect_system_contexts(view, system.target_type, offset, controller)?;
+            if game_over {
+                system_input = Some(SystemInput::GameOver);
             }
-            if self.opponents.iter().all(|v| v.hp == 0) {
-                self.last_output = IterationOutput::GameWin;
-                break;
-            }
-            match system_return {
-                SystemReturn::NeedCardSelect => {
-                    if value.view != FightView::Player {
-                        return Err(Error::ResourceEffectCardSelectInEnemy);
-                    }
-                    self.last_output = IterationOutput::RequireCardSelect;
-                    break;
+            let system_return = controller.call(&system, &mut system_contexts, system_input)?;
+            if !game_over {
+                if self.player.hp == 0 {
+                    self.last_output = IterationOutput::GameLose;
+                    self.trigger_log(FightLog::GameOver)?;
+                    game_over = true;
+                    continue;
                 }
-                SystemReturn::DrawCard(draw_count) => self.player_draw(draw_count, system)?,
-                SystemReturn::FightLog(mut logs) => self.fight_logs.append(&mut logs),
-                _ => return Err(Error::BattleUnexpectedSystemReturn),
+                if self.opponents.iter().all(|v| v.hp == 0) {
+                    self.last_output = IterationOutput::GameWin;
+                    self.trigger_log(FightLog::GameOver)?;
+                    game_over = true;
+                    continue;
+                }
+                match system_return {
+                    SystemReturn::RequireCardSelect => {
+                        if view != FightView::Player {
+                            return Err(Error::ResourceEffectCardSelectInEnemy);
+                        }
+                        self.last_output = IterationOutput::RequireCardSelect;
+                        break;
+                    }
+                    SystemReturn::DrawCard(draw_count) => {
+                        self.player_draw(draw_count, controller)?
+                    }
+                    SystemReturn::SystemLog(mut logs) => self.fight_logs.append(&mut logs),
+                }
             }
-            self.pending_instructions.remove(0);
         }
         Ok(self.last_output)
     }

@@ -6,7 +6,7 @@ use spore_warriors_generated as generated;
 use crate::contexts::WarriorContext;
 use crate::errors::Error;
 use crate::map::MapSkeleton;
-use crate::systems::GameSystem;
+use crate::systems::SystemController;
 use crate::wrappings::{Point, Potion, Warrior};
 
 pub struct Game {
@@ -18,7 +18,7 @@ pub struct Game {
 
 pub struct GameSession<'a, T: RngCore> {
     pub player: WarriorContext<'a>,
-    pub system: GameSystem<'a, T>,
+    pub system: SystemController<'a, T>,
     pub map: MapSkeleton,
 }
 
@@ -59,12 +59,16 @@ impl Game {
         player_point: Point,
     ) -> Result<GameSession<'a, impl RngCore>, Error> {
         let player = WarriorContext::new(&self.player, self.potion.as_ref());
-        let mut system = GameSystem::new(&self.resource_pool, &mut self.rng);
-        let map = MapSkeleton::randomized(player_point, &mut system)?;
+        let map = MapSkeleton::randomized(player_point, &self.resource_pool, &mut self.rng)?;
+        let system = SystemController::new(&mut self.rng);
         Ok(GameSession {
             player,
             system,
             map,
         })
+    }
+
+    pub fn recover_session() {
+        unimplemented!()
     }
 }

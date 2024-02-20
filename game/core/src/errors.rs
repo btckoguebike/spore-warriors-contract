@@ -10,6 +10,7 @@ pub enum Error {
     ResourceBrokenItemClass,
     ResourceBrokenTargetPosition,
     ResourceBrokenEnemyStrategy,
+    ResourceBrokenSystemPool,
     ResourceBrokenSystemId,
     ResourceBrokenPlayerDeck,
     ResourceBrokenHpPercent,
@@ -45,6 +46,7 @@ pub enum Error {
     BattleUnexpectedPosition,
     BattleUnexpectedSystemReturn,
     BattleUnexpectedSystemArgs,
+    BattleUnexpectedSystemContext,
 
     SystemMissing,
     SystemError,

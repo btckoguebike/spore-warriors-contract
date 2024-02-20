@@ -58,19 +58,14 @@ pub fn randomized_selection<T: IntoIterator>(
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub enum Value {
-    Resource(u16),
-    System(u16),
-    Number(u16),
-}
+#[derive(Clone)]
+pub struct Value(pub u16);
 
 impl Value {
     pub fn randomized(value: generated::Value, rng: &mut impl RngCore) -> Self {
         match value.to_enum() {
-            generated::ValueUnion::Number(v) => Self::Number(v.into()),
-            generated::ValueUnion::RandomNumber(v) => Self::Number(randomized_number(v, rng)),
-            generated::ValueUnion::ResourceId(v) => Self::Resource(v.into()),
-            generated::ValueUnion::SystemId(v) => Self::System(v.into()),
+            generated::ValueUnion::Number(v) => Self(v.into()),
+            generated::ValueUnion::RandomNumber(v) => Self(randomized_number(v, rng)),
         }
     }
 }
@@ -102,15 +97,22 @@ impl TryFrom<u8> for RequireTarget {
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy)]
+#[repr(u16)]
 pub enum SystemId {
     Damage,
     MultipleDamage,
 }
 
-impl TryFrom<generated::SystemId> for SystemId {
+impl From<SystemId> for u16 {
+    fn from(value: SystemId) -> Self {
+        value as u16
+    }
+}
+
+impl TryFrom<generated::ResourceId> for SystemId {
     type Error = Error;
 
-    fn try_from(value: generated::SystemId) -> Result<Self, Self::Error> {
+    fn try_from(value: generated::ResourceId) -> Result<Self, Self::Error> {
         match u16::from(value) {
             0 => Ok(Self::Damage),
             1 => Ok(Self::MultipleDamage),
@@ -120,17 +122,22 @@ impl TryFrom<generated::SystemId> for SystemId {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub struct Context {
-    pub target_position: RequireTarget,
-    pub system_id: SystemId,
+#[derive(Clone)]
+pub struct System {
+    pub id: SystemId,
     pub args: Vec<Value>,
+    pub target_type: RequireTarget,
 }
 
-impl Context {
-    pub fn randomized(value: generated::Context, rng: &mut impl RngCore) -> Result<Self, Error> {
+impl System {
+    pub fn randomized(
+        _: &generated::ResourcePool,
+        value: generated::System,
+        rng: &mut impl RngCore,
+    ) -> Result<Self, Error> {
         Ok(Self {
-            target_position: u8::from(value.target_position()).try_into()?,
-            system_id: value.system_id().try_into()?,
+            id: value.id().try_into()?,
+            target_type: u8::from(value.target_type()).try_into()?,
             args: value
                 .args()
                 .into_iter()
@@ -141,54 +148,7 @@ impl Context {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub struct Effect {
-    pub id: u16,
-    pub on_trigger: Option<Context>,
-    pub on_execution: Option<Context>,
-    pub on_discard: Option<Context>,
-}
-
-impl Effect {
-    pub fn randomized(
-        _: &generated::ResourcePool,
-        value: generated::Effect,
-        rng: &mut impl RngCore,
-    ) -> Result<Self, Error> {
-        fn casting(
-            context: generated::ContextOpt,
-            rng: &mut impl RngCore,
-        ) -> Result<Option<Context>, Error> {
-            match context.to_opt() {
-                Some(v) => Ok(Some(Context::randomized(v, rng)?)),
-                None => Ok(None),
-            }
-        }
-        let on_trigger = casting(value.trigger(), rng)?;
-        let on_execution = casting(value.execution(), rng)?;
-        let on_discard = casting(value.discard(), rng)?;
-        // one of exeuction and discard must exist if trigger exists
-        if on_trigger.is_some() && on_execution.is_none() && on_discard.is_none() {
-            return Err(Error::ResourceEffectSetupConflict);
-        }
-        // trigger and execution cannot be simuletously none
-        if on_trigger.is_none() && on_execution.is_none() {
-            return Err(Error::ResourceEffectSetupConflict);
-        }
-        // one of execution and discard must be none if trigger dosen't exist
-        if on_trigger.is_none() && on_execution.is_some() && on_discard.is_some() {
-            return Err(Error::ResourceEffectSetupConflict);
-        }
-        Ok(Self {
-            id: value.id().into(),
-            on_trigger,
-            on_execution,
-            on_discard,
-        })
-    }
-}
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum ItemClass {
     Equipment,
     Props,
@@ -209,13 +169,14 @@ impl TryFrom<u8> for ItemClass {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
 pub struct Item {
     pub id: u16,
     pub class: ItemClass,
     pub quality: u8,
     pub weight: u8,
     pub price: u16,
-    pub effect_pool: Vec<Effect>,
+    pub system_pool: Vec<System>,
 }
 
 impl Item {
@@ -224,10 +185,10 @@ impl Item {
         value: generated::Item,
         rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
-        let effect_pool = randomized_pool!(
-            value.effect_pool(),
-            resource_pool.effect_pool(),
-            Effect,
+        let system_pool = randomized_pool!(
+            value.system_pool(),
+            resource_pool.system_pool(),
+            System,
             rng
         )?;
         Ok(Self {
@@ -236,27 +197,35 @@ impl Item {
             quality: value.quality().into(),
             weight: randomized_byte(value.random_weight(), rng),
             price: randomized_number(value.price(), rng),
-            effect_pool,
+            system_pool,
         })
     }
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
 pub enum Score {
-    Function(Context),
+    Function(System),
     Number(u16),
 }
 
 impl Score {
-    pub fn randomized(value: generated::Score, rng: &mut impl RngCore) -> Result<Self, Error> {
+    pub fn randomized(
+        resource_pool: &generated::ResourcePool,
+        value: generated::Score,
+        rng: &mut impl RngCore,
+    ) -> Result<Self, Error> {
         Ok(match value.to_enum() {
-            generated::ScoreUnion::Context(v) => Self::Function(Context::randomized(v, rng)?),
+            generated::ScoreUnion::System(v) => {
+                Self::Function(System::randomized(resource_pool, v, rng)?)
+            }
             generated::ScoreUnion::RandomNumber(v) => Self::Number(randomized_number(v, rng)),
         })
     }
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
 pub struct Loot {
     pub gold: u16,
     pub score: Score,
@@ -283,7 +252,7 @@ impl Loot {
         }
         Ok(Self {
             gold: randomized_number(value.gold(), rng),
-            score: Score::randomized(value.score(), rng)?,
+            score: Score::randomized(resource_pool, value.score(), rng)?,
             card_pool: package_unpack(resource_pool, Some(value.card_pool()), rng)?,
             props_pool: package_unpack(resource_pool, value.props_pool().to_opt(), rng)?,
             equipment_pool: package_unpack(resource_pool, value.equipment_pool().to_opt(), rng)?,
@@ -292,9 +261,10 @@ impl Loot {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
 pub struct Action {
     pub random_select: bool,
-    pub effect_pool: Vec<Effect>,
+    pub system_pool: Vec<System>,
 }
 
 impl Action {
@@ -303,20 +273,21 @@ impl Action {
         value: generated::Action,
         rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
-        let effect_pool = randomized_pool!(
-            value.effect_pool(),
-            resource_pool.effect_pool(),
-            Effect,
+        let system_pool = randomized_pool!(
+            value.system_pool(),
+            resource_pool.system_pool(),
+            System,
             rng
         )?;
         Ok(Self {
             random_select: u8::from(value.random()) == 1u8,
-            effect_pool,
+            system_pool,
         })
     }
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
 pub struct ActionStrategy {
     pub random_select: bool,
     pub actions: Vec<Action>,
@@ -342,6 +313,7 @@ impl ActionStrategy {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
 pub struct Enemy {
     pub id: u16,
     pub rank: u8,
@@ -463,12 +435,13 @@ impl SizedPoint {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
 pub struct Card {
     pub id: u16,
     pub class: u8,
     pub power_cost: u8,
     pub price: u16,
-    pub effect_pool: Vec<Effect>,
+    pub system_pool: Vec<System>,
 }
 
 impl Card {
@@ -478,9 +451,9 @@ impl Card {
         rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
         let effect_pool = randomized_pool!(
-            value.effect_pool(),
-            resource_pool.effect_pool(),
-            Effect,
+            value.system_pool(),
+            resource_pool.system_pool(),
+            System,
             rng
         )?;
         Ok(Self {
@@ -488,12 +461,13 @@ impl Card {
             class: value.class().into(),
             power_cost: value.cost().into(),
             price: randomized_number(value.price(), rng),
-            effect_pool,
+            system_pool: effect_pool,
         })
     }
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
 pub struct Warrior {
     pub id: u16,
     pub charactor_card: Card,
@@ -567,8 +541,8 @@ pub enum Node {
     RecoverPoint(u8),
     ItemMerchant(Vec<Item>),
     CardMerchant(Vec<Card>),
-    Unknown(Vec<Context>),
-    Campsite(Context),
+    Unknown(Vec<System>),
+    Campsite(System),
     Barrier,
     StartingPoint,
     TargetingPoint,
@@ -624,18 +598,22 @@ impl LevelNode {
                     Node::CardMerchant(randomized_goods)
                 }
                 generated::NodeInstanceUnion::NodeCampsite(value) => {
-                    Node::Campsite(Context::randomized(value.card_context(), rng)?)
-                }
-                generated::NodeInstanceUnion::NodeUnknown(value) => {
-                    let contexts = value
+                    let system = resource_pool
                         .system_pool()
                         .into_iter()
-                        .map(|context| Context::randomized(context, rng))
-                        .collect::<Vec<_>>();
+                        .find(|v| v.id().raw_data() == value.card_system().raw_data())
+                        .ok_or(Error::ResourceBrokenSystemPool)?;
+                    Node::Campsite(System::randomized(resource_pool, system, rng)?)
+                }
+                generated::NodeInstanceUnion::NodeUnknown(value) => {
+                    let unknowns = randomized_pool!(
+                        value.system_pool(),
+                        resource_pool.system_pool(),
+                        System,
+                        rng
+                    )?;
                     let randomized_contexts =
-                        randomized_selection(contexts.len(), contexts, value.count().into(), rng)
-                            .into_iter()
-                            .collect::<Result<_, _>>()?;
+                        randomized_selection(unknowns.len(), unknowns, value.count().into(), rng);
                     Node::Unknown(randomized_contexts)
                 }
                 generated::NodeInstanceUnion::NodeTreasureChest(value) => {

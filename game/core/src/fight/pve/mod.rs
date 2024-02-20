@@ -5,8 +5,8 @@ use rand::RngCore;
 use crate::contexts::{EnemyContext, WarriorContext};
 use crate::errors::Error;
 use crate::fight::traits::{FightLog, IterationInput, IterationOutput, Selection, SimplePVE};
-use crate::systems::{GameSystem, SystemInput};
-use crate::wrappings::{Context, Enemy, ItemClass, RequireTarget};
+use crate::systems::{SystemController, SystemInput};
+use crate::wrappings::{Enemy, ItemClass, RequireTarget, System};
 
 mod control;
 mod iteration;
@@ -18,11 +18,9 @@ enum FightView {
     Enemy,
 }
 
-#[derive(Clone)]
 struct Instruction<'a> {
-    effect_id: u16,
-    enemy_offset: Option<usize>,
-    context: &'a Context,
+    offset: Option<usize>,
+    system: &'a System,
     view: FightView,
     system_input: Option<SystemInput>,
 }
@@ -55,7 +53,7 @@ impl<'a> SimplePVE<'a> for MapFightPVE<'a> {
 
     fn start(
         &mut self,
-        system: &mut GameSystem<'a, impl RngCore>,
+        controller: &mut SystemController<'a, impl RngCore>,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error> {
         if self.round != 0 {
             return Err(Error::BattleRepeatStart);
@@ -63,23 +61,24 @@ impl<'a> SimplePVE<'a> for MapFightPVE<'a> {
         let mut equipment_effects = vec![];
         self.player.warrior.package_status.iter().for_each(|v| {
             if v.class == ItemClass::Equipment {
-                v.effect_pool
+                v.system_pool
                     .iter()
                     .for_each(|effect| equipment_effects.push(effect));
             }
         });
-        self.trigger_fight_log(
-            FightLog::CharactorSet(
-                self.player.snapshot(),
-                self.opponents.iter().map(|v| v.snapshot()).collect(),
-            ),
-            system,
-        )?;
+        self.trigger_log(FightLog::CharactorSet(
+            self.player.snapshot(),
+            self.opponents.iter().map(|v| v.snapshot()).collect(),
+        ))?;
         self.round = 1;
-        self.trigger_fight_log(FightLog::PlayerTurn(self.round), system)?;
-        self.player_draw(self.player.draw_count, system)?;
-        let output =
-            self.operate_positive_effects(FightView::Player, &equipment_effects, None, system)?;
+        self.trigger_log(FightLog::PlayerTurn(self.round))?;
+        self.player_draw(self.player.draw_count, controller)?;
+        let output = self.trigger_iteration_systems(
+            FightView::Player,
+            &equipment_effects,
+            None,
+            controller,
+        )?;
         let logs = self.fight_logs.drain(..).collect();
         Ok((output, logs))
     }
@@ -87,22 +86,23 @@ impl<'a> SimplePVE<'a> for MapFightPVE<'a> {
     fn run(
         &mut self,
         operations: Vec<IterationInput>,
-        system: &mut GameSystem<'a, impl RngCore>,
+        controller: &mut SystemController<'a, impl RngCore>,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error> {
         if self.round == 0 {
             return Err(Error::BattleNotStarted);
         }
         for operation in operations {
-            self.iterate(operation, system)?;
+            let output = self.iterate(operation, controller)?;
+            if output == IterationOutput::GameWin || output == IterationOutput::GameLose {
+                let logs = self.fight_logs.drain(..).collect();
+                return Ok((self.last_output, logs));
+            }
         }
         #[cfg(feature = "debug")]
-        self.trigger_fight_log(
-            FightLog::CharactorSet(
-                self.player.snapshot(),
-                self.opponents.iter().map(|v| v.snapshot()).collect(),
-            ),
-            system,
-        )?;
+        self.trigger_log(FightLog::CharactorSet(
+            self.player.snapshot(),
+            self.opponents.iter().map(|v| v.snapshot()).collect(),
+        ))?;
         let logs = self.fight_logs.drain(..).collect();
         Ok((self.last_output, logs))
     }
@@ -116,10 +116,10 @@ impl<'a> SimplePVE<'a> for MapFightPVE<'a> {
             .hand_deck
             .get(index)
             .ok_or(Error::BattleSelectionError)?
-            .effect_pool
+            .card
+            .system_pool
             .iter()
-            .filter_map(|effect| effect.on_execution.as_ref())
-            .map(|ctx| &ctx.target_position)
+            .map(|system| system.target_type)
             .collect::<Vec<_>>();
         let mut select_required = false;
         for target in &required_targets {

@@ -4,7 +4,7 @@ use rand::RngCore;
 
 use crate::contexts::{EnemySnapshot, WarriorContext, WarriorSnapshot};
 use crate::errors::Error;
-use crate::systems::GameSystem;
+use crate::systems::SystemController;
 use crate::wrappings::Enemy;
 
 #[derive(Clone)]
@@ -47,6 +47,8 @@ pub enum FightLog {
     CharactorSet(WarriorSnapshot, Vec<EnemySnapshot>),
     EnemyTurn(u8),
     PlayerTurn(u8),
+    GameOver,
+
     PowerCost(u8),
     SpecialCardUse,
     HandCardUse(usize),
@@ -56,7 +58,8 @@ pub enum FightLog {
     RecoverGraveDeck,
     RecoverPower,
     RecoverHp(u16),
-    CallEffectId(u16),
+    CallSystemId(u16),
+
     SystemDamage(usize, u16),
 }
 
@@ -68,13 +71,13 @@ where
 
     fn start(
         &mut self,
-        system: &mut GameSystem<'a, impl RngCore>,
+        controller: &mut SystemController<'a, impl RngCore>,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn run(
         &mut self,
         operations: Vec<IterationInput>,
-        system: &mut GameSystem<'a, impl RngCore>,
+        controller: &mut SystemController<'a, impl RngCore>,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn peak_target(&self, hand_card_selection: Selection) -> Result<bool, Error>;

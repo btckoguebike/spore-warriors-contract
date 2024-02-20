@@ -1,88 +1,48 @@
 extern crate alloc;
 use alloc::vec::Vec;
-use rand::RngCore;
 
 use crate::errors::Error;
 use crate::fight::pve::{FightView, Instruction, MapFightPVE};
 use crate::fight::traits::FightLog;
-use crate::systems::{GameSystem, SystemInput, SystemReturn};
-use crate::wrappings::Effect;
+use crate::systems::SystemInput;
+use crate::wrappings::System;
 
 impl<'a> MapFightPVE<'a> {
-    pub(super) fn trigger_fight_log(
-        &mut self,
-        log: FightLog,
-        system: &mut GameSystem<'a, impl RngCore>,
-    ) -> Result<(), Error> {
-        self.prepare_negative_effects(
+    pub(super) fn trigger_log(&mut self, log: FightLog) -> Result<(), Error> {
+        self.trigger_mounting_systems(
             FightView::Player,
-            &self.player.pending_effects.clone(),
+            &self.player.mounting_systems.clone(),
             None,
             log.clone(),
-            system,
         )?;
         self.opponents
             .iter()
-            .map(|enemy| enemy.pending_effects.clone())
+            .map(|enemy| enemy.mounting_systems.clone())
             .collect::<Vec<_>>()
             .into_iter()
             .enumerate()
             .map(|(offset, effects)| {
-                self.prepare_negative_effects(
-                    FightView::Enemy,
-                    &effects,
-                    Some(offset),
-                    log.clone(),
-                    system,
-                )
+                self.trigger_mounting_systems(FightView::Enemy, &effects, Some(offset), log.clone())
             })
             .collect::<Result<Vec<_>, _>>()?;
         self.fight_logs.push(log);
         Ok(())
     }
 
-    fn prepare_negative_effects(
+    fn trigger_mounting_systems(
         &mut self,
         view: FightView,
-        effects: &[&'a Effect],
-        enemy_offset: Option<usize>,
+        effects: &[&'a System],
+        offset: Option<usize>,
         log: FightLog,
-        system: &mut GameSystem<'a, impl RngCore>,
     ) -> Result<(), Error> {
         effects
             .iter()
-            .map(|effect| {
-                let Some(trigger) = &effect.on_trigger else {
-                    return Err(Error::ResourceEffectNotNegative);
-                };
-                let mut system_contexts = self.collect_system_contexts(
-                    view,
-                    trigger.target_position,
-                    enemy_offset,
-                    system,
-                )?;
-                let system_input = SystemInput::FightLog(log.clone());
-                let trigger_return = system.call(
-                    trigger.system_id,
-                    &trigger.args,
-                    &mut system_contexts,
-                    Some(system_input.clone()),
-                )?;
-                let context = match trigger_return {
-                    SystemReturn::Triggered => effect
-                        .on_execution
-                        .as_ref()
-                        .ok_or(Error::ResourceEffectSetupConflict)?,
-                    SystemReturn::Discarded => effect
-                        .on_discard
-                        .as_ref()
-                        .ok_or(Error::ResourceEffectSetupConflict)?,
-                    _ => return Err(Error::BattleSystemInvalidReturn),
-                };
+            .map(|system| {
+                let system_input = SystemInput::Trigger(log.clone());
                 self.pending_instructions.push(Instruction::<'a> {
-                    effect_id: effect.id,
-                    enemy_offset,
-                    context,
+                    offset,
+                    system,
                     view,
                     system_input: Some(system_input),
                 });
