@@ -3,10 +3,10 @@ use alloc::vec;
 
 use crate::contexts::{CardContext, ContextType, CtxAdaptor};
 use crate::errors::Error;
-use crate::wrappings::{Item, ItemClass, Potion, System, Warrior};
+use crate::wrappings::{Card, Item, ItemClass, Potion, System, Warrior};
 
-const SPECIAL_CARD_OFFSET: usize = 10;
-const DECK_START_OFFSET: usize = 11;
+pub const SPECIAL_CARD_OFFSET: usize = 10;
+pub const DECK_START_OFFSET: usize = 11;
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone)]
@@ -35,6 +35,7 @@ pub struct WarriorSnapshot {
 pub struct WarriorContext<'a> {
     pub warrior: &'a Warrior,
     pub offset: usize,
+    pub max_hp: u16,
     pub hp: u16,
     pub gold: u16,
     pub power: u8,
@@ -51,7 +52,7 @@ pub struct WarriorContext<'a> {
     pub hand_deck: Vec<CardContext<'a>>,
     pub deck: Vec<CardContext<'a>>,
     pub grave_deck: Vec<CardContext<'a>>,
-    pub pending_deck: Vec<CardContext<'a>>,
+    pub selection_deck: Vec<&'a Card>,
     pub mounting_systems: Vec<&'a System>,
 }
 
@@ -72,6 +73,7 @@ impl<'a> WarriorContext<'a> {
         let mut player = Self {
             warrior,
             offset: 0,
+            max_hp: warrior.hp,
             hp: warrior.hp,
             gold: warrior.gold,
             power: warrior.power,
@@ -88,7 +90,7 @@ impl<'a> WarriorContext<'a> {
             deck,
             hand_deck: vec![],
             grave_deck: vec![],
-            pending_deck: vec![],
+            selection_deck: vec![],
             mounting_systems: vec![],
         };
         if let Some(potion) = potion {
@@ -114,6 +116,22 @@ impl<'a> WarriorContext<'a> {
         player
     }
 
+    pub fn reset(&mut self) {
+        let origin = self.warrior;
+        self.power = origin.power;
+        self.armor = origin.armor;
+        self.shield = origin.shield;
+        self.attack = origin.attack;
+        self.attack_weak = origin.attack_weak;
+        self.defense = origin.defense;
+        self.defense_weak = origin.defense_weak;
+        self.draw_count = origin.draw_count;
+        self.deck.append(&mut self.hand_deck.drain(..).collect());
+        self.deck.append(&mut self.grave_deck.drain(..).collect());
+        self.selection_deck.clear();
+        self.mounting_systems.clear();
+    }
+
     pub fn snapshot(&self) -> WarriorSnapshot {
         WarriorSnapshot {
             id: self.warrior.id,
@@ -132,7 +150,7 @@ impl<'a> WarriorContext<'a> {
             deck: self.deck.iter().map(|v| v.card.id).collect(),
             hand_deck: self.hand_deck.iter().map(|v| v.card.id).collect(),
             grave_deck: self.grave_deck.iter().map(|v| v.card.id).collect(),
-            pending_deck: self.pending_deck.iter().map(|v| v.card.id).collect(),
+            pending_deck: self.selection_deck.iter().map(|v| v.id).collect(),
             mounting_systems: self.mounting_systems.iter().map(|v| v.id.into()).collect(),
         }
     }

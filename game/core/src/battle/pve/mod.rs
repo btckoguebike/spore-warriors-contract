@@ -2,9 +2,9 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 use rand::RngCore;
 
+use crate::battle::traits::{FightLog, IterationInput, IterationOutput, Selection, SimplePVE};
 use crate::contexts::{EnemyContext, WarriorContext};
 use crate::errors::Error;
-use crate::fight::traits::{FightLog, IterationInput, IterationOutput, Selection, SimplePVE};
 use crate::systems::{SystemController, SystemInput};
 use crate::wrappings::{Enemy, ItemClass, RequireTarget, System};
 
@@ -25,7 +25,7 @@ struct Instruction<'a> {
     system_input: Option<SystemInput>,
 }
 
-pub struct MapFightPVE<'a> {
+pub struct MapBattlePVE<'a> {
     player: &'a mut WarriorContext<'a>,
     opponents: Vec<EnemyContext<'a>>,
     round: u8,
@@ -34,7 +34,7 @@ pub struct MapFightPVE<'a> {
     pending_instructions: Vec<Instruction<'a>>,
 }
 
-impl<'a> SimplePVE<'a> for MapFightPVE<'a> {
+impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
     fn create(player: &'a mut WarriorContext<'a>, enemies: &'a [Enemy]) -> Result<Self, Error> {
         let opponents = enemies
             .iter()

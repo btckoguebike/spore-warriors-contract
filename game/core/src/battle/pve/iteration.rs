@@ -2,15 +2,15 @@ extern crate alloc;
 use alloc::vec::Vec;
 use rand::RngCore;
 
+use crate::battle::pve::{FightView, MapBattlePVE};
+use crate::battle::traits::{FightLog, IterationInput, IterationOutput, Selection};
 use crate::errors::Error;
-use crate::fight::pve::{FightView, MapFightPVE};
-use crate::fight::traits::{FightLog, IterationInput, IterationOutput, Selection};
 use crate::systems::{SystemController, SystemInput};
 use crate::wrappings::System;
 
 use super::Instruction;
 
-impl<'a> MapFightPVE<'a> {
+impl<'a> MapBattlePVE<'a> {
     pub(super) fn iterate(
         &mut self,
         operation: IterationInput,
@@ -129,7 +129,7 @@ impl<'a> MapFightPVE<'a> {
     ) -> Result<IterationOutput, Error> {
         if card_indexes
             .iter()
-            .any(|v| *v >= self.player.pending_deck.len())
+            .any(|v| *v >= self.player.selection_deck.len())
         {
             return Err(Error::BattleSelectionError);
         }

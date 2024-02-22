@@ -1,13 +1,13 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
+use crate::battle::pve::{FightView, Instruction, MapBattlePVE};
+use crate::battle::traits::FightLog;
 use crate::errors::Error;
-use crate::fight::pve::{FightView, Instruction, MapFightPVE};
-use crate::fight::traits::FightLog;
 use crate::systems::SystemInput;
 use crate::wrappings::System;
 
-impl<'a> MapFightPVE<'a> {
+impl<'a> MapBattlePVE<'a> {
     pub(super) fn trigger_log(&mut self, log: FightLog) -> Result<(), Error> {
         self.trigger_mounting_systems(
             FightView::Player,

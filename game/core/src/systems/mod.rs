@@ -1,10 +1,11 @@
 extern crate alloc;
 use alloc::collections::BTreeMap;
 use rand::RngCore;
+use spore_warriors_generated as generated;
 
+use crate::battle::traits::FightLog;
 use crate::contexts::{ContextType, CtxAdaptor};
 use crate::errors::Error;
-use crate::fight::traits::FightLog;
 use crate::wrappings::{System, SystemId, Value};
 
 pub enum SystemReturn {
@@ -21,6 +22,7 @@ pub enum SystemInput {
 }
 
 type SystemCallback = fn(
+    &generated::ResourcePool,
     &mut dyn RngCore,
     &[Value],
     &mut [&mut dyn CtxAdaptor],
@@ -28,16 +30,18 @@ type SystemCallback = fn(
 ) -> Result<SystemReturn, Error>;
 
 pub struct SystemController<'a, T: RngCore> {
+    resource_pool: &'a generated::ResourcePool,
     rng: &'a mut T,
     system_callbacks: BTreeMap<SystemId, SystemCallback>,
 }
 
 impl<'a, T: RngCore> SystemController<'a, T> {
-    pub fn new(rng: &'a mut T) -> Self {
+    pub fn new(resource_pool: &'a generated::ResourcePool, rng: &'a mut T) -> Self {
         let mut system_callbacks = BTreeMap::new();
         system_callbacks.insert(SystemId::Damage, attack as SystemCallback);
         system_callbacks.insert(SystemId::MultipleDamage, multiple_attack as SystemCallback);
         Self {
+            resource_pool,
             rng,
             system_callbacks,
         }
@@ -57,11 +61,18 @@ impl<'a, T: RngCore> SystemController<'a, T> {
             .system_callbacks
             .get(&system.id)
             .ok_or(Error::SystemMissing)?;
-        trigger(self.rng, &system.args, contexts, system_input)
+        trigger(
+            self.resource_pool,
+            self.rng,
+            &system.args,
+            contexts,
+            system_input,
+        )
     }
 }
 
 fn attack(
+    _: &generated::ResourcePool,
     _: &mut dyn RngCore,
     args: &[Value],
     contexts: &mut [&mut dyn CtxAdaptor],
@@ -93,6 +104,7 @@ fn attack(
 }
 
 fn multiple_attack(
+    _: &generated::ResourcePool,
     _: &mut dyn RngCore,
     args: &[Value],
     contexts: &mut [&mut dyn CtxAdaptor],

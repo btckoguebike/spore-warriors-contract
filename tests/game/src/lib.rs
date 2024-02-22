@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod test {
     use lazy_static::lazy_static;
-    use spore_warriors_core::fight::pve::MapFightPVE;
-    use spore_warriors_core::fight::traits::{IterationInput, Selection, SimplePVE};
+    use spore_warriors_core::battle::pve::MapBattlePVE;
+    use spore_warriors_core::battle::traits::{IterationInput, Selection, SimplePVE};
     use spore_warriors_core::game::Game;
     use spore_warriors_core::wrappings::{Enemy, Point};
 
@@ -35,15 +35,15 @@ mod test {
 
     #[test]
     fn test_pve_fight() -> eyre::Result<()> {
-        let point = Point::from_xy(1, 0);
         let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000, 5001).unwrap();
-        let mut session = game.new_session(point).unwrap();
         let enemies = {
-            let resource_pool = session.system.resource_pool();
+            let resource_pool = &game.resource_pool;
             let enemy = resource_pool.enemy_pool().get_unchecked(0);
-            vec![Enemy::randomized(resource_pool, enemy, session.system.rng()).unwrap()]
+            vec![Enemy::randomized(resource_pool, enemy, &mut game.rng).unwrap()]
         };
-        let mut battle = MapFightPVE::create(&mut session.player, &enemies).unwrap();
+        let point = Point::from_xy(1, 0);
+        let mut session = game.new_session(point).unwrap();
+        let mut battle = MapBattlePVE::create(&mut session.player, &enemies).unwrap();
         let (output, logs) = battle.start(&mut session.system).unwrap();
         println!("===START===");
         println!("[logs] = {logs:?}");

@@ -4,14 +4,75 @@ use core::cmp::{max, min};
 use rand::RngCore;
 use spore_warriors_generated as generated;
 
-use crate::contexts::{CardContext, CtxAdaptor, WarriorContext};
+use crate::battle::pve::MapBattlePVE;
+use crate::battle::traits::{FightLog, SimplePVE};
+use crate::contexts::{CardContext, CtxAdaptor, WarriorContext, DECK_START_OFFSET};
 use crate::errors::Error;
-use crate::fight::pve::MapFightPVE;
-use crate::fight::traits::{FightLog, SimplePVE};
 use crate::systems::{SystemController, SystemReturn};
 use crate::wrappings::{
     randomized_selection, Card, Item, ItemClass, LevelNode, LevelPartition, Node, Point, System,
 };
+
+fn run_context<'a>(
+    player: &mut WarriorContext<'a>,
+    system: &System,
+    controller: &mut SystemController<'a, impl RngCore>,
+) -> Result<Vec<FightLog>, Error> {
+    let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
+    let system_return = controller.call(&system, &mut system_contexts, None)?;
+    if let SystemReturn::SystemLog(logs) = system_return {
+        Ok(logs)
+    } else {
+        return Err(Error::SceneUnexpectedSystemReturn);
+    }
+}
+
+fn purchase_cards<'a>(
+    player: &mut WarriorContext<'a>,
+    user_imported: Vec<usize>,
+    cards: &'a Vec<Card>,
+) -> Result<Vec<()>, Error> {
+    user_imported
+        .into_iter()
+        .map(|index| {
+            let card = cards.get(index).ok_or(Error::SceneUserImportOutOfIndex)?;
+            if card.price > player.gold {
+                return Err(Error::SceneMerchantInsufficientGold);
+            }
+            player.gold -= card.price;
+            player.deck.push(CardContext::new(
+                card,
+                player.deck.len() + DECK_START_OFFSET,
+            ));
+            Ok(())
+        })
+        .collect::<Result<Vec<_>, _>>()
+}
+
+fn collect_items<'a>(
+    player: &mut WarriorContext<'a>,
+    user_imported: Vec<usize>,
+    items: &'a Vec<Item>,
+    purchase: bool,
+) -> Result<Vec<()>, Error> {
+    user_imported
+        .into_iter()
+        .map(|index| {
+            let item = items.get(index).ok_or(Error::SceneUserImportOutOfIndex)?;
+            if purchase {
+                if item.price > player.gold {
+                    return Err(Error::SceneMerchantInsufficientGold);
+                }
+                player.gold -= item.price;
+            }
+            match item.class {
+                ItemClass::Equipment => player.equipment_list.push(item),
+                ItemClass::Props => player.props_list.push(item),
+            }
+            Ok(())
+        })
+        .collect::<Result<Vec<_>, _>>()
+}
 
 pub struct Phantom<'a> {
     _i: &'a u8,
@@ -175,7 +236,7 @@ impl<'a> MapSkeleton {
                     .collect::<Result<_, _>>()?;
             }
             Node::Enemy(enemies) => {
-                let fight = MapFightPVE::create(player, enemies)?;
+                let fight = MapBattlePVE::create(player, enemies)?;
                 return Ok(MoveResult::Fight(fight));
             }
             Node::ItemMerchant(items) => {
@@ -193,64 +254,4 @@ impl<'a> MapSkeleton {
         }
         Ok(MoveResult::MapLogs(map_logs))
     }
-}
-
-fn run_context<'a>(
-    player: &mut WarriorContext<'a>,
-    system: &System,
-    controller: &mut SystemController<'a, impl RngCore>,
-) -> Result<Vec<FightLog>, Error> {
-    let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
-    let system_return = controller.call(&system, &mut system_contexts, None)?;
-    if let SystemReturn::SystemLog(logs) = system_return {
-        Ok(logs)
-    } else {
-        return Err(Error::SceneUnexpectedSystemReturn);
-    }
-}
-
-fn purchase_cards<'a>(
-    player: &mut WarriorContext<'a>,
-    user_imported: Vec<usize>,
-    cards: &'a Vec<Card>,
-) -> Result<Vec<()>, Error> {
-    user_imported
-        .into_iter()
-        .map(|index| {
-            let card = cards.get(index).ok_or(Error::SceneUserImportOutOfIndex)?;
-            if card.price > player.gold {
-                return Err(Error::SceneMerchantInsufficientGold);
-            }
-            player.gold -= card.price;
-            player
-                .deck
-                .push(CardContext::new(card, player.deck.len() + 11));
-            Ok(())
-        })
-        .collect::<Result<Vec<_>, _>>()
-}
-
-fn collect_items<'a>(
-    player: &mut WarriorContext<'a>,
-    user_imported: Vec<usize>,
-    items: &'a Vec<Item>,
-    purchase: bool,
-) -> Result<Vec<()>, Error> {
-    user_imported
-        .into_iter()
-        .map(|index| {
-            let item = items.get(index).ok_or(Error::SceneUserImportOutOfIndex)?;
-            if purchase {
-                if item.price > player.gold {
-                    return Err(Error::SceneMerchantInsufficientGold);
-                }
-                player.gold -= item.price;
-            }
-            match item.class {
-                ItemClass::Equipment => player.equipment_list.push(item),
-                ItemClass::Props => player.props_list.push(item),
-            }
-            Ok(())
-        })
-        .collect::<Result<Vec<_>, _>>()
 }

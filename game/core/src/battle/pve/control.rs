@@ -2,14 +2,14 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 use rand::RngCore;
 
+use crate::battle::pve::{FightView, Instruction, MapBattlePVE};
+use crate::battle::traits::{FightLog, IterationOutput};
 use crate::contexts::CtxAdaptor;
 use crate::errors::Error;
-use crate::fight::pve::{FightView, Instruction, MapFightPVE};
-use crate::fight::traits::{FightLog, IterationOutput};
 use crate::systems::{SystemController, SystemInput, SystemReturn};
 use crate::wrappings::RequireTarget;
 
-impl<'a> MapFightPVE<'a> {
+impl<'a> MapBattlePVE<'a> {
     pub(super) fn player_draw(
         &mut self,
         draw_count: u8,
@@ -127,6 +127,9 @@ impl<'a> MapFightPVE<'a> {
                     SystemReturn::SystemLog(mut logs) => self.fight_logs.append(&mut logs),
                 }
             }
+        }
+        if game_over {
+            self.player.reset();
         }
         Ok(self.last_output)
     }
