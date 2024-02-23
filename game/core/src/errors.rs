@@ -14,6 +14,7 @@ pub enum Error {
     ResourceBrokenSystemId,
     ResourceBrokenPlayerDeck,
     ResourceBrokenHpPercent,
+    ResourceBrokenUniqueId,
 
     ResourceEffectMultiTargetInEffectPool,
     ResourceEffectSetupConflict,
@@ -50,4 +51,5 @@ pub enum Error {
 
     SystemMissing,
     SystemError,
+    SystemDeserializeError,
 }

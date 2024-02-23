@@ -1,11 +1,14 @@
 extern crate alloc;
 use core::cmp::max;
+use core::sync::atomic::AtomicU16;
 
 use alloc::vec::Vec;
 use rand::RngCore;
 use spore_warriors_generated as generated;
 
 use crate::errors::Error;
+
+static UNIQUE_ID: AtomicU16 = AtomicU16::new(10);
 
 macro_rules! randomized_pool {
     ($val:ident.$meth:ident(), $pool:ident.$pmeth:ident(), $retn:ty, $rng:ident) => {{
@@ -171,6 +174,7 @@ impl TryFrom<u8> for ItemClass {
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone)]
 pub struct Item {
+    pub unique_id: u16,
     pub id: u16,
     pub class: ItemClass,
     pub quality: u8,
@@ -192,6 +196,7 @@ impl Item {
             rng
         )?;
         Ok(Self {
+            unique_id: UNIQUE_ID.fetch_add(1, core::sync::atomic::Ordering::SeqCst),
             id: value.id().into(),
             class: u8::from(value.class()).try_into()?,
             quality: value.quality().into(),
@@ -437,6 +442,7 @@ impl SizedPoint {
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone)]
 pub struct Card {
+    pub unique_id: u16,
     pub id: u16,
     pub class: u8,
     pub power_cost: u8,
@@ -450,18 +456,19 @@ impl Card {
         value: generated::Card,
         rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
-        let effect_pool = randomized_pool!(
+        let system_pool = randomized_pool!(
             value.system_pool(),
             resource_pool.system_pool(),
             System,
             rng
         )?;
         Ok(Self {
+            unique_id: UNIQUE_ID.fetch_add(1, core::sync::atomic::Ordering::SeqCst),
             id: value.id().into(),
             class: value.class().into(),
             power_cost: value.cost().into(),
             price: randomized_number(value.price(), rng),
-            system_pool: effect_pool,
+            system_pool,
         })
     }
 }

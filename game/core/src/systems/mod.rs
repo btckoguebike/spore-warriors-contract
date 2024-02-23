@@ -30,8 +30,8 @@ type SystemCallback = fn(
 ) -> Result<SystemReturn, Error>;
 
 pub struct SystemController<'a, T: RngCore> {
-    resource_pool: &'a generated::ResourcePool,
-    rng: &'a mut T,
+    pub resource_pool: &'a generated::ResourcePool,
+    pub rng: &'a mut T,
     system_callbacks: BTreeMap<SystemId, SystemCallback>,
 }
 
@@ -45,10 +45,6 @@ impl<'a, T: RngCore> SystemController<'a, T> {
             rng,
             system_callbacks,
         }
-    }
-
-    pub fn rng(&mut self) -> &mut T {
-        self.rng
     }
 
     pub fn call(

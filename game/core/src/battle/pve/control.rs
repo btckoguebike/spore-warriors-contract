@@ -27,7 +27,7 @@ impl<'a> MapBattlePVE<'a> {
                 self.player.deck.append(&mut grave_cards);
                 self.trigger_log(FightLog::RecoverGraveDeck)?;
             }
-            let card_index = controller.rng().next_u32() as usize % self.player.deck.len();
+            let card_index = controller.rng.next_u32() as usize % self.player.deck.len();
             let card = self.player.deck.remove(card_index);
             self.player.hand_deck.push(card);
             self.trigger_log(FightLog::Draw(card_index))?;
@@ -68,7 +68,7 @@ impl<'a> MapBattlePVE<'a> {
                 system_contexts.push(self.player);
             }
             (FightView::Player, RequireTarget::RandomOpponent) => {
-                let offset = controller.rng().next_u32() as usize % self.opponents.len();
+                let offset = controller.rng.next_u32() as usize % self.opponents.len();
                 let enemy = self.opponents.get_mut(offset).unwrap();
                 system_contexts.push(enemy);
             }

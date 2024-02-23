@@ -159,7 +159,7 @@ impl<'a> MapBattlePVE<'a> {
         let actions = self
             .opponents
             .iter_mut()
-            .map(|enemy| enemy.pop_action(controller.rng()))
+            .map(|enemy| enemy.pop_action(controller.rng))
             .collect::<Result<Vec<_>, _>>()?;
         for (offset, effects) in actions.into_iter().enumerate() {
             let output = self.trigger_iteration_systems(

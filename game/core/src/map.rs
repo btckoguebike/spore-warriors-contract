@@ -6,7 +6,7 @@ use spore_warriors_generated as generated;
 
 use crate::battle::pve::MapBattlePVE;
 use crate::battle::traits::{FightLog, SimplePVE};
-use crate::contexts::{CardContext, CtxAdaptor, WarriorContext, DECK_START_OFFSET};
+use crate::contexts::{CardContext, CtxAdaptor, WarriorContext};
 use crate::errors::Error;
 use crate::systems::{SystemController, SystemReturn};
 use crate::wrappings::{
@@ -40,10 +40,7 @@ fn purchase_cards<'a>(
                 return Err(Error::SceneMerchantInsufficientGold);
             }
             player.gold -= card.price;
-            player.deck.push(CardContext::new(
-                card,
-                player.deck.len() + DECK_START_OFFSET,
-            ));
+            player.deck.push(CardContext::new(card));
             Ok(())
         })
         .collect::<Result<Vec<_>, _>>()
@@ -88,16 +85,15 @@ pub enum MoveResult<'a, T: SimplePVE<'a>> {
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct MapSkeleton {
-    id: u16,
-    width: i16,
-    height: i16,
-    skeleton: Vec<LevelNode>,
-    player_point: Point,
+    pub id: u16,
+    pub width: i16,
+    pub height: i16,
+    pub skeleton: Vec<LevelNode>,
+    pub player_point: Point,
 }
 
 impl<'a> MapSkeleton {
     pub fn randomized(
-        player_point: Point,
         resource_pool: &generated::ResourcePool,
         rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
@@ -118,35 +114,37 @@ impl<'a> MapSkeleton {
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .for_each(|mut level| skeleton.append(&mut level.nodes));
-        let good_start = skeleton.iter().any(|level| {
-            if let Node::StartingPoint = level.node {
-                return level.point.contains(&player_point);
-            }
-            false
-        });
-        if !good_start {
-            return Err(Error::ScenePlayerPointInvalid);
-        }
         Ok(Self {
             id: scene.id().into(),
             width: u8::from(scene.width()) as i16,
             height: u8::from(scene.height()) as i16,
             skeleton,
-            player_point,
+            player_point: Point::default(),
         })
     }
 
-    pub fn profile(&self) -> (u16, u8, u8, &Vec<LevelNode>) {
-        (self.id, self.width as u8, self.height as u8, &self.skeleton)
+    pub fn place_player(
+        &mut self,
+        player_point: Point,
+        check_start_point: bool,
+    ) -> Result<(), Error> {
+        if check_start_point {
+            let good_start = self.skeleton.iter().any(|level| {
+                if let Node::StartingPoint = level.node {
+                    return level.point.contains(&player_point);
+                }
+                false
+            });
+            if !good_start {
+                return Err(Error::ScenePlayerPointInvalid);
+            }
+        }
+        self.player_point = player_point;
+        Ok(())
     }
 
     pub fn contains(&self, point: &Point) -> bool {
         (point.x as i16) < self.width && (point.y as i16) < self.height
-    }
-
-    pub fn player_point(&self) -> (u8, u8) {
-        let Point { x, y } = self.player_point;
-        (x, y)
     }
 
     pub fn movable_range(&self, motion: u8) -> Vec<Point> {
