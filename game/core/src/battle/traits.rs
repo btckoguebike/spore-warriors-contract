@@ -1,10 +1,9 @@
 extern crate alloc;
 use alloc::vec::Vec;
-use rand::RngCore;
 
 use crate::contexts::{EnemySnapshot, WarriorContext, WarriorSnapshot};
 use crate::errors::Error;
-use crate::systems::SystemController;
+use crate::game::Game;
 use crate::wrappings::Enemy;
 
 #[derive(Clone)]
@@ -69,15 +68,12 @@ where
 {
     fn create(player: &'a mut WarriorContext<'a>, enemies: &'a [Enemy]) -> Result<Self, Error>;
 
-    fn start(
-        &mut self,
-        controller: &mut SystemController<'a, impl RngCore>,
-    ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
+    fn start(&mut self, game: &mut Game<'a>) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn run(
         &mut self,
         operations: Vec<IterationInput>,
-        controller: &mut SystemController<'a, impl RngCore>,
+        game: &mut Game<'a>,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn peak_target(&self, hand_card_selection: Selection) -> Result<bool, Error>;

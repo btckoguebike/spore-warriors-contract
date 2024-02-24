@@ -1,17 +1,16 @@
 extern crate alloc;
-use core::cell::RefCell;
-
 use alloc::collections::BTreeMap;
+use core::cell::RefCell;
 use molecule::prelude::Entity;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 use spore_warriors_generated as generated;
 
-use crate::contexts::WarriorContext;
+use crate::contexts::{CtxAdaptor, WarriorContext};
 use crate::errors::Error;
 use crate::map::MapSkeleton;
-use crate::systems::SystemController;
-use crate::wrappings::{Card, Item, Node, Point, Potion, Warrior};
+use crate::systems::{setup_system_controllers, SystemController, SystemInput, SystemReturn};
+use crate::wrappings::{Card, Item, Node, Point, Potion, System, Warrior};
 
 pub struct SporeRng {
     rng: SmallRng,
@@ -26,13 +25,15 @@ impl SporeRng {
         }
     }
 
-    pub fn rotate_to(&mut self, rotation_count: u16) {
+    pub fn rotate_to(&mut self, rotation_count: u16) -> bool {
         if rotation_count > self.rotation_count {
             let rotation_diff = rotation_count - self.rotation_count;
             (0..rotation_diff).for_each(|_| {
                 self.next_u32();
             });
+            return true;
         }
+        false
     }
 
     pub fn rotation_count(&self) -> u16 {
@@ -109,12 +110,8 @@ pub struct Game<'a> {
     pub player: Warrior,
     pub map: MapSkeleton,
     pub potion: Option<Potion>,
+    pub controller: SystemController,
     pub outside_refers: ReferContainer<'a>,
-}
-
-pub struct GameSession<'a> {
-    pub player: WarriorContext<'a>,
-    pub system: SystemController<'a, SporeRng>,
 }
 
 impl<'a> Game<'a> {
@@ -141,30 +138,59 @@ impl<'a> Game<'a> {
                 None
             }
         };
+        let mut controller = SystemController::default();
+        setup_system_controllers(&mut controller);
         Ok(Self {
             player: Warrior::randomized(&resource_pool, warrior, &mut rng)?,
             map: MapSkeleton::randomized(&resource_pool, &mut rng)?,
             resource_pool,
             rng,
             potion,
+            controller,
             outside_refers: Default::default(),
         })
     }
 
-    pub fn new_session(&'a mut self, player_point: Point) -> Result<GameSession<'a>, Error> {
-        self.map.place_player(player_point, true)?;
-        Ok(GameSession {
-            player: WarriorContext::new(&self.player, self.potion.as_ref()),
-            system: SystemController::new(&self.resource_pool, &mut self.rng),
-        })
+    pub fn system_call(
+        &mut self,
+        system: &System,
+        contexts: &mut [&mut dyn CtxAdaptor],
+        system_input: Option<SystemInput>,
+    ) -> Result<SystemReturn, Error> {
+        let system_trigger = self
+            .controller
+            .get(&system.id)
+            .ok_or(Error::SystemTriggerMissing)?;
+        system_trigger(
+            &self.resource_pool,
+            &mut self.rng,
+            &system.args,
+            contexts,
+            system_input,
+        )
     }
 
-    pub fn recover_session(
+    pub fn new_context(&'a mut self, player_point: Point) -> Result<WarriorContext<'a>, Error> {
+        self.map.place_player(player_point, true)?;
+        Ok(WarriorContext::new(&self.player, self.potion.as_ref()))
+    }
+
+    pub fn recover_context(
         &'a mut self,
         rng_rotation_count: u16,
-    ) -> Result<GameSession<'a>, Error> {
+        player_point: Point,
+        mut raw_context: Vec<u8>,
+    ) -> Result<WarriorContext<'a>, Error> {
+        if !self.rng.rotate_to(rng_rotation_count) {
+            return Err(Error::SystemRngRotationError);
+        }
+        self.map.place_player(player_point, false)?;
         self.link_reference();
-        unimplemented!()
+        Ok(WarriorContext::deserialize(
+            &self.outside_refers,
+            &self.player,
+            &mut raw_context,
+        )?)
     }
 
     fn link_reference(&'a self) {

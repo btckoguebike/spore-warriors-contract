@@ -15,7 +15,7 @@ mod test {
     fn test_map_skeleton() -> eyre::Result<()> {
         let point = Point::from_xy(1, 0);
         let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000, 5001).unwrap();
-        let mut session = game.new_session(point).unwrap();
+        let mut session = game.new_context(point).unwrap();
         let motion = session.player.warrior.motion;
         println!("[map] = {:?}", session.map);
         println!(
@@ -42,7 +42,7 @@ mod test {
             vec![Enemy::randomized(resource_pool, enemy, &mut game.rng).unwrap()]
         };
         let point = Point::from_xy(1, 0);
-        let mut session = game.new_session(point).unwrap();
+        let mut session = game.new_context(point).unwrap();
         let mut battle = MapBattlePVE::create(&mut session.player, &enemies).unwrap();
         let (output, logs) = battle.start(&mut session.system).unwrap();
         println!("===START===");

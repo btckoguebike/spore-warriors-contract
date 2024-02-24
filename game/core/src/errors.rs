@@ -49,7 +49,9 @@ pub enum Error {
     BattleUnexpectedSystemArgs,
     BattleUnexpectedSystemContext,
 
-    SystemMissing,
+    SystemTriggerMissing,
     SystemError,
     SystemDeserializeError,
+    SystemRngRotationError,
+    SystemEmptyReference,
 }

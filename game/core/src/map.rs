@@ -8,7 +8,8 @@ use crate::battle::pve::MapBattlePVE;
 use crate::battle::traits::{FightLog, SimplePVE};
 use crate::contexts::{CardContext, CtxAdaptor, WarriorContext};
 use crate::errors::Error;
-use crate::systems::{SystemController, SystemReturn};
+use crate::game::Game;
+use crate::systems::SystemReturn;
 use crate::wrappings::{
     randomized_selection, Card, Item, ItemClass, LevelNode, LevelPartition, Node, Point, System,
 };
@@ -16,10 +17,10 @@ use crate::wrappings::{
 fn run_context<'a>(
     player: &mut WarriorContext<'a>,
     system: &System,
-    controller: &mut SystemController<'a, impl RngCore>,
+    game: &mut Game<'a>,
 ) -> Result<Vec<FightLog>, Error> {
     let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
-    let system_return = controller.call(&system, &mut system_contexts, None)?;
+    let system_return = game.system_call(&system, &mut system_contexts, None)?;
     if let SystemReturn::SystemLog(logs) = system_return {
         Ok(logs)
     } else {
@@ -203,7 +204,7 @@ impl<'a> MapSkeleton {
         player: &'a mut WarriorContext<'a>,
         player_point: Point,
         user_imported: Vec<usize>,
-        system: &mut SystemController<'a, impl RngCore>,
+        game: &mut Game<'a>,
     ) -> Result<MoveResult<impl SimplePVE>, Error> {
         self.player_point = player_point;
         let Some(level) = self.peak_upcoming_movment(player_point, player.warrior.motion)? else {
@@ -220,14 +221,14 @@ impl<'a> MapSkeleton {
                 map_logs.push(FightLog::RecoverHp(hp_recover));
             }
             Node::Campsite(context) => {
-                let mut logs = run_context(player, context, system)?;
+                let mut logs = run_context(player, context, game)?;
                 map_logs.append(&mut logs);
             }
             Node::Unknown(contexts) => {
                 contexts
                     .iter()
                     .map(|context| {
-                        let mut logs = run_context(player, context, system)?;
+                        let mut logs = run_context(player, context, game)?;
                         map_logs.append(&mut logs);
                         Ok(())
                     })

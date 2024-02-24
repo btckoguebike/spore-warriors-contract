@@ -6,7 +6,7 @@ use spore_warriors_generated as generated;
 use crate::battle::traits::FightLog;
 use crate::contexts::{ContextType, CtxAdaptor};
 use crate::errors::Error;
-use crate::wrappings::{System, SystemId, Value};
+use crate::wrappings::{SystemId, Value};
 
 pub enum SystemReturn {
     RequireCardSelect,
@@ -21,7 +21,9 @@ pub enum SystemInput {
     GameOver,
 }
 
-type SystemCallback = fn(
+pub type SystemController = BTreeMap<SystemId, SystemCallback>;
+
+pub type SystemCallback = fn(
     &generated::ResourcePool,
     &mut dyn RngCore,
     &[Value],
@@ -29,42 +31,9 @@ type SystemCallback = fn(
     Option<SystemInput>,
 ) -> Result<SystemReturn, Error>;
 
-pub struct SystemController<'a, T: RngCore> {
-    pub resource_pool: &'a generated::ResourcePool,
-    pub rng: &'a mut T,
-    system_callbacks: BTreeMap<SystemId, SystemCallback>,
-}
-
-impl<'a, T: RngCore> SystemController<'a, T> {
-    pub fn new(resource_pool: &'a generated::ResourcePool, rng: &'a mut T) -> Self {
-        let mut system_callbacks = BTreeMap::new();
-        system_callbacks.insert(SystemId::Damage, attack as SystemCallback);
-        system_callbacks.insert(SystemId::MultipleDamage, multiple_attack as SystemCallback);
-        Self {
-            resource_pool,
-            rng,
-            system_callbacks,
-        }
-    }
-
-    pub fn call(
-        &mut self,
-        system: &System,
-        contexts: &mut [&mut dyn CtxAdaptor],
-        system_input: Option<SystemInput>,
-    ) -> Result<SystemReturn, Error> {
-        let trigger = self
-            .system_callbacks
-            .get(&system.id)
-            .ok_or(Error::SystemMissing)?;
-        trigger(
-            self.resource_pool,
-            self.rng,
-            &system.args,
-            contexts,
-            system_input,
-        )
-    }
+pub fn setup_system_controllers(controller: &mut SystemController) {
+    controller.insert(SystemId::Damage, attack as SystemCallback);
+    controller.insert(SystemId::MultipleDamage, multiple_attack as SystemCallback);
 }
 
 fn attack(

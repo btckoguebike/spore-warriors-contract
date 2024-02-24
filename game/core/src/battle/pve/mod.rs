@@ -1,11 +1,11 @@
 extern crate alloc;
 use alloc::{vec, vec::Vec};
-use rand::RngCore;
 
 use crate::battle::traits::{FightLog, IterationInput, IterationOutput, Selection, SimplePVE};
 use crate::contexts::{EnemyContext, WarriorContext};
 use crate::errors::Error;
-use crate::systems::{SystemController, SystemInput};
+use crate::game::Game;
+use crate::systems::SystemInput;
 use crate::wrappings::{Enemy, ItemClass, RequireTarget, System};
 
 mod control;
@@ -51,10 +51,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
         })
     }
 
-    fn start(
-        &mut self,
-        controller: &mut SystemController<'a, impl RngCore>,
-    ) -> Result<(IterationOutput, Vec<FightLog>), Error> {
+    fn start(&mut self, game: &mut Game<'a>) -> Result<(IterationOutput, Vec<FightLog>), Error> {
         if self.round != 0 {
             return Err(Error::BattleRepeatStart);
         }
@@ -72,13 +69,9 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
         ))?;
         self.round = 1;
         self.trigger_log(FightLog::PlayerTurn(self.round))?;
-        self.player_draw(self.player.draw_count, controller)?;
-        let output = self.trigger_iteration_systems(
-            FightView::Player,
-            &equipment_effects,
-            None,
-            controller,
-        )?;
+        self.player_draw(self.player.draw_count, game)?;
+        let output =
+            self.trigger_iteration_systems(FightView::Player, &equipment_effects, None, game)?;
         let logs = self.fight_logs.drain(..).collect();
         Ok((output, logs))
     }
@@ -86,13 +79,13 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
     fn run(
         &mut self,
         operations: Vec<IterationInput>,
-        controller: &mut SystemController<'a, impl RngCore>,
+        game: &mut Game<'a>,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error> {
         if self.round == 0 {
             return Err(Error::BattleNotStarted);
         }
         for operation in operations {
-            let output = self.iterate(operation, controller)?;
+            let output = self.iterate(operation, game)?;
             if output == IterationOutput::GameWin || output == IterationOutput::GameLose {
                 let logs = self.fight_logs.drain(..).collect();
                 return Ok((self.last_output, logs));
