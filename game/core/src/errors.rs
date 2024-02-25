@@ -41,6 +41,7 @@ pub enum Error {
     BattleInstructionNotEmpty,
     BattleInstructionEmpty,
     BattleSystemInvalidReturn,
+    BattleInternalError,
 
     BattleUnexpectedDrawCount,
     BattleUnexpectedOutput,
@@ -50,7 +51,6 @@ pub enum Error {
     BattleUnexpectedSystemContext,
 
     SystemTriggerMissing,
-    SystemError,
     SystemDeserializeError,
     SystemRngRotationError,
     SystemEmptyReference,

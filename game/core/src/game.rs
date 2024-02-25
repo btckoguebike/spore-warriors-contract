@@ -6,11 +6,11 @@ use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 use spore_warriors_generated as generated;
 
-use crate::contexts::{CtxAdaptor, WarriorContext};
+use crate::contexts::WarriorContext;
 use crate::errors::Error;
 use crate::map::MapSkeleton;
-use crate::systems::{setup_system_controllers, SystemController, SystemInput, SystemReturn};
-use crate::wrappings::{Card, Item, Node, Point, Potion, System, Warrior};
+use crate::systems::SystemController;
+use crate::wrappings::{Card, Item, Node, Point, Potion, Warrior};
 
 pub struct SporeRng {
     rng: SmallRng,
@@ -87,7 +87,7 @@ impl<'a> ReferContainer<'a> {
         });
     }
 
-    pub fn get_card(&self, unique_id: u16) -> Result<&Card, Error> {
+    pub fn get_card(&self, unique_id: u16) -> Result<&'a Card, Error> {
         let value = self.refers.borrow();
         let Some(Reference::Card(card)) = value.get(&unique_id) else {
             return Err(Error::ResourceBrokenUniqueId);
@@ -95,7 +95,7 @@ impl<'a> ReferContainer<'a> {
         Ok(card)
     }
 
-    pub fn get_item(&self, unique_id: u16) -> Result<&Item, Error> {
+    pub fn get_item(&self, unique_id: u16) -> Result<&'a Item, Error> {
         let value = self.refers.borrow();
         let Some(Reference::Item(card)) = value.get(&unique_id) else {
             return Err(Error::ResourceBrokenUniqueId);
@@ -104,17 +104,14 @@ impl<'a> ReferContainer<'a> {
     }
 }
 
-pub struct Game<'a> {
+pub struct Game {
     pub resource_pool: generated::ResourcePool,
     pub rng: SporeRng,
     pub player: Warrior,
-    pub map: MapSkeleton,
     pub potion: Option<Potion>,
-    pub controller: SystemController,
-    pub outside_refers: ReferContainer<'a>,
 }
 
-impl<'a> Game<'a> {
+impl Game {
     pub fn new(
         raw_resource_pool: &Vec<u8>,
         raw_potion: Option<Vec<u8>>,
@@ -138,73 +135,51 @@ impl<'a> Game<'a> {
                 None
             }
         };
-        let mut controller = SystemController::default();
-        setup_system_controllers(&mut controller);
         Ok(Self {
             player: Warrior::randomized(&resource_pool, warrior, &mut rng)?,
-            map: MapSkeleton::randomized(&resource_pool, &mut rng)?,
             resource_pool,
             rng,
             potion,
-            controller,
-            outside_refers: Default::default(),
         })
     }
 
-    pub fn system_call(
-        &mut self,
-        system: &System,
-        contexts: &mut [&mut dyn CtxAdaptor],
-        system_input: Option<SystemInput>,
-    ) -> Result<SystemReturn, Error> {
-        let system_trigger = self
-            .controller
-            .get(&system.id)
-            .ok_or(Error::SystemTriggerMissing)?;
-        system_trigger(
-            &self.resource_pool,
-            &mut self.rng,
-            &system.args,
-            contexts,
-            system_input,
-        )
-    }
-
-    pub fn new_context(&'a mut self, player_point: Point) -> Result<WarriorContext<'a>, Error> {
-        self.map.place_player(player_point, true)?;
-        Ok(WarriorContext::new(&self.player, self.potion.as_ref()))
-    }
-
-    pub fn recover_context(
+    pub fn new_session<'a>(
         &'a mut self,
+        player_point: Point,
+    ) -> Result<(MapSkeleton, SystemController<'a>, WarriorContext<'a>), Error> {
+        let mut map = MapSkeleton::randomized(&self.resource_pool, &mut self.rng)?;
+        map.place_player(player_point, true)?;
+        let context = WarriorContext::new(&self.player, self.potion.as_ref());
+        let controller = SystemController::new(&self.resource_pool, &mut self.rng);
+        Ok((map, controller, context))
+    }
+
+    pub fn recover_session<'a>(
+        &'a mut self,
+        refers: ReferContainer<'a>,
         rng_rotation_count: u16,
         player_point: Point,
         mut raw_context: Vec<u8>,
-    ) -> Result<WarriorContext<'a>, Error> {
+    ) -> Result<(MapSkeleton, SystemController<'a>, WarriorContext<'a>), Error> {
+        let mut map = MapSkeleton::randomized(&self.resource_pool, &mut self.rng)?;
         if !self.rng.rotate_to(rng_rotation_count) {
             return Err(Error::SystemRngRotationError);
         }
-        self.map.place_player(player_point, false)?;
-        self.link_reference();
-        Ok(WarriorContext::deserialize(
-            &self.outside_refers,
-            &self.player,
-            &mut raw_context,
-        )?)
+        map.place_player(player_point, false)?;
+        let context = WarriorContext::deserialize(&refers, &self.player, &mut raw_context)?;
+        let controller = SystemController::new(&self.resource_pool, &mut self.rng);
+        Ok((map, controller, context))
     }
 
-    fn link_reference(&'a self) {
-        self.outside_refers.refer_items(&self.player.package_status);
-        self.outside_refers.refer_cards(&self.player.deck_status);
-        self.map
-            .skeleton
-            .iter()
-            .for_each(|level| match &level.node {
-                Node::TreasureChest(items, _) | Node::ItemMerchant(items) => {
-                    self.outside_refers.refer_items(items)
-                }
-                Node::CardMerchant(cards) => self.outside_refers.refer_cards(cards),
-                _ => {}
-            });
+    pub fn unique_reference<'a>(&'a self, map: &'a MapSkeleton) -> ReferContainer<'a> {
+        let refers = ReferContainer::default();
+        refers.refer_items(&self.player.package_status);
+        refers.refer_cards(&self.player.deck_status);
+        map.skeleton.iter().for_each(|level| match &level.node {
+            Node::TreasureChest(items, _) | Node::ItemMerchant(items) => refers.refer_items(items),
+            Node::CardMerchant(cards) => refers.refer_cards(cards),
+            _ => {}
+        });
+        refers
     }
 }

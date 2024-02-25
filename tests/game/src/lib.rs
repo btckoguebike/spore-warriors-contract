@@ -15,20 +15,13 @@ mod test {
     fn test_map_skeleton() -> eyre::Result<()> {
         let point = Point::from_xy(1, 0);
         let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000, 5001).unwrap();
-        let mut session = game.new_context(point).unwrap();
-        let motion = session.player.warrior.motion;
-        println!("[map] = {:?}", session.map);
-        println!(
-            "[avaliable_range] = {:?}",
-            session.map.movable_range(motion)
-        );
+        let (mut map, mut controller, mut player) = game.new_session(point).unwrap();
+        println!("[map] = {:?}", map);
         println!(
             "[node] = {:?}",
-            session.map.peak_upcoming_movment((1, 1).into(), motion)
+            map.peak_upcoming_movment(&player, (1, 1).into())
         );
-        session
-            .map
-            .move_to(&mut session.player, point, vec![], &mut session.system)
+        map.move_to(&mut player, point, vec![], &mut controller)
             .unwrap();
         Ok(())
     }
@@ -42,9 +35,9 @@ mod test {
             vec![Enemy::randomized(resource_pool, enemy, &mut game.rng).unwrap()]
         };
         let point = Point::from_xy(1, 0);
-        let mut session = game.new_context(point).unwrap();
-        let mut battle = MapBattlePVE::create(&mut session.player, &enemies).unwrap();
-        let (output, logs) = battle.start(&mut session.system).unwrap();
+        let (_, mut controller, mut player) = game.new_session(point).unwrap();
+        let mut battle = MapBattlePVE::create(&mut player, &enemies).unwrap();
+        let (output, logs) = battle.start(&mut controller).unwrap();
         println!("===START===");
         println!("[logs] = {logs:?}");
         println!("[output] = {output:?}");
@@ -54,14 +47,14 @@ mod test {
                     Selection::SingleCard(0),
                     Some(0),
                 )],
-                &mut session.system,
+                &mut controller,
             )
             .unwrap();
         println!("===PLAYER TURN===");
         println!("[logs] = {logs:?}");
         println!("[output] = {output:?}");
         let (output, logs) = battle
-            .run(vec![IterationInput::EnemyTurn], &mut session.system)
+            .run(vec![IterationInput::EnemyTurn], &mut controller)
             .unwrap();
         println!("===ENEMY TURN===");
         println!("[logs] = {logs:?}");

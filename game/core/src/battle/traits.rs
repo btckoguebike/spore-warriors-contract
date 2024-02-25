@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 
 use crate::contexts::{EnemySnapshot, WarriorContext, WarriorSnapshot};
 use crate::errors::Error;
-use crate::game::Game;
+use crate::systems::SystemController;
 use crate::wrappings::Enemy;
 
 #[derive(Clone)]
@@ -68,12 +68,15 @@ where
 {
     fn create(player: &'a mut WarriorContext<'a>, enemies: &'a [Enemy]) -> Result<Self, Error>;
 
-    fn start(&mut self, game: &mut Game<'a>) -> Result<(IterationOutput, Vec<FightLog>), Error>;
+    fn start(
+        &mut self,
+        controller: &mut SystemController<'a>,
+    ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn run(
         &mut self,
         operations: Vec<IterationInput>,
-        game: &mut Game<'a>,
+        controller: &mut SystemController<'a>,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn peak_target(&self, hand_card_selection: Selection) -> Result<bool, Error>;

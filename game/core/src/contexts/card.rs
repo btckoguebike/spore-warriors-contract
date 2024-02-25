@@ -34,7 +34,7 @@ impl<'a> CardContext<'a> {
     }
 
     pub(super) fn deserialize(
-        refers: &'a ReferContainer<'a>,
+        refers: &ReferContainer<'a>,
         extractor: &mut BytesExtractor,
     ) -> Result<Self, Error> {
         let unique_id = extractor.pop_u16()?;

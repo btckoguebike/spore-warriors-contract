@@ -6,12 +6,15 @@ use crate::battle::pve::{FightView, Instruction, MapBattlePVE};
 use crate::battle::traits::{FightLog, IterationOutput};
 use crate::contexts::CtxAdaptor;
 use crate::errors::Error;
-use crate::game::Game;
-use crate::systems::{SystemInput, SystemReturn};
+use crate::systems::{SystemController, SystemInput, SystemReturn};
 use crate::wrappings::RequireTarget;
 
 impl<'a> MapBattlePVE<'a> {
-    pub(super) fn player_draw(&mut self, draw_count: u8, game: &mut Game<'a>) -> Result<(), Error> {
+    pub(super) fn player_draw(
+        &mut self,
+        draw_count: u8,
+        controller: &mut SystemController<'a>,
+    ) -> Result<(), Error> {
         if draw_count == 0 {
             return Err(Error::BattleUnexpectedDrawCount);
         }
@@ -19,12 +22,12 @@ impl<'a> MapBattlePVE<'a> {
             if self.player.deck.is_empty() {
                 let mut grave_cards = self.player.grave_deck.drain(..).collect::<Vec<_>>();
                 if grave_cards.is_empty() {
-                    return Err(Error::SystemError);
+                    return Err(Error::BattleInternalError);
                 }
                 self.player.deck.append(&mut grave_cards);
                 self.trigger_log(FightLog::RecoverGraveDeck)?;
             }
-            let card_index = game.rng.next_u32() as usize % self.player.deck.len();
+            let card_index = controller.rng.next_u32() as usize % self.player.deck.len();
             let card = self.player.deck.remove(card_index);
             self.player.hand_deck.push(card);
             self.trigger_log(FightLog::Draw(card_index))?;
@@ -37,7 +40,7 @@ impl<'a> MapBattlePVE<'a> {
         view: FightView,
         target: RequireTarget,
         offset: Option<usize>,
-        game: &mut Game<'a>,
+        controller: &mut SystemController<'a>,
     ) -> Result<Vec<&mut dyn CtxAdaptor<'a>>, Error> {
         let mut system_contexts: Vec<&mut dyn CtxAdaptor<'a>> = vec![];
         match (view, target) {
@@ -65,7 +68,7 @@ impl<'a> MapBattlePVE<'a> {
                 system_contexts.push(self.player);
             }
             (FightView::Player, RequireTarget::RandomOpponent) => {
-                let offset = game.rng.next_u32() as usize % self.opponents.len();
+                let offset = controller.rng.next_u32() as usize % self.opponents.len();
                 let enemy = self.opponents.get_mut(offset).unwrap();
                 system_contexts.push(enemy);
             }
@@ -79,7 +82,7 @@ impl<'a> MapBattlePVE<'a> {
 
     pub(super) fn operate_pending_instructions(
         &mut self,
-        game: &mut Game<'a>,
+        controller: &mut SystemController<'a>,
     ) -> Result<IterationOutput, Error> {
         let mut game_over = false;
         self.last_output = IterationOutput::Continue;
@@ -92,11 +95,12 @@ impl<'a> MapBattlePVE<'a> {
             } = self.pending_instructions.remove(0);
             self.trigger_log(FightLog::CallSystemId(system.id.into()))?;
             let mut system_contexts =
-                self.collect_system_contexts(view, system.target_type, offset, game)?;
+                self.collect_system_contexts(view, system.target_type, offset, controller)?;
             if game_over {
                 system_input = Some(SystemInput::GameOver);
             }
-            let system_return = game.system_call(&system, &mut system_contexts, system_input)?;
+            let system_return =
+                controller.system_call(&system, &mut system_contexts, system_input)?;
             if !game_over {
                 if self.player.hp == 0 {
                     self.last_output = IterationOutput::GameLose;
@@ -118,7 +122,9 @@ impl<'a> MapBattlePVE<'a> {
                         self.last_output = IterationOutput::RequireCardSelect;
                         break;
                     }
-                    SystemReturn::DrawCard(draw_count) => self.player_draw(draw_count, game)?,
+                    SystemReturn::DrawCard(draw_count) => {
+                        self.player_draw(draw_count, controller)?
+                    }
                     SystemReturn::SystemLog(mut logs) => self.fight_logs.append(&mut logs),
                 }
             }

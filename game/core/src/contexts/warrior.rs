@@ -187,7 +187,7 @@ impl<'a> WarriorContext<'a> {
     }
 
     pub fn deserialize(
-        refers: &'a ReferContainer<'a>,
+        refers: &ReferContainer<'a>,
         warrior: &'a Warrior,
         data: &mut Vec<u8>,
     ) -> Result<Self, Error> {

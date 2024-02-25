@@ -6,7 +6,8 @@ use spore_warriors_generated as generated;
 use crate::battle::traits::FightLog;
 use crate::contexts::{ContextType, CtxAdaptor};
 use crate::errors::Error;
-use crate::wrappings::{SystemId, Value};
+use crate::game::SporeRng;
+use crate::wrappings::{System, SystemId, Value};
 
 pub enum SystemReturn {
     RequireCardSelect,
@@ -21,8 +22,6 @@ pub enum SystemInput {
     GameOver,
 }
 
-pub type SystemController = BTreeMap<SystemId, SystemCallback>;
-
 pub type SystemCallback = fn(
     &generated::ResourcePool,
     &mut dyn RngCore,
@@ -31,9 +30,42 @@ pub type SystemCallback = fn(
     Option<SystemInput>,
 ) -> Result<SystemReturn, Error>;
 
-pub fn setup_system_controllers(controller: &mut SystemController) {
-    controller.insert(SystemId::Damage, attack as SystemCallback);
-    controller.insert(SystemId::MultipleDamage, multiple_attack as SystemCallback);
+pub struct SystemController<'a> {
+    pub resource_pool: &'a generated::ResourcePool,
+    pub rng: &'a mut SporeRng,
+    controller: BTreeMap<SystemId, SystemCallback>,
+}
+
+impl<'a> SystemController<'a> {
+    pub fn new(resource_pool: &'a generated::ResourcePool, rng: &'a mut SporeRng) -> Self {
+        let mut controller = BTreeMap::new();
+        controller.insert(SystemId::Damage, attack as SystemCallback);
+        controller.insert(SystemId::MultipleDamage, multiple_attack as SystemCallback);
+        Self {
+            resource_pool,
+            rng,
+            controller,
+        }
+    }
+
+    pub fn system_call(
+        &mut self,
+        system: &System,
+        contexts: &mut [&mut dyn CtxAdaptor],
+        system_input: Option<SystemInput>,
+    ) -> Result<SystemReturn, Error> {
+        let system_trigger = self
+            .controller
+            .get(&system.id)
+            .ok_or(Error::SystemTriggerMissing)?;
+        system_trigger(
+            self.resource_pool,
+            &mut self.rng,
+            &system.args,
+            contexts,
+            system_input,
+        )
+    }
 }
 
 fn attack(

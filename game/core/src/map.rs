@@ -8,8 +8,7 @@ use crate::battle::pve::MapBattlePVE;
 use crate::battle::traits::{FightLog, SimplePVE};
 use crate::contexts::{CardContext, CtxAdaptor, WarriorContext};
 use crate::errors::Error;
-use crate::game::Game;
-use crate::systems::SystemReturn;
+use crate::systems::{SystemController, SystemReturn};
 use crate::wrappings::{
     randomized_selection, Card, Item, ItemClass, LevelNode, LevelPartition, Node, Point, System,
 };
@@ -17,10 +16,10 @@ use crate::wrappings::{
 fn run_context<'a>(
     player: &mut WarriorContext<'a>,
     system: &System,
-    game: &mut Game<'a>,
+    controller: &mut SystemController<'a>,
 ) -> Result<Vec<FightLog>, Error> {
     let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
-    let system_return = game.system_call(&system, &mut system_contexts, None)?;
+    let system_return = controller.system_call(&system, &mut system_contexts, None)?;
     if let SystemReturn::SystemLog(logs) = system_return {
         Ok(logs)
     } else {
@@ -144,47 +143,15 @@ impl<'a> MapSkeleton {
         Ok(())
     }
 
-    pub fn contains(&self, point: &Point) -> bool {
-        (point.x as i16) < self.width && (point.y as i16) < self.height
-    }
-
-    pub fn movable_range(&self, motion: u8) -> Vec<Point> {
-        let motion = motion as i16;
-        let mut points = Vec::<Point>::new();
-        (1..motion).for_each(|y_step| {
-            let y = y_step;
-            (-y_step..(y_step + 1)).for_each(|x_step| {
-                let x = min(
-                    max((self.player_point.x as i16) + x_step, 0),
-                    self.width - 1,
-                );
-                if !points
-                    .iter()
-                    .any(|point| point.x as i16 == x && point.y as i16 == y)
-                {
-                    points.push(Point::from_xy(x as u8, y as u8));
-                }
-            })
-        });
-        points
-    }
-
-    pub fn filter_nonempty_nodes(&self, points: &Vec<Point>) -> Vec<&LevelNode> {
-        self.skeleton
-            .iter()
-            .filter(|node| points.iter().any(|point| node.point.contains(point)))
-            .collect()
-    }
-
     pub fn peak_upcoming_movment(
         &self,
+        player: &WarriorContext<'a>,
         peak_point: Point,
-        motion: u8,
     ) -> Result<Option<&LevelNode>, Error> {
         if !self.contains(&peak_point) {
             return Err(Error::ScenePlayerPointBeyondMap);
         }
-        let movable_range = self.movable_range(motion);
+        let movable_range = self.movable_range(player.warrior.motion);
         let nodes = self.filter_nonempty_nodes(&movable_range);
         let mut peaked_node = None;
         if nodes.is_empty() {
@@ -204,10 +171,10 @@ impl<'a> MapSkeleton {
         player: &'a mut WarriorContext<'a>,
         player_point: Point,
         user_imported: Vec<usize>,
-        game: &mut Game<'a>,
+        controller: &'a mut SystemController<'a>,
     ) -> Result<MoveResult<impl SimplePVE>, Error> {
         self.player_point = player_point;
-        let Some(level) = self.peak_upcoming_movment(player_point, player.warrior.motion)? else {
+        let Some(level) = self.peak_upcoming_movment(player, player_point)? else {
             return Ok(MoveResult::Skip);
         };
         let mut map_logs = vec![];
@@ -221,14 +188,14 @@ impl<'a> MapSkeleton {
                 map_logs.push(FightLog::RecoverHp(hp_recover));
             }
             Node::Campsite(context) => {
-                let mut logs = run_context(player, context, game)?;
+                let mut logs = run_context(player, context, controller)?;
                 map_logs.append(&mut logs);
             }
             Node::Unknown(contexts) => {
                 contexts
                     .iter()
                     .map(|context| {
-                        let mut logs = run_context(player, context, game)?;
+                        let mut logs = run_context(player, context, controller)?;
                         map_logs.append(&mut logs);
                         Ok(())
                     })
@@ -252,5 +219,37 @@ impl<'a> MapSkeleton {
             }
         }
         Ok(MoveResult::MapLogs(map_logs))
+    }
+
+    fn contains(&self, point: &Point) -> bool {
+        (point.x as i16) < self.width && (point.y as i16) < self.height
+    }
+
+    fn movable_range(&self, motion: u8) -> Vec<Point> {
+        let motion = motion as i16;
+        let mut points = Vec::<Point>::new();
+        (1..motion).for_each(|y_step| {
+            let y = y_step;
+            (-y_step..(y_step + 1)).for_each(|x_step| {
+                let x = min(
+                    max((self.player_point.x as i16) + x_step, 0),
+                    self.width - 1,
+                );
+                if !points
+                    .iter()
+                    .any(|point| point.x as i16 == x && point.y as i16 == y)
+                {
+                    points.push(Point::from_xy(x as u8, y as u8));
+                }
+            })
+        });
+        points
+    }
+
+    fn filter_nonempty_nodes(&self, points: &Vec<Point>) -> Vec<&LevelNode> {
+        self.skeleton
+            .iter()
+            .filter(|node| points.iter().any(|point| node.point.contains(point)))
+            .collect()
     }
 }
