@@ -13,7 +13,7 @@ impl<'a> MapBattlePVE<'a> {
     pub(super) fn player_draw(
         &mut self,
         draw_count: u8,
-        controller: &mut SystemController<'a>,
+        controller: &mut SystemController,
     ) -> Result<(), Error> {
         if draw_count == 0 {
             return Err(Error::BattleUnexpectedDrawCount);
@@ -40,9 +40,9 @@ impl<'a> MapBattlePVE<'a> {
         view: FightView,
         target: RequireTarget,
         offset: Option<usize>,
-        controller: &mut SystemController<'a>,
-    ) -> Result<Vec<&mut dyn CtxAdaptor<'a>>, Error> {
-        let mut system_contexts: Vec<&mut dyn CtxAdaptor<'a>> = vec![];
+        controller: &mut SystemController,
+    ) -> Result<Vec<&mut dyn CtxAdaptor>, Error> {
+        let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![];
         match (view, target) {
             (FightView::Player, RequireTarget::Opponent)
             | (FightView::Enemy, RequireTarget::Owner) => {
@@ -82,7 +82,7 @@ impl<'a> MapBattlePVE<'a> {
 
     pub(super) fn operate_pending_instructions(
         &mut self,
-        controller: &mut SystemController<'a>,
+        controller: &mut SystemController,
     ) -> Result<IterationOutput, Error> {
         let mut game_over = false;
         self.last_output = IterationOutput::Continue;

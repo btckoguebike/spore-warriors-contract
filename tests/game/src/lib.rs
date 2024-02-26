@@ -14,30 +14,31 @@ mod test {
     #[test]
     fn test_map_skeleton() -> eyre::Result<()> {
         let point = Point::from_xy(1, 0);
-        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000, 5001).unwrap();
-        let (mut map, mut controller, mut player) = game.new_session(point).unwrap();
-        println!("[map] = {:?}", map);
+        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000).unwrap();
+        let mut player = game.new_session(5001, point).unwrap();
+        println!("[map] = {:?}", game.map);
         println!(
             "[node] = {:?}",
-            map.peak_upcoming_movment(&player, (1, 1).into())
+            game.map.peak_upcoming_movment(&player, (1, 1).into())
         );
-        map.move_to(&mut player, point, vec![], &mut controller)
+        game.map
+            .move_to(&mut player, point, vec![], &mut game.controller)
             .unwrap();
         Ok(())
     }
 
     #[test]
     fn test_pve_fight() -> eyre::Result<()> {
-        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000, 5001).unwrap();
+        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000).unwrap();
         let enemies = {
-            let resource_pool = &game.resource_pool;
+            let resource_pool = &game.controller.resource_pool;
             let enemy = resource_pool.enemy_pool().get_unchecked(0);
-            vec![Enemy::randomized(resource_pool, enemy, &mut game.rng).unwrap()]
+            vec![Enemy::randomized(resource_pool, enemy, &mut game.controller.rng).unwrap()]
         };
         let point = Point::from_xy(1, 0);
-        let (_, mut controller, mut player) = game.new_session(point).unwrap();
-        let mut battle = MapBattlePVE::create(&mut player, &enemies).unwrap();
-        let (output, logs) = battle.start(&mut controller).unwrap();
+        let mut player = game.new_session(5001, point).unwrap();
+        let mut battle = MapBattlePVE::create(&mut player, enemies).unwrap();
+        let (output, logs) = battle.start(&mut game.controller).unwrap();
         println!("===START===");
         println!("[logs] = {logs:?}");
         println!("[output] = {output:?}");
@@ -47,14 +48,14 @@ mod test {
                     Selection::SingleCard(0),
                     Some(0),
                 )],
-                &mut controller,
+                &mut game.controller,
             )
             .unwrap();
         println!("===PLAYER TURN===");
         println!("[logs] = {logs:?}");
         println!("[output] = {output:?}");
         let (output, logs) = battle
-            .run(vec![IterationInput::EnemyTurn], &mut controller)
+            .run(vec![IterationInput::EnemyTurn], &mut game.controller)
             .unwrap();
         println!("===ENEMY TURN===");
         println!("[logs] = {logs:?}");

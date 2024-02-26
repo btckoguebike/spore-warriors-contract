@@ -1,8 +1,6 @@
 extern crate alloc;
 use alloc::{vec, vec::Vec};
 use core::cmp::{max, min};
-use rand::RngCore;
-use spore_warriors_generated as generated;
 
 use crate::battle::pve::MapBattlePVE;
 use crate::battle::traits::{FightLog, SimplePVE};
@@ -13,10 +11,10 @@ use crate::wrappings::{
     randomized_selection, Card, Item, ItemClass, LevelNode, LevelPartition, Node, Point, System,
 };
 
-fn run_context<'a>(
-    player: &mut WarriorContext<'a>,
+fn run_context(
+    player: &mut WarriorContext,
     system: &System,
-    controller: &mut SystemController<'a>,
+    controller: &mut SystemController,
 ) -> Result<Vec<FightLog>, Error> {
     let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
     let system_return = controller.system_call(&system, &mut system_contexts, None)?;
@@ -27,10 +25,10 @@ fn run_context<'a>(
     }
 }
 
-fn purchase_cards<'a>(
-    player: &mut WarriorContext<'a>,
+fn purchase_cards(
+    player: &mut WarriorContext,
     user_imported: Vec<usize>,
-    cards: &'a Vec<Card>,
+    cards: &Vec<Card>,
 ) -> Result<Vec<()>, Error> {
     user_imported
         .into_iter()
@@ -40,16 +38,16 @@ fn purchase_cards<'a>(
                 return Err(Error::SceneMerchantInsufficientGold);
             }
             player.gold -= card.price;
-            player.deck.push(CardContext::new(card));
+            player.deck.push(CardContext::new(card.clone()));
             Ok(())
         })
         .collect::<Result<Vec<_>, _>>()
 }
 
-fn collect_items<'a>(
-    player: &mut WarriorContext<'a>,
+fn collect_items(
+    player: &mut WarriorContext,
     user_imported: Vec<usize>,
-    items: &'a Vec<Item>,
+    items: &Vec<Item>,
     purchase: bool,
 ) -> Result<Vec<()>, Error> {
     user_imported
@@ -63,8 +61,8 @@ fn collect_items<'a>(
                 player.gold -= item.price;
             }
             match item.class {
-                ItemClass::Equipment => player.equipment_list.push(item),
-                ItemClass::Props => player.props_list.push(item),
+                ItemClass::Equipment => player.equipment_list.push(item.clone()),
+                ItemClass::Props => player.props_list.push(item.clone()),
             }
             Ok(())
         })
@@ -93,10 +91,9 @@ pub struct MapSkeleton {
 }
 
 impl<'a> MapSkeleton {
-    pub fn randomized(
-        resource_pool: &generated::ResourcePool,
-        rng: &mut impl RngCore,
-    ) -> Result<Self, Error> {
+    pub fn randomized(controller: &mut SystemController) -> Result<Self, Error> {
+        let resource_pool = &controller.resource_pool;
+        let rng = &mut controller.rng;
         let scene_pool = resource_pool.scene_pool();
         let scene = randomized_selection(scene_pool.len(), scene_pool, 1, rng)
             .first()
@@ -145,7 +142,7 @@ impl<'a> MapSkeleton {
 
     pub fn peak_upcoming_movment(
         &self,
-        player: &WarriorContext<'a>,
+        player: &WarriorContext,
         peak_point: Point,
     ) -> Result<Option<&LevelNode>, Error> {
         if !self.contains(&peak_point) {
@@ -168,10 +165,10 @@ impl<'a> MapSkeleton {
 
     pub fn move_to(
         &'a mut self,
-        player: &'a mut WarriorContext<'a>,
+        player: &'a mut WarriorContext,
         player_point: Point,
         user_imported: Vec<usize>,
-        controller: &'a mut SystemController<'a>,
+        controller: &'a mut SystemController,
     ) -> Result<MoveResult<impl SimplePVE>, Error> {
         self.player_point = player_point;
         let Some(level) = self.peak_upcoming_movment(player, player_point)? else {
@@ -202,7 +199,7 @@ impl<'a> MapSkeleton {
                     .collect::<Result<_, _>>()?;
             }
             Node::Enemy(enemies) => {
-                let fight = MapBattlePVE::create(player, enemies)?;
+                let fight = MapBattlePVE::create(player, enemies.clone())?;
                 return Ok(MoveResult::Fight(fight));
             }
             Node::ItemMerchant(items) => {

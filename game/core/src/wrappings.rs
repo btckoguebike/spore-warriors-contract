@@ -1,9 +1,10 @@
 extern crate alloc;
+use alloc::vec::Vec;
 use core::cmp::max;
 use core::sync::atomic::AtomicU16;
-
-use alloc::vec::Vec;
+use molecule::bytes::BytesMut;
 use rand::RngCore;
+use rlp::{RlpDecodable, RlpEncodable, RlpStream};
 use spore_warriors_generated as generated;
 
 use crate::errors::Error;
@@ -61,7 +62,7 @@ pub fn randomized_selection<T: IntoIterator>(
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone)]
+#[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct Value(pub u16);
 
 impl Value {
@@ -98,6 +99,28 @@ impl TryFrom<u8> for RequireTarget {
     }
 }
 
+impl rlp::Encodable for RequireTarget {
+    fn rlp_append(&self, s: &mut rlp::RlpStream) {
+        s.append(&(self.clone() as u8));
+    }
+
+    fn rlp_bytes(&self) -> BytesMut {
+        let mut stream = RlpStream::new();
+        stream.append(&(self.clone() as u8));
+        stream.out()
+    }
+}
+
+impl rlp::Decodable for RequireTarget {
+    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
+        let value: u8 = rlp.val_at(0)?;
+        let class: Self = value
+            .try_into()
+            .map_err(|_| rlp::DecoderError::Custom("invalid RequireTarget"))?;
+        Ok(class)
+    }
+}
+
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy)]
 #[repr(u16)]
@@ -112,11 +135,11 @@ impl From<SystemId> for u16 {
     }
 }
 
-impl TryFrom<generated::ResourceId> for SystemId {
+impl TryFrom<u16> for SystemId {
     type Error = Error;
 
-    fn try_from(value: generated::ResourceId) -> Result<Self, Self::Error> {
-        match u16::from(value) {
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
             0 => Ok(Self::Damage),
             1 => Ok(Self::MultipleDamage),
             _ => Err(Error::ResourceBrokenSystemId),
@@ -124,8 +147,30 @@ impl TryFrom<generated::ResourceId> for SystemId {
     }
 }
 
+impl rlp::Encodable for SystemId {
+    fn rlp_append(&self, s: &mut rlp::RlpStream) {
+        s.append(&(self.clone() as u16));
+    }
+
+    fn rlp_bytes(&self) -> BytesMut {
+        let mut stream = RlpStream::new();
+        stream.append(&(self.clone() as u16));
+        stream.out()
+    }
+}
+
+impl rlp::Decodable for SystemId {
+    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
+        let value: u16 = rlp.val_at(0)?;
+        let class: Self = value
+            .try_into()
+            .map_err(|_| rlp::DecoderError::Custom("invalid SystemId"))?;
+        Ok(class)
+    }
+}
+
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone)]
+#[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct System {
     pub id: SystemId,
     pub args: Vec<Value>,
@@ -139,7 +184,7 @@ impl System {
         rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
         Ok(Self {
-            id: value.id().try_into()?,
+            id: u16::from(value.id()).try_into()?,
             target_type: u8::from(value.target_type()).try_into()?,
             args: value
                 .args()
@@ -152,6 +197,7 @@ impl System {
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(PartialEq, Clone)]
+#[repr(u8)]
 pub enum ItemClass {
     Equipment,
     Props,
@@ -171,8 +217,30 @@ impl TryFrom<u8> for ItemClass {
     }
 }
 
+impl rlp::Encodable for ItemClass {
+    fn rlp_append(&self, s: &mut rlp::RlpStream) {
+        s.append(&(self.clone() as u8));
+    }
+
+    fn rlp_bytes(&self) -> BytesMut {
+        let mut stream = RlpStream::new();
+        stream.append(&(self.clone() as u8));
+        stream.out()
+    }
+}
+
+impl rlp::Decodable for ItemClass {
+    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
+        let value: u8 = rlp.val_at(0)?;
+        let class: Self = value
+            .try_into()
+            .map_err(|_| rlp::DecoderError::Custom("invalid ItemClass"))?;
+        Ok(class)
+    }
+}
+
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone)]
+#[derive(Clone, RlpDecodable, RlpEncodable)]
 pub struct Item {
     pub unique_id: u16,
     pub id: u16,
@@ -440,7 +508,7 @@ impl SizedPoint {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone)]
+#[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct Card {
     pub unique_id: u16,
     pub id: u16,
@@ -474,7 +542,7 @@ impl Card {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone)]
+#[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct Warrior {
     pub id: u16,
     pub charactor_card: Card,
@@ -700,6 +768,7 @@ impl LevelPartition {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
 pub struct Potion {
     pub count: u8,
     pub hp: u8,

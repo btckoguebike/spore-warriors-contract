@@ -30,14 +30,14 @@ pub type SystemCallback = fn(
     Option<SystemInput>,
 ) -> Result<SystemReturn, Error>;
 
-pub struct SystemController<'a> {
-    pub resource_pool: &'a generated::ResourcePool,
-    pub rng: &'a mut SporeRng,
+pub struct SystemController {
+    pub resource_pool: generated::ResourcePool,
+    pub rng: SporeRng,
     controller: BTreeMap<SystemId, SystemCallback>,
 }
 
-impl<'a> SystemController<'a> {
-    pub fn new(resource_pool: &'a generated::ResourcePool, rng: &'a mut SporeRng) -> Self {
+impl SystemController {
+    pub fn new(resource_pool: generated::ResourcePool, rng: SporeRng) -> Self {
         let mut controller = BTreeMap::new();
         controller.insert(SystemId::Damage, attack as SystemCallback);
         controller.insert(SystemId::MultipleDamage, multiple_attack as SystemCallback);
@@ -59,7 +59,7 @@ impl<'a> SystemController<'a> {
             .get(&system.id)
             .ok_or(Error::SystemTriggerMissing)?;
         system_trigger(
-            self.resource_pool,
+            &self.resource_pool,
             &mut self.rng,
             &system.args,
             contexts,

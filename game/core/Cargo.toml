@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 molecule = { version = "0.7.5", default-features = false }
 rand = { version = "0.8.5", default-features = false, features = ["small_rng"] }
+rlp = { version = "0.5.2", default-features = false, features = ["derive"] }
 
 spore-warriors-generated = { path = "../generated" }
 

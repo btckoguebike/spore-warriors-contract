@@ -66,17 +66,17 @@ pub trait SimplePVE<'a>
 where
     Self: Sized,
 {
-    fn create(player: &'a mut WarriorContext<'a>, enemies: &'a [Enemy]) -> Result<Self, Error>;
+    fn create(player: &'a mut WarriorContext, enemies: Vec<Enemy>) -> Result<Self, Error>;
 
     fn start(
         &mut self,
-        controller: &mut SystemController<'a>,
+        controller: &mut SystemController,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn run(
         &mut self,
         operations: Vec<IterationInput>,
-        controller: &mut SystemController<'a>,
+        controller: &mut SystemController,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn peak_target(&self, hand_card_selection: Selection) -> Result<bool, Error>;

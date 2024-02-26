@@ -1,9 +1,9 @@
 extern crate alloc;
 use alloc::vec;
+use rlp::{RlpDecodable, RlpEncodable};
 
-use crate::contexts::{BytesExtractor, BytesPusher, CardContext, ContextType, CtxAdaptor};
+use crate::contexts::{CardContext, ContextType, CtxAdaptor};
 use crate::errors::Error;
-use crate::game::ReferContainer;
 use crate::wrappings::{Card, Item, ItemClass, Potion, System, Warrior};
 
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -33,8 +33,9 @@ pub struct WarriorSnapshot {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-pub struct WarriorContext<'a> {
-    pub warrior: &'a Warrior,
+#[derive(RlpEncodable, RlpDecodable)]
+pub struct WarriorContext {
+    pub warrior: Warrior,
     pub offset: usize,
     pub max_hp: u16,
     pub hp: u16,
@@ -47,31 +48,30 @@ pub struct WarriorContext<'a> {
     pub defense: u8,
     pub defense_weak: u8,
     pub draw_count: u8,
-    pub special_card: CardContext<'a>,
-    pub equipment_list: Vec<&'a Item>,
-    pub props_list: Vec<&'a Item>,
-    pub hand_deck: Vec<CardContext<'a>>,
-    pub deck: Vec<CardContext<'a>>,
-    pub grave_deck: Vec<CardContext<'a>>,
-    pub selection_deck: Vec<&'a Card>,
-    pub mounting_systems: Vec<&'a System>,
+    pub special_card: CardContext,
+    pub equipment_list: Vec<Item>,
+    pub props_list: Vec<Item>,
+    pub hand_deck: Vec<CardContext>,
+    pub deck: Vec<CardContext>,
+    pub grave_deck: Vec<CardContext>,
+    pub selection_deck: Vec<Card>,
+    pub mounting_systems: Vec<System>,
 }
 
-impl<'a> WarriorContext<'a> {
-    pub fn new(warrior: &'a Warrior, potion: Option<&'a Potion>) -> Self {
+impl WarriorContext {
+    pub fn new(warrior: Warrior, potion: Option<Potion>) -> Self {
         let mut equipment_list = vec![];
         let mut props_list = vec![];
         warrior.package_status.iter().for_each(|v| match v.class {
-            ItemClass::Equipment => equipment_list.push(v),
-            ItemClass::Props => props_list.push(v),
+            ItemClass::Equipment => equipment_list.push(v.clone()),
+            ItemClass::Props => props_list.push(v.clone()),
         });
         let deck = warrior
             .deck_status
             .iter()
-            .map(|card| CardContext::new(card))
+            .map(|card| CardContext::new(card.clone()))
             .collect();
         let mut player = Self {
-            warrior,
             offset: 0,
             max_hp: warrior.hp,
             hp: warrior.hp,
@@ -84,7 +84,7 @@ impl<'a> WarriorContext<'a> {
             defense: warrior.defense,
             defense_weak: warrior.defense_weak,
             draw_count: warrior.draw_count,
-            special_card: CardContext::new(&warrior.charactor_card),
+            special_card: CardContext::new(warrior.charactor_card.clone()),
             equipment_list,
             props_list,
             deck,
@@ -92,9 +92,10 @@ impl<'a> WarriorContext<'a> {
             grave_deck: vec![],
             selection_deck: vec![],
             mounting_systems: vec![],
+            warrior,
         };
         if let Some(potion) = potion {
-            let mut package = potion.package_status.iter().map(|v| v).collect();
+            let mut package = potion.package_status;
             player.hp += potion.hp as u16;
             player.power += potion.power;
             player.armor += potion.armor;
@@ -105,7 +106,7 @@ impl<'a> WarriorContext<'a> {
             player.deck.append(
                 &mut potion
                     .deck_status
-                    .iter()
+                    .into_iter()
                     .map(|card| CardContext::new(card))
                     .collect(),
             );
@@ -114,7 +115,7 @@ impl<'a> WarriorContext<'a> {
     }
 
     pub fn reset(&mut self) {
-        let origin = self.warrior;
+        let origin = &self.warrior;
         self.power = origin.power;
         self.armor = origin.armor;
         self.shield = origin.shield;
@@ -154,91 +155,9 @@ impl<'a> WarriorContext<'a> {
             mounting_systems: self.mounting_systems.iter().map(|v| v.id.into()).collect(),
         }
     }
-
-    pub fn serialize(&self) -> Vec<u8> {
-        let mut pusher = BytesPusher::new();
-        pusher.push_u16(self.warrior.id);
-        pusher.push_usize(self.offset);
-        pusher.push_u16(self.max_hp);
-        pusher.push_u16(self.hp);
-        pusher.push_u16(self.gold);
-        pusher.push_u8(self.power);
-        pusher.push_u8(self.armor);
-        pusher.push_u8(self.shield);
-        pusher.push_u8(self.attack);
-        pusher.push_u8(self.attack_weak);
-        pusher.push_u8(self.defense);
-        pusher.push_u8(self.defense_weak);
-        pusher.push_u8(self.draw_count);
-        pusher.push_bytes(self.special_card.serialize());
-        pusher.push_usize(self.equipment_list.len());
-        self.equipment_list.iter().for_each(|v| {
-            pusher.push_u16(v.unique_id);
-        });
-        pusher.push_usize(self.props_list.len());
-        self.props_list.iter().for_each(|v| {
-            pusher.push_u16(v.unique_id);
-        });
-        pusher.push_usize(self.deck.len());
-        self.deck.iter().for_each(|v| {
-            pusher.push_bytes(v.serialize());
-        });
-        pusher.data()
-    }
-
-    pub fn deserialize(
-        refers: &ReferContainer<'a>,
-        warrior: &'a Warrior,
-        data: &mut Vec<u8>,
-    ) -> Result<Self, Error> {
-        let mut extractor = BytesExtractor::new(data);
-        Ok(Self {
-            warrior,
-            offset: extractor.pop_usize()?,
-            max_hp: extractor.pop_u16()?,
-            hp: extractor.pop_u16()?,
-            gold: extractor.pop_u16()?,
-            power: extractor.pop_u8()?,
-            armor: extractor.pop_u8()?,
-            shield: extractor.pop_u8()?,
-            attack: extractor.pop_u8()?,
-            attack_weak: extractor.pop_u8()?,
-            defense: extractor.pop_u8()?,
-            defense_weak: extractor.pop_u8()?,
-            draw_count: extractor.pop_u8()?,
-            special_card: CardContext::deserialize(refers, &mut extractor)?,
-            equipment_list: {
-                let mut list = Vec::with_capacity(extractor.pop_usize()?);
-                for _ in 0..list.len() {
-                    let unique_id = extractor.pop_u16()?;
-                    list.push(refers.get_item(unique_id)?);
-                }
-                list
-            },
-            props_list: {
-                let count = extractor.pop_usize()?;
-                (0..count)
-                    .map(|_| {
-                        let unique_id = extractor.pop_u16()?;
-                        refers.get_item(unique_id)
-                    })
-                    .collect::<Result<_, _>>()?
-            },
-            deck: {
-                let count = extractor.pop_usize()?;
-                (0..count)
-                    .map(|_| CardContext::deserialize(refers, &mut extractor))
-                    .collect::<Result<_, _>>()?
-            },
-            hand_deck: vec![],
-            grave_deck: vec![],
-            selection_deck: vec![],
-            mounting_systems: vec![],
-        })
-    }
 }
 
-impl<'a> CtxAdaptor<'a> for WarriorContext<'a> {
+impl CtxAdaptor for WarriorContext {
     fn context_type(&self) -> ContextType {
         ContextType::Warrior
     }
@@ -247,7 +166,7 @@ impl<'a> CtxAdaptor<'a> for WarriorContext<'a> {
         self.offset
     }
 
-    fn warrior(&mut self) -> Result<&mut WarriorContext<'a>, Error> {
+    fn warrior(&mut self) -> Result<&mut WarriorContext, Error> {
         Ok(self)
     }
 }

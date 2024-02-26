@@ -21,8 +21,8 @@ pub struct EnemySnapshot {
     pub pending_effects: Vec<u16>,
 }
 
-pub struct EnemyContext<'a> {
-    pub enemy: &'a Enemy,
+pub struct EnemyContext {
+    pub enemy: Enemy,
     pub offset: usize,
     pub hp: u16,
     pub armor: u8,
@@ -31,14 +31,13 @@ pub struct EnemyContext<'a> {
     pub attack_weak: u8,
     pub defense: u8,
     pub defense_weak: u8,
-    pub strategy: Vec<Vec<&'a System>>,
-    pub mounting_systems: Vec<&'a System>,
+    pub strategy: Vec<Vec<System>>,
+    pub mounting_systems: Vec<System>,
 }
 
-impl<'a> EnemyContext<'a> {
-    pub fn new(enemy: &'a Enemy, offset: usize) -> Self {
+impl EnemyContext {
+    pub fn new(enemy: Enemy, offset: usize) -> Self {
         Self {
-            enemy,
             offset,
             hp: enemy.hp,
             armor: enemy.armor,
@@ -49,10 +48,11 @@ impl<'a> EnemyContext<'a> {
             defense_weak: enemy.defense_weak,
             strategy: vec![],
             mounting_systems: vec![],
+            enemy,
         }
     }
 
-    pub fn pop_action(&mut self, rng: &mut impl RngCore) -> Result<Vec<&'a System>, Error> {
+    pub fn pop_action(&mut self, rng: &mut impl RngCore) -> Result<Vec<System>, Error> {
         if self.strategy.is_empty() {
             self.reset_strategy(rng);
         }
@@ -73,7 +73,7 @@ impl<'a> EnemyContext<'a> {
         }
         self.strategy.clear();
         randomized_actions.into_iter().for_each(|action| {
-            let mut randomized_effects = action.system_pool.iter().collect::<Vec<_>>();
+            let mut randomized_effects = action.system_pool.clone().into_iter().collect::<Vec<_>>();
             if action.random_select {
                 let mut effects = randomized_effects.drain(..).collect::<Vec<_>>();
                 while !effects.is_empty() {
@@ -101,7 +101,7 @@ impl<'a> EnemyContext<'a> {
     }
 }
 
-impl<'a> CtxAdaptor<'a> for EnemyContext<'a> {
+impl CtxAdaptor for EnemyContext {
     fn context_type(&self) -> ContextType {
         ContextType::Enemy
     }
@@ -110,7 +110,7 @@ impl<'a> CtxAdaptor<'a> for EnemyContext<'a> {
         self.offset
     }
 
-    fn enemy(&mut self) -> Result<&mut EnemyContext<'a>, Error> {
+    fn enemy(&mut self) -> Result<&mut EnemyContext, Error> {
         Ok(self)
     }
 }

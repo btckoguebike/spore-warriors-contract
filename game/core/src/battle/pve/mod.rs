@@ -17,26 +17,26 @@ enum FightView {
     Enemy,
 }
 
-struct Instruction<'a> {
+struct Instruction {
     offset: Option<usize>,
-    system: &'a System,
+    system: System,
     view: FightView,
     system_input: Option<SystemInput>,
 }
 
 pub struct MapBattlePVE<'a> {
-    player: &'a mut WarriorContext<'a>,
-    opponents: Vec<EnemyContext<'a>>,
+    player: &'a mut WarriorContext,
+    opponents: Vec<EnemyContext>,
     round: u8,
     fight_logs: Vec<FightLog>,
     last_output: IterationOutput,
-    pending_instructions: Vec<Instruction<'a>>,
+    pending_instructions: Vec<Instruction>,
 }
 
 impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
-    fn create(player: &'a mut WarriorContext<'a>, enemies: &'a [Enemy]) -> Result<Self, Error> {
+    fn create(player: &'a mut WarriorContext, enemies: Vec<Enemy>) -> Result<Self, Error> {
         let opponents = enemies
-            .iter()
+            .into_iter()
             .enumerate()
             .map(|(i, enemy)| EnemyContext::new(enemy, i + 1))
             .collect();
@@ -52,7 +52,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
 
     fn start(
         &mut self,
-        controller: &mut SystemController<'a>,
+        controller: &mut SystemController,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error> {
         if self.round != 0 {
             return Err(Error::BattleRepeatStart);
@@ -62,7 +62,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
             if v.class == ItemClass::Equipment {
                 v.system_pool
                     .iter()
-                    .for_each(|effect| equipment_effects.push(effect));
+                    .for_each(|effect| equipment_effects.push(effect.clone()));
             }
         });
         self.trigger_log(FightLog::CharactorSet(
@@ -72,12 +72,8 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
         self.round = 1;
         self.trigger_log(FightLog::PlayerTurn(self.round))?;
         self.player_draw(self.player.draw_count, controller)?;
-        let output = self.trigger_iteration_systems(
-            FightView::Player,
-            &equipment_effects,
-            None,
-            controller,
-        )?;
+        let output =
+            self.trigger_iteration_systems(FightView::Player, equipment_effects, None, controller)?;
         let logs = self.fight_logs.drain(..).collect();
         Ok((output, logs))
     }
@@ -85,7 +81,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
     fn run(
         &mut self,
         operations: Vec<IterationInput>,
-        controller: &mut SystemController<'a>,
+        controller: &mut SystemController,
     ) -> Result<(IterationOutput, Vec<FightLog>), Error> {
         if self.round == 0 {
             return Err(Error::BattleNotStarted);
