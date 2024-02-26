@@ -1,7 +1,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use crate::contexts::{EnemySnapshot, WarriorContext, WarriorSnapshot};
+use crate::contexts::{EnemyContext, WarriorContext};
 use crate::errors::Error;
 use crate::systems::SystemController;
 use crate::wrappings::Enemy;
@@ -43,7 +43,7 @@ pub enum IterationOutput {
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone)]
 pub enum FightLog {
-    CharactorSet(WarriorSnapshot, Vec<EnemySnapshot>),
+    CharactorSet(WarriorContext, Vec<EnemyContext>),
     EnemyTurn(u8),
     PlayerTurn(u8),
     GameOver,

@@ -66,8 +66,8 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
             }
         });
         self.trigger_log(FightLog::CharactorSet(
-            self.player.snapshot(),
-            self.opponents.iter().map(|v| v.snapshot()).collect(),
+            self.player.clone(),
+            self.opponents.iter().map(|v| v.clone()).collect(),
         ))?;
         self.round = 1;
         self.trigger_log(FightLog::PlayerTurn(self.round))?;
@@ -95,8 +95,8 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
         }
         #[cfg(feature = "debug")]
         self.trigger_log(FightLog::CharactorSet(
-            self.player.snapshot(),
-            self.opponents.iter().map(|v| v.snapshot()).collect(),
+            self.player.clone(),
+            self.opponents.iter().map(|v| v.clone()).collect(),
         ))?;
         let logs = self.fight_logs.drain(..).collect();
         Ok((self.last_output, logs))

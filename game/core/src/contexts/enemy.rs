@@ -8,19 +8,6 @@ use crate::wrappings::{Enemy, System};
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone)]
-pub struct EnemySnapshot {
-    pub id: u16,
-    pub offset: usize,
-    pub hp: u16,
-    pub armor: u8,
-    pub shield: u8,
-    pub attack: u8,
-    pub attack_weak: u8,
-    pub defense: u8,
-    pub defense_weak: u8,
-    pub pending_effects: Vec<u16>,
-}
-
 pub struct EnemyContext {
     pub enemy: Enemy,
     pub offset: usize,
@@ -83,21 +70,6 @@ impl EnemyContext {
             }
             self.strategy.push(randomized_effects);
         });
-    }
-
-    pub fn snapshot(&self) -> EnemySnapshot {
-        EnemySnapshot {
-            id: self.enemy.id,
-            offset: self.offset,
-            hp: self.hp,
-            armor: self.armor,
-            shield: self.shield,
-            attack: self.attack,
-            attack_weak: self.attack_weak,
-            defense: self.defense,
-            defense_weak: self.defense_weak,
-            pending_effects: self.mounting_systems.iter().map(|v| v.id.into()).collect(),
-        }
     }
 }
 

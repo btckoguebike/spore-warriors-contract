@@ -7,33 +7,7 @@ use crate::errors::Error;
 use crate::wrappings::{Card, Item, ItemClass, Potion, System, Warrior};
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone)]
-pub struct WarriorSnapshot {
-    pub id: u16,
-    pub offset: usize,
-    pub max_hp: u16,
-    pub hp: u16,
-    pub gold: u16,
-    pub power: u8,
-    pub armor: u8,
-    pub shield: u8,
-    pub attack: u8,
-    pub attack_weak: u8,
-    pub defense: u8,
-    pub defense_weak: u8,
-    pub draw_count: u8,
-    pub special_card: u16,
-    pub equipment_list: Vec<u16>,
-    pub props_list: Vec<u16>,
-    pub hand_deck: Vec<u16>,
-    pub deck: Vec<u16>,
-    pub grave_deck: Vec<u16>,
-    pub selection_deck: Vec<u16>,
-    pub mounting_systems: Vec<u16>,
-}
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(RlpEncodable, RlpDecodable)]
+#[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct WarriorContext {
     pub warrior: Warrior,
     pub offset: usize,
@@ -128,32 +102,6 @@ impl WarriorContext {
         self.deck.append(&mut self.grave_deck.drain(..).collect());
         self.selection_deck.clear();
         self.mounting_systems.clear();
-    }
-
-    pub fn snapshot(&self) -> WarriorSnapshot {
-        WarriorSnapshot {
-            id: self.warrior.id,
-            offset: self.offset,
-            max_hp: self.max_hp,
-            hp: self.hp,
-            gold: self.gold,
-            power: self.power,
-            armor: self.armor,
-            shield: self.shield,
-            attack: self.attack,
-            attack_weak: self.attack_weak,
-            defense: self.defense,
-            defense_weak: self.defense_weak,
-            draw_count: self.draw_count,
-            special_card: self.special_card.card.id,
-            equipment_list: self.equipment_list.iter().map(|v| v.id).collect(),
-            props_list: self.props_list.iter().map(|v| v.id).collect(),
-            deck: self.deck.iter().map(|v| v.card.id).collect(),
-            hand_deck: self.hand_deck.iter().map(|v| v.card.id).collect(),
-            grave_deck: self.grave_deck.iter().map(|v| v.card.id).collect(),
-            selection_deck: self.selection_deck.iter().map(|v| v.id).collect(),
-            mounting_systems: self.mounting_systems.iter().map(|v| v.id.into()).collect(),
-        }
     }
 }
 

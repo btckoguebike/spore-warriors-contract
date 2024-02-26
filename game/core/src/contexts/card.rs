@@ -7,7 +7,7 @@ use crate::errors::Error;
 use crate::wrappings::{Card, Value};
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(RlpEncodable, RlpDecodable)]
+#[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct CardContext {
     pub card: Card,
     pub power_cost: u8,
