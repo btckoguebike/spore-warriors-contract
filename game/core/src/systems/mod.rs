@@ -56,7 +56,7 @@ impl SystemController {
     ) -> Result<SystemReturn, Error> {
         let system_trigger = self
             .controller
-            .get(&system.id)
+            .get(&system.system_id)
             .ok_or(Error::SystemTriggerMissing)?;
         system_trigger(
             &self.resource_pool,

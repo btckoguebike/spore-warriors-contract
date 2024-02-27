@@ -1,5 +1,6 @@
 array Number [byte; 2];
 array ResourceId [byte; 2];
+array SystemId [byte; 2];
 array Seed [byte; 8];
 array Hash [byte; 32];
 array Uint64 [byte; 8];
@@ -29,6 +30,7 @@ vector ValueVec <Value>;
 
 table System {
     id: ResourceId,
+    system_id: SystemId,
     args: ValueVec,
     target_type: byte,
 }

@@ -172,7 +172,8 @@ impl rlp::Decodable for SystemId {
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct System {
-    pub id: SystemId,
+    pub id: u16,
+    pub system_id: SystemId,
     pub args: Vec<Value>,
     pub target_type: RequireTarget,
 }
@@ -184,7 +185,8 @@ impl System {
         rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
         Ok(Self {
-            id: u16::from(value.id()).try_into()?,
+            id: value.id().into(),
+            system_id: u16::from(value.system_id()).try_into()?,
             target_type: u8::from(value.target_type()).try_into()?,
             args: value
                 .args()

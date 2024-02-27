@@ -34,6 +34,12 @@ mod casting {
         }
     }
 
+    impl From<SystemId> for u16 {
+        fn from(value: SystemId) -> Self {
+            Self::from_le_bytes(value.as_slice().try_into().unwrap())
+        }
+    }
+
     impl From<ResourceIdVec> for Vec<u16> {
         fn from(value: ResourceIdVec) -> Self {
             value.into_iter().map(Into::into).collect()

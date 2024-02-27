@@ -356,6 +356,183 @@ impl molecule::prelude::Builder for ResourceIdBuilder {
     }
 }
 #[derive(Clone)]
+pub struct SystemId(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for SystemId {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl ::core::fmt::Debug for SystemId {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl ::core::fmt::Display for SystemId {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        let raw_data = hex_string(&self.raw_data());
+        write!(f, "{}(0x{})", Self::NAME, raw_data)
+    }
+}
+impl ::core::default::Default for SystemId {
+    fn default() -> Self {
+        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
+        SystemId::new_unchecked(v)
+    }
+}
+impl SystemId {
+    const DEFAULT_VALUE: [u8; 2] = [0, 0];
+    pub const TOTAL_SIZE: usize = 2;
+    pub const ITEM_SIZE: usize = 1;
+    pub const ITEM_COUNT: usize = 2;
+    pub fn nth0(&self) -> Byte {
+        Byte::new_unchecked(self.0.slice(0..1))
+    }
+    pub fn nth1(&self) -> Byte {
+        Byte::new_unchecked(self.0.slice(1..2))
+    }
+    pub fn raw_data(&self) -> molecule::bytes::Bytes {
+        self.as_bytes()
+    }
+    pub fn as_reader<'r>(&'r self) -> SystemIdReader<'r> {
+        SystemIdReader::new_unchecked(self.as_slice())
+    }
+}
+impl molecule::prelude::Entity for SystemId {
+    type Builder = SystemIdBuilder;
+    const NAME: &'static str = "SystemId";
+    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
+        SystemId(data)
+    }
+    fn as_bytes(&self) -> molecule::bytes::Bytes {
+        self.0.clone()
+    }
+    fn as_slice(&self) -> &[u8] {
+        &self.0[..]
+    }
+    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        SystemIdReader::from_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        SystemIdReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn new_builder() -> Self::Builder {
+        ::core::default::Default::default()
+    }
+    fn as_builder(self) -> Self::Builder {
+        Self::new_builder().set([self.nth0(), self.nth1()])
+    }
+}
+#[derive(Clone, Copy)]
+pub struct SystemIdReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for SystemIdReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl<'r> ::core::fmt::Debug for SystemIdReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl<'r> ::core::fmt::Display for SystemIdReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        let raw_data = hex_string(&self.raw_data());
+        write!(f, "{}(0x{})", Self::NAME, raw_data)
+    }
+}
+impl<'r> SystemIdReader<'r> {
+    pub const TOTAL_SIZE: usize = 2;
+    pub const ITEM_SIZE: usize = 1;
+    pub const ITEM_COUNT: usize = 2;
+    pub fn nth0(&self) -> ByteReader<'r> {
+        ByteReader::new_unchecked(&self.as_slice()[0..1])
+    }
+    pub fn nth1(&self) -> ByteReader<'r> {
+        ByteReader::new_unchecked(&self.as_slice()[1..2])
+    }
+    pub fn raw_data(&self) -> &'r [u8] {
+        self.as_slice()
+    }
+}
+impl<'r> molecule::prelude::Reader<'r> for SystemIdReader<'r> {
+    type Entity = SystemId;
+    const NAME: &'static str = "SystemIdReader";
+    fn to_entity(&self) -> Self::Entity {
+        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
+    }
+    fn new_unchecked(slice: &'r [u8]) -> Self {
+        SystemIdReader(slice)
+    }
+    fn as_slice(&self) -> &'r [u8] {
+        self.0
+    }
+    fn verify(slice: &[u8], _compatible: bool) -> molecule::error::VerificationResult<()> {
+        use molecule::verification_error as ve;
+        let slice_len = slice.len();
+        if slice_len != Self::TOTAL_SIZE {
+            return ve!(Self, TotalSizeNotMatch, Self::TOTAL_SIZE, slice_len);
+        }
+        Ok(())
+    }
+}
+#[derive(Clone)]
+pub struct SystemIdBuilder(pub(crate) [Byte; 2]);
+impl ::core::fmt::Debug for SystemIdBuilder {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:?})", Self::NAME, &self.0[..])
+    }
+}
+impl ::core::default::Default for SystemIdBuilder {
+    fn default() -> Self {
+        SystemIdBuilder([Byte::default(), Byte::default()])
+    }
+}
+impl SystemIdBuilder {
+    pub const TOTAL_SIZE: usize = 2;
+    pub const ITEM_SIZE: usize = 1;
+    pub const ITEM_COUNT: usize = 2;
+    pub fn set(mut self, v: [Byte; 2]) -> Self {
+        self.0 = v;
+        self
+    }
+    pub fn nth0(mut self, v: Byte) -> Self {
+        self.0[0] = v;
+        self
+    }
+    pub fn nth1(mut self, v: Byte) -> Self {
+        self.0[1] = v;
+        self
+    }
+}
+impl molecule::prelude::Builder for SystemIdBuilder {
+    type Entity = SystemId;
+    const NAME: &'static str = "SystemIdBuilder";
+    fn expected_length(&self) -> usize {
+        Self::TOTAL_SIZE
+    }
+    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
+        writer.write_all(self.0[0].as_slice())?;
+        writer.write_all(self.0[1].as_slice())?;
+        Ok(())
+    }
+    fn build(&self) -> Self::Entity {
+        let mut inner = Vec::with_capacity(self.expected_length());
+        self.write(&mut inner)
+            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
+        SystemId::new_unchecked(inner.into())
+    }
+}
+#[derive(Clone)]
 pub struct Seed(molecule::bytes::Bytes);
 impl ::core::fmt::LowerHex for Seed {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
@@ -3579,6 +3756,7 @@ impl ::core::fmt::Display for System {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "id", self.id())?;
+        write!(f, ", {}: {}", "system_id", self.system_id())?;
         write!(f, ", {}: {}", "args", self.args())?;
         write!(f, ", {}: {}", "target_type", self.target_type())?;
         let extra_count = self.count_extra_fields();
@@ -3595,10 +3773,10 @@ impl ::core::default::Default for System {
     }
 }
 impl System {
-    const DEFAULT_VALUE: [u8; 23] = [
-        23, 0, 0, 0, 16, 0, 0, 0, 18, 0, 0, 0, 22, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0,
+    const DEFAULT_VALUE: [u8; 29] = [
+        29, 0, 0, 0, 20, 0, 0, 0, 22, 0, 0, 0, 24, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0,
     ];
-    pub const FIELD_COUNT: usize = 3;
+    pub const FIELD_COUNT: usize = 4;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -3621,17 +3799,23 @@ impl System {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         ResourceId::new_unchecked(self.0.slice(start..end))
     }
-    pub fn args(&self) -> ValueVec {
+    pub fn system_id(&self) -> SystemId {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         let end = molecule::unpack_number(&slice[12..]) as usize;
+        SystemId::new_unchecked(self.0.slice(start..end))
+    }
+    pub fn args(&self) -> ValueVec {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[12..]) as usize;
+        let end = molecule::unpack_number(&slice[16..]) as usize;
         ValueVec::new_unchecked(self.0.slice(start..end))
     }
     pub fn target_type(&self) -> Byte {
         let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[12..]) as usize;
+        let start = molecule::unpack_number(&slice[16..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[16..]) as usize;
+            let end = molecule::unpack_number(&slice[20..]) as usize;
             Byte::new_unchecked(self.0.slice(start..end))
         } else {
             Byte::new_unchecked(self.0.slice(start..))
@@ -3665,6 +3849,7 @@ impl molecule::prelude::Entity for System {
     fn as_builder(self) -> Self::Builder {
         Self::new_builder()
             .id(self.id())
+            .system_id(self.system_id())
             .args(self.args())
             .target_type(self.target_type())
     }
@@ -3689,6 +3874,7 @@ impl<'r> ::core::fmt::Display for SystemReader<'r> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "{} {{ ", Self::NAME)?;
         write!(f, "{}: {}", "id", self.id())?;
+        write!(f, ", {}: {}", "system_id", self.system_id())?;
         write!(f, ", {}: {}", "args", self.args())?;
         write!(f, ", {}: {}", "target_type", self.target_type())?;
         let extra_count = self.count_extra_fields();
@@ -3699,7 +3885,7 @@ impl<'r> ::core::fmt::Display for SystemReader<'r> {
     }
 }
 impl<'r> SystemReader<'r> {
-    pub const FIELD_COUNT: usize = 3;
+    pub const FIELD_COUNT: usize = 4;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -3722,17 +3908,23 @@ impl<'r> SystemReader<'r> {
         let end = molecule::unpack_number(&slice[8..]) as usize;
         ResourceIdReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn args(&self) -> ValueVecReader<'r> {
+    pub fn system_id(&self) -> SystemIdReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[8..]) as usize;
         let end = molecule::unpack_number(&slice[12..]) as usize;
+        SystemIdReader::new_unchecked(&self.as_slice()[start..end])
+    }
+    pub fn args(&self) -> ValueVecReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[12..]) as usize;
+        let end = molecule::unpack_number(&slice[16..]) as usize;
         ValueVecReader::new_unchecked(&self.as_slice()[start..end])
     }
     pub fn target_type(&self) -> ByteReader<'r> {
         let slice = self.as_slice();
-        let start = molecule::unpack_number(&slice[12..]) as usize;
+        let start = molecule::unpack_number(&slice[16..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[16..]) as usize;
+            let end = molecule::unpack_number(&slice[20..]) as usize;
             ByteReader::new_unchecked(&self.as_slice()[start..end])
         } else {
             ByteReader::new_unchecked(&self.as_slice()[start..])
@@ -3786,21 +3978,27 @@ impl<'r> molecule::prelude::Reader<'r> for SystemReader<'r> {
             return ve!(Self, OffsetsNotMatch);
         }
         ResourceIdReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
-        ValueVecReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
-        ByteReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
+        SystemIdReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
+        ValueVecReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
+        ByteReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
         Ok(())
     }
 }
 #[derive(Clone, Debug, Default)]
 pub struct SystemBuilder {
     pub(crate) id: ResourceId,
+    pub(crate) system_id: SystemId,
     pub(crate) args: ValueVec,
     pub(crate) target_type: Byte,
 }
 impl SystemBuilder {
-    pub const FIELD_COUNT: usize = 3;
+    pub const FIELD_COUNT: usize = 4;
     pub fn id(mut self, v: ResourceId) -> Self {
         self.id = v;
+        self
+    }
+    pub fn system_id(mut self, v: SystemId) -> Self {
+        self.system_id = v;
         self
     }
     pub fn args(mut self, v: ValueVec) -> Self {
@@ -3818,6 +4016,7 @@ impl molecule::prelude::Builder for SystemBuilder {
     fn expected_length(&self) -> usize {
         molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
             + self.id.as_slice().len()
+            + self.system_id.as_slice().len()
             + self.args.as_slice().len()
             + self.target_type.as_slice().len()
     }
@@ -3827,6 +4026,8 @@ impl molecule::prelude::Builder for SystemBuilder {
         offsets.push(total_size);
         total_size += self.id.as_slice().len();
         offsets.push(total_size);
+        total_size += self.system_id.as_slice().len();
+        offsets.push(total_size);
         total_size += self.args.as_slice().len();
         offsets.push(total_size);
         total_size += self.target_type.as_slice().len();
@@ -3835,6 +4036,7 @@ impl molecule::prelude::Builder for SystemBuilder {
             writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
         }
         writer.write_all(self.id.as_slice())?;
+        writer.write_all(self.system_id.as_slice())?;
         writer.write_all(self.args.as_slice())?;
         writer.write_all(self.target_type.as_slice())?;
         Ok(())
