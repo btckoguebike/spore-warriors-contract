@@ -6,7 +6,7 @@ use crate::contexts::{ContextType, CtxAdaptor};
 use crate::errors::Error;
 use crate::wrappings::{Card, Value};
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct CardContext {
     pub card: Card,
@@ -30,7 +30,7 @@ impl CtxAdaptor for CardContext {
     }
 
     fn offset(&self) -> usize {
-        self.card.unique_id as usize
+        self.card.offset
     }
 
     fn card(&mut self) -> Result<&mut CardContext, Error> {

@@ -1,15 +1,14 @@
 extern crate alloc;
 use alloc::vec::Vec;
 use core::cmp::max;
-use core::sync::atomic::AtomicU16;
-use molecule::bytes::BytesMut;
+use core::sync::atomic::AtomicUsize;
 use rand::RngCore;
-use rlp::{RlpDecodable, RlpEncodable, RlpStream};
+use rlp::{RlpDecodable, RlpEncodable};
 use spore_warriors_generated as generated;
 
 use crate::errors::Error;
 
-static UNIQUE_ID: AtomicU16 = AtomicU16::new(10);
+static OFFSET: AtomicUsize = AtomicUsize::new(10);
 
 macro_rules! randomized_pool {
     ($val:ident.$meth:ident(), $pool:ident.$pmeth:ident(), $retn:ty, $rng:ident) => {{
@@ -61,7 +60,7 @@ pub fn randomized_selection<T: IntoIterator>(
         .collect::<Vec<_>>()
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct Value(pub u16);
 
@@ -74,7 +73,7 @@ impl Value {
     }
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, Copy)]
 pub enum RequireTarget {
     Owner,
@@ -101,13 +100,8 @@ impl TryFrom<u8> for RequireTarget {
 
 impl rlp::Encodable for RequireTarget {
     fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        s.append(&(self.clone() as u8));
-    }
-
-    fn rlp_bytes(&self) -> BytesMut {
-        let mut stream = RlpStream::new();
-        stream.append(&(self.clone() as u8));
-        stream.out()
+        let target = self.clone() as u8;
+        s.begin_list(1).append(&target);
     }
 }
 
@@ -116,13 +110,13 @@ impl rlp::Decodable for RequireTarget {
         let value: u8 = rlp.val_at(0)?;
         let class: Self = value
             .try_into()
-            .map_err(|_| rlp::DecoderError::Custom("invalid RequireTarget"))?;
+            .map_err(|_| rlp::DecoderError::Custom("Invalid RequireTarget"))?;
         Ok(class)
     }
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Clone)]
 #[repr(u16)]
 pub enum SystemId {
     Damage,
@@ -149,13 +143,8 @@ impl TryFrom<u16> for SystemId {
 
 impl rlp::Encodable for SystemId {
     fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        s.append(&(self.clone() as u16));
-    }
-
-    fn rlp_bytes(&self) -> BytesMut {
-        let mut stream = RlpStream::new();
-        stream.append(&(self.clone() as u16));
-        stream.out()
+        let id = self.clone() as u16;
+        s.begin_list(1).append(&id);
     }
 }
 
@@ -164,12 +153,12 @@ impl rlp::Decodable for SystemId {
         let value: u16 = rlp.val_at(0)?;
         let class: Self = value
             .try_into()
-            .map_err(|_| rlp::DecoderError::Custom("invalid SystemId"))?;
+            .map_err(|_| rlp::DecoderError::Custom("Invalid SystemId"))?;
         Ok(class)
     }
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct System {
     pub id: u16,
@@ -221,13 +210,8 @@ impl TryFrom<u8> for ItemClass {
 
 impl rlp::Encodable for ItemClass {
     fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        s.append(&(self.clone() as u8));
-    }
-
-    fn rlp_bytes(&self) -> BytesMut {
-        let mut stream = RlpStream::new();
-        stream.append(&(self.clone() as u8));
-        stream.out()
+        let class = self.clone() as u8;
+        s.begin_list(1).append(&class);
     }
 }
 
@@ -241,10 +225,9 @@ impl rlp::Decodable for ItemClass {
     }
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpDecodable, RlpEncodable)]
 pub struct Item {
-    pub unique_id: u16,
     pub id: u16,
     pub class: ItemClass,
     pub quality: u8,
@@ -266,7 +249,6 @@ impl Item {
             rng
         )?;
         Ok(Self {
-            unique_id: UNIQUE_ID.fetch_add(1, core::sync::atomic::Ordering::SeqCst),
             id: value.id().into(),
             class: u8::from(value.class()).try_into()?,
             quality: value.quality().into(),
@@ -487,10 +469,10 @@ impl SizedPoint {
     }
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct Card {
-    pub unique_id: u16,
+    pub offset: usize,
     pub id: u16,
     pub class: u8,
     pub power_cost: u8,
@@ -511,7 +493,7 @@ impl Card {
             rng
         )?;
         Ok(Self {
-            unique_id: UNIQUE_ID.fetch_add(1, core::sync::atomic::Ordering::SeqCst),
+            offset: OFFSET.fetch_add(1, core::sync::atomic::Ordering::SeqCst),
             id: value.id().into(),
             class: value.class().into(),
             power_cost: value.cost().into(),
@@ -521,7 +503,7 @@ impl Card {
     }
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct Warrior {
     pub id: u16,

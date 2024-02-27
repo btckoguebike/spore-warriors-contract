@@ -6,7 +6,7 @@ use crate::contexts::{CardContext, ContextType, CtxAdaptor};
 use crate::errors::Error;
 use crate::wrappings::{Card, Item, ItemClass, Potion, System, Warrior};
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct WarriorContext {
     pub warrior: Warrior,

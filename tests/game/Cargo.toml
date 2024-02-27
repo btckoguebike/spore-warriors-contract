@@ -9,6 +9,7 @@ edition = "2021"
 lazy_static = "1.4"
 eyre = "0.6.12"
 molecule = "0.7.5"
+rlp =  "0.5.2"
 rand = { version = "0.8.5", features = ["small_rng"] }
 
 spore-warriors-core = { path = "../../game/core", features = ["debug"] }

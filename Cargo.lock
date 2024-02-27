@@ -647,6 +647,7 @@ dependencies = [
  "lazy_static",
  "molecule",
  "rand 0.8.5",
+ "rlp",
  "spore-warriors-core",
  "spore-warriors-generated",
 ]
