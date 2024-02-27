@@ -277,31 +277,9 @@ impl Item {
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone)]
-pub enum Score {
-    Function(System),
-    Number(u16),
-}
-
-impl Score {
-    pub fn randomized(
-        resource_pool: &generated::ResourcePool,
-        value: generated::Score,
-        rng: &mut impl RngCore,
-    ) -> Result<Self, Error> {
-        Ok(match value.to_enum() {
-            generated::ScoreUnion::System(v) => {
-                Self::Function(System::randomized(resource_pool, v, rng)?)
-            }
-            generated::ScoreUnion::RandomNumber(v) => Self::Number(randomized_number(v, rng)),
-        })
-    }
-}
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone)]
 pub struct Loot {
     pub gold: u16,
-    pub score: Score,
+    pub score: u16,
     pub card_pool: Vec<Item>,
     pub props_pool: Vec<Item>,
     pub equipment_pool: Vec<Item>,
@@ -325,7 +303,7 @@ impl Loot {
         }
         Ok(Self {
             gold: randomized_number(value.gold(), rng),
-            score: Score::randomized(resource_pool, value.score(), rng)?,
+            score: randomized_number(value.score(), rng),
             card_pool: package_unpack(resource_pool, Some(value.card_pool()), rng)?,
             props_pool: package_unpack(resource_pool, value.props_pool().to_opt(), rng)?,
             equipment_pool: package_unpack(resource_pool, value.equipment_pool().to_opt(), rng)?,

@@ -2436,303 +2436,6 @@ impl molecule::prelude::Builder for PackageOptBuilder {
     }
 }
 #[derive(Clone)]
-pub struct Score(molecule::bytes::Bytes);
-impl ::core::fmt::LowerHex for Score {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl ::core::fmt::Debug for Score {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl ::core::fmt::Display for Score {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}(", Self::NAME)?;
-        self.to_enum().display_inner(f)?;
-        write!(f, ")")
-    }
-}
-impl ::core::default::Default for Score {
-    fn default() -> Self {
-        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
-        Score::new_unchecked(v)
-    }
-}
-impl Score {
-    const DEFAULT_VALUE: [u8; 27] = [
-        0, 0, 0, 0, 23, 0, 0, 0, 16, 0, 0, 0, 18, 0, 0, 0, 22, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0,
-    ];
-    pub const ITEMS_COUNT: usize = 2;
-    pub fn item_id(&self) -> molecule::Number {
-        molecule::unpack_number(self.as_slice())
-    }
-    pub fn to_enum(&self) -> ScoreUnion {
-        let inner = self.0.slice(molecule::NUMBER_SIZE..);
-        match self.item_id() {
-            0 => System::new_unchecked(inner).into(),
-            1 => RandomNumber::new_unchecked(inner).into(),
-            _ => panic!("{}: invalid data", Self::NAME),
-        }
-    }
-    pub fn as_reader<'r>(&'r self) -> ScoreReader<'r> {
-        ScoreReader::new_unchecked(self.as_slice())
-    }
-}
-impl molecule::prelude::Entity for Score {
-    type Builder = ScoreBuilder;
-    const NAME: &'static str = "Score";
-    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
-        Score(data)
-    }
-    fn as_bytes(&self) -> molecule::bytes::Bytes {
-        self.0.clone()
-    }
-    fn as_slice(&self) -> &[u8] {
-        &self.0[..]
-    }
-    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        ScoreReader::from_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
-        ScoreReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
-    }
-    fn new_builder() -> Self::Builder {
-        ::core::default::Default::default()
-    }
-    fn as_builder(self) -> Self::Builder {
-        Self::new_builder().set(self.to_enum())
-    }
-}
-#[derive(Clone, Copy)]
-pub struct ScoreReader<'r>(&'r [u8]);
-impl<'r> ::core::fmt::LowerHex for ScoreReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        use molecule::hex_string;
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        write!(f, "{}", hex_string(self.as_slice()))
-    }
-}
-impl<'r> ::core::fmt::Debug for ScoreReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}({:#x})", Self::NAME, self)
-    }
-}
-impl<'r> ::core::fmt::Display for ScoreReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        write!(f, "{}(", Self::NAME)?;
-        self.to_enum().display_inner(f)?;
-        write!(f, ")")
-    }
-}
-impl<'r> ScoreReader<'r> {
-    pub const ITEMS_COUNT: usize = 2;
-    pub fn item_id(&self) -> molecule::Number {
-        molecule::unpack_number(self.as_slice())
-    }
-    pub fn to_enum(&self) -> ScoreUnionReader<'r> {
-        let inner = &self.as_slice()[molecule::NUMBER_SIZE..];
-        match self.item_id() {
-            0 => SystemReader::new_unchecked(inner).into(),
-            1 => RandomNumberReader::new_unchecked(inner).into(),
-            _ => panic!("{}: invalid data", Self::NAME),
-        }
-    }
-}
-impl<'r> molecule::prelude::Reader<'r> for ScoreReader<'r> {
-    type Entity = Score;
-    const NAME: &'static str = "ScoreReader";
-    fn to_entity(&self) -> Self::Entity {
-        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
-    }
-    fn new_unchecked(slice: &'r [u8]) -> Self {
-        ScoreReader(slice)
-    }
-    fn as_slice(&self) -> &'r [u8] {
-        self.0
-    }
-    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
-        use molecule::verification_error as ve;
-        let slice_len = slice.len();
-        if slice_len < molecule::NUMBER_SIZE {
-            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE, slice_len);
-        }
-        let item_id = molecule::unpack_number(slice);
-        let inner_slice = &slice[molecule::NUMBER_SIZE..];
-        match item_id {
-            0 => SystemReader::verify(inner_slice, compatible),
-            1 => RandomNumberReader::verify(inner_slice, compatible),
-            _ => ve!(Self, UnknownItem, Self::ITEMS_COUNT, item_id),
-        }?;
-        Ok(())
-    }
-}
-#[derive(Clone, Debug, Default)]
-pub struct ScoreBuilder(pub(crate) ScoreUnion);
-impl ScoreBuilder {
-    pub const ITEMS_COUNT: usize = 2;
-    pub fn set<I>(mut self, v: I) -> Self
-    where
-        I: ::core::convert::Into<ScoreUnion>,
-    {
-        self.0 = v.into();
-        self
-    }
-}
-impl molecule::prelude::Builder for ScoreBuilder {
-    type Entity = Score;
-    const NAME: &'static str = "ScoreBuilder";
-    fn expected_length(&self) -> usize {
-        molecule::NUMBER_SIZE + self.0.as_slice().len()
-    }
-    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
-        writer.write_all(&molecule::pack_number(self.0.item_id()))?;
-        writer.write_all(self.0.as_slice())
-    }
-    fn build(&self) -> Self::Entity {
-        let mut inner = Vec::with_capacity(self.expected_length());
-        self.write(&mut inner)
-            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
-        Score::new_unchecked(inner.into())
-    }
-}
-#[derive(Debug, Clone)]
-pub enum ScoreUnion {
-    System(System),
-    RandomNumber(RandomNumber),
-}
-#[derive(Debug, Clone, Copy)]
-pub enum ScoreUnionReader<'r> {
-    System(SystemReader<'r>),
-    RandomNumber(RandomNumberReader<'r>),
-}
-impl ::core::default::Default for ScoreUnion {
-    fn default() -> Self {
-        ScoreUnion::System(::core::default::Default::default())
-    }
-}
-impl ::core::fmt::Display for ScoreUnion {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            ScoreUnion::System(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, System::NAME, item)
-            }
-            ScoreUnion::RandomNumber(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, RandomNumber::NAME, item)
-            }
-        }
-    }
-}
-impl<'r> ::core::fmt::Display for ScoreUnionReader<'r> {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            ScoreUnionReader::System(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, System::NAME, item)
-            }
-            ScoreUnionReader::RandomNumber(ref item) => {
-                write!(f, "{}::{}({})", Self::NAME, RandomNumber::NAME, item)
-            }
-        }
-    }
-}
-impl ScoreUnion {
-    pub(crate) fn display_inner(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            ScoreUnion::System(ref item) => write!(f, "{}", item),
-            ScoreUnion::RandomNumber(ref item) => write!(f, "{}", item),
-        }
-    }
-}
-impl<'r> ScoreUnionReader<'r> {
-    pub(crate) fn display_inner(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            ScoreUnionReader::System(ref item) => write!(f, "{}", item),
-            ScoreUnionReader::RandomNumber(ref item) => write!(f, "{}", item),
-        }
-    }
-}
-impl ::core::convert::From<System> for ScoreUnion {
-    fn from(item: System) -> Self {
-        ScoreUnion::System(item)
-    }
-}
-impl ::core::convert::From<RandomNumber> for ScoreUnion {
-    fn from(item: RandomNumber) -> Self {
-        ScoreUnion::RandomNumber(item)
-    }
-}
-impl<'r> ::core::convert::From<SystemReader<'r>> for ScoreUnionReader<'r> {
-    fn from(item: SystemReader<'r>) -> Self {
-        ScoreUnionReader::System(item)
-    }
-}
-impl<'r> ::core::convert::From<RandomNumberReader<'r>> for ScoreUnionReader<'r> {
-    fn from(item: RandomNumberReader<'r>) -> Self {
-        ScoreUnionReader::RandomNumber(item)
-    }
-}
-impl ScoreUnion {
-    pub const NAME: &'static str = "ScoreUnion";
-    pub fn as_bytes(&self) -> molecule::bytes::Bytes {
-        match self {
-            ScoreUnion::System(item) => item.as_bytes(),
-            ScoreUnion::RandomNumber(item) => item.as_bytes(),
-        }
-    }
-    pub fn as_slice(&self) -> &[u8] {
-        match self {
-            ScoreUnion::System(item) => item.as_slice(),
-            ScoreUnion::RandomNumber(item) => item.as_slice(),
-        }
-    }
-    pub fn item_id(&self) -> molecule::Number {
-        match self {
-            ScoreUnion::System(_) => 0,
-            ScoreUnion::RandomNumber(_) => 1,
-        }
-    }
-    pub fn item_name(&self) -> &str {
-        match self {
-            ScoreUnion::System(_) => "System",
-            ScoreUnion::RandomNumber(_) => "RandomNumber",
-        }
-    }
-    pub fn as_reader<'r>(&'r self) -> ScoreUnionReader<'r> {
-        match self {
-            ScoreUnion::System(item) => item.as_reader().into(),
-            ScoreUnion::RandomNumber(item) => item.as_reader().into(),
-        }
-    }
-}
-impl<'r> ScoreUnionReader<'r> {
-    pub const NAME: &'r str = "ScoreUnionReader";
-    pub fn as_slice(&self) -> &'r [u8] {
-        match self {
-            ScoreUnionReader::System(item) => item.as_slice(),
-            ScoreUnionReader::RandomNumber(item) => item.as_slice(),
-        }
-    }
-    pub fn item_id(&self) -> molecule::Number {
-        match self {
-            ScoreUnionReader::System(_) => 0,
-            ScoreUnionReader::RandomNumber(_) => 1,
-        }
-    }
-    pub fn item_name(&self) -> &str {
-        match self {
-            ScoreUnionReader::System(_) => "System",
-            ScoreUnionReader::RandomNumber(_) => "RandomNumber",
-        }
-    }
-}
-#[derive(Clone)]
 pub struct Loot(molecule::bytes::Bytes);
 impl ::core::fmt::LowerHex for Loot {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
@@ -2771,11 +2474,10 @@ impl ::core::default::Default for Loot {
     }
 }
 impl Loot {
-    const DEFAULT_VALUE: [u8; 90] = [
-        90, 0, 0, 0, 28, 0, 0, 0, 30, 0, 0, 0, 46, 0, 0, 0, 73, 0, 0, 0, 90, 0, 0, 0, 90, 0, 0, 0,
-        0, 0, 16, 0, 0, 0, 12, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 16, 0, 0,
-        0, 18, 0, 0, 0, 22, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0,
-        0, 0, 0, 0,
+    const DEFAULT_VALUE: [u8; 79] = [
+        79, 0, 0, 0, 28, 0, 0, 0, 30, 0, 0, 0, 46, 0, 0, 0, 62, 0, 0, 0, 79, 0, 0, 0, 79, 0, 0, 0,
+        0, 0, 16, 0, 0, 0, 12, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 12, 0, 0, 0, 14, 0,
+        0, 0, 0, 0, 0, 0, 17, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
     pub const FIELD_COUNT: usize = 6;
     pub fn total_size(&self) -> usize {
@@ -2806,11 +2508,11 @@ impl Loot {
         let end = molecule::unpack_number(&slice[12..]) as usize;
         RandomNumber::new_unchecked(self.0.slice(start..end))
     }
-    pub fn score(&self) -> Score {
+    pub fn score(&self) -> RandomNumber {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[12..]) as usize;
         let end = molecule::unpack_number(&slice[16..]) as usize;
-        Score::new_unchecked(self.0.slice(start..end))
+        RandomNumber::new_unchecked(self.0.slice(start..end))
     }
     pub fn card_pool(&self) -> Package {
         let slice = self.as_slice();
@@ -2931,11 +2633,11 @@ impl<'r> LootReader<'r> {
         let end = molecule::unpack_number(&slice[12..]) as usize;
         RandomNumberReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn score(&self) -> ScoreReader<'r> {
+    pub fn score(&self) -> RandomNumberReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[12..]) as usize;
         let end = molecule::unpack_number(&slice[16..]) as usize;
-        ScoreReader::new_unchecked(&self.as_slice()[start..end])
+        RandomNumberReader::new_unchecked(&self.as_slice()[start..end])
     }
     pub fn card_pool(&self) -> PackageReader<'r> {
         let slice = self.as_slice();
@@ -3008,7 +2710,7 @@ impl<'r> molecule::prelude::Reader<'r> for LootReader<'r> {
         }
         ResourceIdReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
         RandomNumberReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
-        ScoreReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
+        RandomNumberReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
         PackageReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
         PackageOptReader::verify(&slice[offsets[4]..offsets[5]], compatible)?;
         PackageOptReader::verify(&slice[offsets[5]..offsets[6]], compatible)?;
@@ -3019,7 +2721,7 @@ impl<'r> molecule::prelude::Reader<'r> for LootReader<'r> {
 pub struct LootBuilder {
     pub(crate) id: ResourceId,
     pub(crate) gold: RandomNumber,
-    pub(crate) score: Score,
+    pub(crate) score: RandomNumber,
     pub(crate) card_pool: Package,
     pub(crate) props_pool: PackageOpt,
     pub(crate) equipment_pool: PackageOpt,
@@ -3034,7 +2736,7 @@ impl LootBuilder {
         self.gold = v;
         self
     }
-    pub fn score(mut self, v: Score) -> Self {
+    pub fn score(mut self, v: RandomNumber) -> Self {
         self.score = v;
         self
     }

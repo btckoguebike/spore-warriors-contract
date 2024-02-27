@@ -40,15 +40,10 @@ table Package {
 
 option PackageOpt (Package);
 
-union Score {
-    System,
-    RandomNumber,
-}
-
 table Loot {
     id: ResourceId,
     gold: RandomNumber,
-    score: Score,
+    score: RandomNumber,
     card_pool: Package,
     props_pool: PackageOpt,
     equipment_pool: PackageOpt,
