@@ -121,6 +121,9 @@ impl rlp::Decodable for RequireTarget {
 pub enum SystemId {
     Damage,
     MultipleDamage,
+    Healing,
+    AttackPowerUp,
+    DefensePowerUp,
 }
 
 impl From<SystemId> for u16 {

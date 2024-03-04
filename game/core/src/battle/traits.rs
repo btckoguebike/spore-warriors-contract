@@ -60,6 +60,9 @@ pub enum FightLog {
     CallSystemId(u16),
 
     SystemDamage(usize, u16),
+    SystemRecoverHp(usize, u16),
+    SystemAttackPowerUp(usize, u8),
+    SystemDefensePowerUp(usize, u8),
 }
 
 pub trait SimplePVE<'a>

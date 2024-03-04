@@ -39,14 +39,21 @@ impl<'a> MapBattlePVE<'a> {
         &mut self,
         view: FightView,
         target: RequireTarget,
-        offset: Option<usize>,
+        target_offset: Option<usize>,
         controller: &mut SystemController,
     ) -> Result<Vec<&mut dyn CtxAdaptor>, Error> {
         let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![];
         match (view, target) {
+            (FightView::Card(offset), _) => {
+                let card = self
+                    .player
+                    .refer_card(offset)
+                    .ok_or(Error::BattleInternalError)?;
+                system_contexts.push(card);
+            }
             (FightView::Player, RequireTarget::Opponent)
             | (FightView::Enemy, RequireTarget::Owner) => {
-                let Some(offset) = offset else {
+                let Some(offset) = target_offset else {
                     return Err(Error::BattleSelectionError);
                 };
                 let enemy = self
@@ -86,21 +93,21 @@ impl<'a> MapBattlePVE<'a> {
     ) -> Result<IterationOutput, Error> {
         let mut game_over = false;
         self.last_output = IterationOutput::Continue;
-        while !self.pending_instructions.is_empty() {
-            let Instruction {
-                view,
-                system,
-                offset,
-                mut system_input,
-            } = self.pending_instructions.remove(0);
+        while let Some(Instruction {
+            view,
+            system,
+            target,
+            mut system_input,
+        }) = self.pending_instructions.pop_front()
+        {
             self.trigger_log(FightLog::CallSystemId(system.id.into()))?;
             let mut system_contexts =
-                self.collect_system_contexts(view, system.target_type, offset, controller)?;
+                self.collect_system_contexts(view, system.target_type, target, controller)?;
             if game_over {
                 system_input = Some(SystemInput::GameOver);
             }
             let system_return =
-                controller.system_call(&system, &mut system_contexts, system_input)?;
+                controller.system_call(&system, &mut system_contexts, system_input.clone())?;
             if !game_over {
                 if self.player.hp == 0 {
                     self.last_output = IterationOutput::GameLose;
@@ -116,7 +123,7 @@ impl<'a> MapBattlePVE<'a> {
                 }
                 match system_return {
                     SystemReturn::RequireCardSelect => {
-                        if view != FightView::Player {
+                        if let FightView::Player = view {
                             return Err(Error::ResourceEffectCardSelectInEnemy);
                         }
                         self.last_output = IterationOutput::RequireCardSelect;
@@ -126,6 +133,22 @@ impl<'a> MapBattlePVE<'a> {
                         self.player_draw(draw_count, controller)?
                     }
                     SystemReturn::SystemLog(mut logs) => self.fight_logs.append(&mut logs),
+                    SystemReturn::PendingSystems(pending, mut logs) => {
+                        let mut instructions = pending
+                            .into_iter()
+                            .map(|system| Instruction {
+                                view,
+                                system,
+                                target,
+                                system_input: system_input.clone(),
+                            })
+                            .collect::<Vec<_>>();
+                        instructions.reverse();
+                        instructions.into_iter().for_each(|v| {
+                            self.pending_instructions.push_front(v);
+                        });
+                        self.fight_logs.append(&mut logs);
+                    }
                 }
             }
         }

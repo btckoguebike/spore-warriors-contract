@@ -1,4 +1,5 @@
 extern crate alloc;
+use alloc::collections::VecDeque;
 use alloc::{vec, vec::Vec};
 
 use crate::battle::traits::{FightLog, IterationInput, IterationOutput, Selection, SimplePVE};
@@ -15,10 +16,11 @@ mod log;
 enum FightView {
     Player,
     Enemy,
+    Card(usize),
 }
 
 struct Instruction {
-    offset: Option<usize>,
+    target: Option<usize>,
     system: System,
     view: FightView,
     system_input: Option<SystemInput>,
@@ -30,7 +32,7 @@ pub struct MapBattlePVE<'a> {
     round: u8,
     fight_logs: Vec<FightLog>,
     last_output: IterationOutput,
-    pending_instructions: Vec<Instruction>,
+    pending_instructions: VecDeque<Instruction>,
 }
 
 impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
@@ -46,7 +48,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
             round: 0,
             fight_logs: vec![],
             last_output: IterationOutput::Continue,
-            pending_instructions: vec![],
+            pending_instructions: VecDeque::new(),
         })
     }
 
@@ -69,6 +71,13 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
             self.player.clone(),
             self.opponents.iter().map(|v| v.clone()).collect(),
         ))?;
+        self.player
+            .collect_card_systems(false)
+            .into_iter()
+            .map(|(offset, effects)| {
+                self.trigger_iteration_systems(FightView::Card(offset), effects, None, controller)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         self.round = 1;
         self.trigger_log(FightLog::PlayerTurn(self.round))?;
         self.player_draw(self.player.draw_count, controller)?;

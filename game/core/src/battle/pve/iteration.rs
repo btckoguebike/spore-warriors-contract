@@ -13,7 +13,6 @@ impl<'a> MapBattlePVE<'a> {
     pub(super) fn iterate(
         &mut self,
         operation: IterationInput,
-
         controller: &mut SystemController,
     ) -> Result<IterationOutput, Error> {
         match operation {
@@ -38,16 +37,16 @@ impl<'a> MapBattlePVE<'a> {
         &mut self,
         view: FightView,
         effects: Vec<System>,
-        offset: Option<usize>,
+        target: Option<usize>,
         controller: &mut SystemController,
     ) -> Result<IterationOutput, Error> {
         effects
             .into_iter()
             .map(|system| {
-                self.pending_instructions.push(Instruction {
+                self.pending_instructions.push_back(Instruction {
                     view,
-                    offset,
-                    system: system.clone(),
+                    target,
+                    system,
                     system_input: None,
                 });
                 Ok(())
@@ -59,7 +58,7 @@ impl<'a> MapBattlePVE<'a> {
     fn iterate_item_use(
         &mut self,
         item_index: usize,
-        offset: Option<usize>,
+        target: Option<usize>,
         controller: &mut SystemController,
     ) -> Result<IterationOutput, Error> {
         if item_index >= self.player.props_list.len() {
@@ -73,7 +72,7 @@ impl<'a> MapBattlePVE<'a> {
         self.trigger_iteration_systems(
             FightView::Player,
             props_item.system_pool.clone(),
-            offset,
+            target,
             controller,
         )
     }
@@ -81,7 +80,7 @@ impl<'a> MapBattlePVE<'a> {
     fn iterate_hand_card_use(
         &mut self,
         card_index: usize,
-        offset: Option<usize>,
+        target: Option<usize>,
         controller: &mut SystemController,
     ) -> Result<IterationOutput, Error> {
         if card_index >= self.player.hand_deck.len() {
@@ -98,12 +97,12 @@ impl<'a> MapBattlePVE<'a> {
         self.trigger_log(FightLog::PowerCost(context.power_cost))?;
         self.trigger_log(FightLog::HandCardUse(card_index))?;
         self.player.grave_deck.push(context);
-        self.trigger_iteration_systems(FightView::Player, effects, offset, controller)
+        self.trigger_iteration_systems(FightView::Player, effects, target, controller)
     }
 
     fn iterate_special_card_use(
         &mut self,
-        offset: Option<usize>,
+        target: Option<usize>,
         controller: &mut SystemController,
     ) -> Result<IterationOutput, Error> {
         if IterationOutput::Continue != self.last_output {
@@ -119,7 +118,7 @@ impl<'a> MapBattlePVE<'a> {
         self.trigger_iteration_systems(
             FightView::Player,
             self.player.special_card.card.system_pool.clone(),
-            offset,
+            target,
             controller,
         )
     }
@@ -138,7 +137,7 @@ impl<'a> MapBattlePVE<'a> {
         if IterationOutput::RequireCardSelect != self.last_output {
             return Err(Error::BattleUnexpectedOutput);
         }
-        if let Some(value) = self.pending_instructions.first_mut() {
+        if let Some(value) = self.pending_instructions.front_mut() {
             value.system_input = Some(SystemInput::Selection(card_indexes));
         } else {
             return Err(Error::BattleInstructionEmpty);

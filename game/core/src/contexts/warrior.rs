@@ -1,5 +1,5 @@
 extern crate alloc;
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 use rlp::{RlpDecodable, RlpEncodable};
 
 use crate::contexts::{CardContext, ContextType, CtxAdaptor};
@@ -88,6 +88,56 @@ impl WarriorContext {
         player
     }
 
+    pub fn refer_card(&mut self, offset: usize) -> Option<&mut CardContext> {
+        if self.special_card.offset() == offset {
+            return Some(&mut self.special_card);
+        }
+        if let Some(card) = self.hand_deck.iter_mut().find(|v| v.offset() == offset) {
+            return Some(card);
+        }
+        if let Some(card) = self.deck.iter_mut().find(|v| v.offset() == offset) {
+            return Some(card);
+        }
+        if let Some(card) = self.grave_deck.iter_mut().find(|v| v.offset() == offset) {
+            return Some(card);
+        }
+        None
+    }
+
+    pub fn collect_card_systems(&self, mounting: bool) -> Vec<(usize, Vec<System>)> {
+        let mut collection = vec![];
+        if mounting {
+            collection.push((
+                self.special_card.offset(),
+                self.special_card.mounting_system.clone(),
+            ));
+            self.deck
+                .iter()
+                .for_each(|v| collection.push((v.offset(), v.mounting_system.clone())));
+            self.hand_deck
+                .iter()
+                .for_each(|v| collection.push((v.offset(), v.mounting_system.clone())));
+            self.grave_deck
+                .iter()
+                .for_each(|v| collection.push((v.offset(), v.mounting_system.clone())));
+        } else {
+            collection.push((
+                self.special_card.offset(),
+                self.special_card.card.system_pool.clone(),
+            ));
+            self.deck
+                .iter()
+                .for_each(|v| collection.push((v.offset(), v.card.system_pool.clone())));
+            self.hand_deck
+                .iter()
+                .for_each(|v| collection.push((v.offset(), v.card.system_pool.clone())));
+            self.grave_deck
+                .iter()
+                .for_each(|v| collection.push((v.offset(), v.card.system_pool.clone())));
+        }
+        collection
+    }
+
     pub fn reset(&mut self) {
         let origin = &self.warrior;
         self.power = origin.power;
@@ -100,6 +150,7 @@ impl WarriorContext {
         self.draw_count = origin.draw_count;
         self.deck.append(&mut self.hand_deck.drain(..).collect());
         self.deck.append(&mut self.grave_deck.drain(..).collect());
+        self.deck.iter_mut().for_each(|card| card.reset());
         self.selection_deck.clear();
         self.mounting_systems.clear();
     }

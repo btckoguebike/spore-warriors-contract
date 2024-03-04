@@ -1,18 +1,20 @@
 extern crate alloc;
 use alloc::collections::BTreeMap;
-use rand::RngCore;
 use spore_warriors_generated as generated;
 
 use crate::battle::traits::FightLog;
-use crate::contexts::{ContextType, CtxAdaptor};
+use crate::contexts::CtxAdaptor;
 use crate::errors::Error;
 use crate::game::SporeRng;
 use crate::wrappings::{System, SystemId, Value};
+
+mod simple;
 
 pub enum SystemReturn {
     RequireCardSelect,
     DrawCard(u8),
     SystemLog(Vec<FightLog>),
+    PendingSystems(Vec<System>, Vec<FightLog>),
 }
 
 #[derive(Clone)]
@@ -24,7 +26,7 @@ pub enum SystemInput {
 
 pub type SystemCallback = fn(
     &generated::ResourcePool,
-    &mut dyn RngCore,
+    &mut SporeRng,
     &[Value],
     &mut [&mut dyn CtxAdaptor],
     Option<SystemInput>,
@@ -36,11 +38,25 @@ pub struct SystemController {
     controller: BTreeMap<SystemId, SystemCallback>,
 }
 
+macro_rules! collect_systems {
+    ($collector:ident $(, ($id:ident, $ns:ident::$sys:ident))+) => {
+        $(
+            $collector.insert(SystemId::$id, $ns::$sys as SystemCallback);
+        )+
+    };
+}
+
 impl SystemController {
     pub fn new(resource_pool: generated::ResourcePool, rng: SporeRng) -> Self {
         let mut controller = BTreeMap::new();
-        controller.insert(SystemId::Damage, attack as SystemCallback);
-        controller.insert(SystemId::MultipleDamage, multiple_attack as SystemCallback);
+        collect_systems!(
+            controller,
+            (Damage, simple::attack),
+            (MultipleDamage, simple::multiple_attack),
+            (Healing, simple::healing),
+            (AttackPowerUp, simple::attack_power_up),
+            (DefensePowerUp, simple::defense_power_up)
+        );
         Self {
             resource_pool,
             rng,
@@ -66,73 +82,4 @@ impl SystemController {
             system_input,
         )
     }
-}
-
-fn attack(
-    _: &generated::ResourcePool,
-    _: &mut dyn RngCore,
-    args: &[Value],
-    contexts: &mut [&mut dyn CtxAdaptor],
-    input: Option<SystemInput>,
-) -> Result<SystemReturn, Error> {
-    if let Some(SystemInput::GameOver) = input {
-        return Ok(SystemReturn::SystemLog(vec![]));
-    }
-    let Some(Value(damage)) = args.get(0) else {
-        return Err(Error::BattleUnexpectedSystemArgs);
-    };
-    let value = *damage;
-    let mut logs = vec![];
-    for object in contexts {
-        match object.context_type() {
-            ContextType::Warrior => {
-                let warrior = object.warrior()?;
-                warrior.hp -= value;
-            }
-            ContextType::Enemy => {
-                let enemy = object.enemy()?;
-                enemy.hp -= value;
-            }
-            ContextType::Card => unreachable!(),
-        };
-        logs.push(FightLog::SystemDamage(object.offset(), *damage));
-    }
-    Ok(SystemReturn::SystemLog(logs))
-}
-
-fn multiple_attack(
-    _: &generated::ResourcePool,
-    _: &mut dyn RngCore,
-    args: &[Value],
-    contexts: &mut [&mut dyn CtxAdaptor],
-    input: Option<SystemInput>,
-) -> Result<SystemReturn, Error> {
-    if let Some(SystemInput::GameOver) = input {
-        return Ok(SystemReturn::SystemLog(vec![]));
-    }
-    let (Some(Value(damage)), Some(Value(count))) = (args.get(0), args.get(1)) else {
-        return Err(Error::BattleUnexpectedSystemArgs);
-    };
-    let value = *damage;
-    let mut logs = vec![];
-    for object in contexts {
-        (0..*count)
-            .map(|_| {
-                match object.context_type() {
-                    ContextType::Warrior => {
-                        let warrior = object.warrior()?;
-                        warrior.hp -= value;
-                    }
-                    ContextType::Enemy => {
-                        let enemy = object.enemy()?;
-                        enemy.hp -= value;
-                    }
-                    ContextType::Card => unreachable!(),
-                };
-                logs.push(FightLog::SystemDamage(object.offset(), *damage));
-                Ok(())
-            })
-            .collect::<Result<_, _>>()?;
-    }
-    Ok(SystemReturn::SystemLog(logs))
 }
