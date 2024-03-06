@@ -2,7 +2,11 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 use rlp::{RlpDecodable, RlpEncodable};
 
-use crate::contexts::{CardContext, ContextType, CtxAdaptor};
+use crate::contexts::system::SystemContext;
+use crate::contexts::{
+    add_mounting_system_internal, remove_mounting_system_internal, CardContext, ContextType,
+    CtxAdaptor,
+};
 use crate::errors::Error;
 use crate::wrappings::{Card, Item, ItemClass, Potion, System, Warrior};
 
@@ -15,13 +19,14 @@ pub struct WarriorContext {
     pub hp: u16,
     pub gold: u16,
     pub power: u8,
-    pub armor: u8,
-    pub shield: u8,
+    pub armor: u16,
+    pub shield: u16,
     pub attack: u8,
     pub attack_weak: u8,
     pub defense: u8,
     pub defense_weak: u8,
     pub draw_count: u8,
+    pub physique: u8,
     pub special_card: CardContext,
     pub equipment_list: Vec<Item>,
     pub props_list: Vec<Item>,
@@ -29,7 +34,7 @@ pub struct WarriorContext {
     pub deck: Vec<CardContext>,
     pub grave_deck: Vec<CardContext>,
     pub selection_deck: Vec<Card>,
-    pub mounting_systems: Vec<System>,
+    pub mounting_systems: Vec<SystemContext>,
 }
 
 impl WarriorContext {
@@ -51,13 +56,14 @@ impl WarriorContext {
             hp: warrior.hp,
             gold: warrior.gold,
             power: warrior.power,
-            armor: warrior.armor,
-            shield: warrior.shield,
+            armor: warrior.armor as u16,
+            shield: warrior.shield as u16,
             attack: warrior.attack,
             attack_weak: warrior.attack_weak,
             defense: warrior.defense,
             defense_weak: warrior.defense_weak,
             draw_count: warrior.draw_count,
+            physique: warrior.physique,
             special_card: CardContext::new(warrior.charactor_card.clone()),
             equipment_list,
             props_list,
@@ -72,10 +78,11 @@ impl WarriorContext {
             let mut package = potion.package_status;
             player.hp += potion.hp as u16;
             player.power += potion.power;
-            player.armor += potion.armor;
-            player.shield += potion.shield;
+            player.armor += potion.armor as u16;
+            player.shield += potion.shield as u16;
             player.attack += potion.attack;
             player.draw_count += potion.draw_count;
+            player.physique += potion.physique;
             player.props_list.append(&mut package);
             player.deck.append(
                 &mut potion
@@ -104,45 +111,47 @@ impl WarriorContext {
         None
     }
 
-    pub fn collect_card_systems(&self, mounting: bool) -> Vec<(usize, Vec<System>)> {
+    pub fn collect_card_mountings(&self) -> Vec<(usize, Vec<SystemContext>)> {
         let mut collection = vec![];
-        if mounting {
-            collection.push((
-                self.special_card.offset(),
-                self.special_card.mounting_system.clone(),
-            ));
-            self.deck
-                .iter()
-                .for_each(|v| collection.push((v.offset(), v.mounting_system.clone())));
-            self.hand_deck
-                .iter()
-                .for_each(|v| collection.push((v.offset(), v.mounting_system.clone())));
-            self.grave_deck
-                .iter()
-                .for_each(|v| collection.push((v.offset(), v.mounting_system.clone())));
-        } else {
-            collection.push((
-                self.special_card.offset(),
-                self.special_card.card.system_pool.clone(),
-            ));
-            self.deck
-                .iter()
-                .for_each(|v| collection.push((v.offset(), v.card.system_pool.clone())));
-            self.hand_deck
-                .iter()
-                .for_each(|v| collection.push((v.offset(), v.card.system_pool.clone())));
-            self.grave_deck
-                .iter()
-                .for_each(|v| collection.push((v.offset(), v.card.system_pool.clone())));
-        }
+        collection.push((
+            self.special_card.offset(),
+            self.special_card.mounting_systems.clone(),
+        ));
+        self.deck
+            .iter()
+            .for_each(|v| collection.push((v.offset(), v.mounting_systems.clone())));
+        self.hand_deck
+            .iter()
+            .for_each(|v| collection.push((v.offset(), v.mounting_systems.clone())));
+        self.grave_deck
+            .iter()
+            .for_each(|v| collection.push((v.offset(), v.mounting_systems.clone())));
+        collection
+    }
+
+    pub fn collect_card_systems(&self) -> Vec<(usize, Vec<System>)> {
+        let mut collection = vec![];
+        collection.push((
+            self.special_card.offset(),
+            self.special_card.card.system_pool.clone(),
+        ));
+        self.deck
+            .iter()
+            .for_each(|v| collection.push((v.offset(), v.card.system_pool.clone())));
+        self.hand_deck
+            .iter()
+            .for_each(|v| collection.push((v.offset(), v.card.system_pool.clone())));
+        self.grave_deck
+            .iter()
+            .for_each(|v| collection.push((v.offset(), v.card.system_pool.clone())));
         collection
     }
 
     pub fn reset(&mut self) {
         let origin = &self.warrior;
         self.power = origin.power;
-        self.armor = origin.armor;
-        self.shield = origin.shield;
+        self.armor = origin.armor as u16;
+        self.shield = origin.shield as u16;
         self.attack = origin.attack;
         self.attack_weak = origin.attack_weak;
         self.defense = origin.defense;
@@ -163,6 +172,14 @@ impl CtxAdaptor for WarriorContext {
 
     fn offset(&self) -> usize {
         self.offset
+    }
+
+    fn add_mounting_system(&mut self, ctx: &SystemContext) -> bool {
+        add_mounting_system_internal(ctx, &mut self.mounting_systems)
+    }
+
+    fn remove_mounting_system(&mut self, ctx: &SystemContext) -> bool {
+        remove_mounting_system_internal(ctx, &mut self.mounting_systems)
     }
 
     fn warrior(&mut self) -> Result<&mut WarriorContext, Error> {

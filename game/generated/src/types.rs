@@ -3737,6 +3737,430 @@ impl<'t: 'r, 'r> ::core::iter::ExactSizeIterator for ValueVecReaderIterator<'t, 
     }
 }
 #[derive(Clone)]
+pub struct Duration(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for Duration {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl ::core::fmt::Debug for Duration {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl ::core::fmt::Display for Duration {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "trigger", self.trigger())?;
+        write!(f, ", {}: {}", "count", self.count())?;
+        let extra_count = self.count_extra_fields();
+        if extra_count != 0 {
+            write!(f, ", .. ({} fields)", extra_count)?;
+        }
+        write!(f, " }}")
+    }
+}
+impl ::core::default::Default for Duration {
+    fn default() -> Self {
+        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
+        Duration::new_unchecked(v)
+    }
+}
+impl Duration {
+    const DEFAULT_VALUE: [u8; 14] = [14, 0, 0, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0];
+    pub const FIELD_COUNT: usize = 2;
+    pub fn total_size(&self) -> usize {
+        molecule::unpack_number(self.as_slice()) as usize
+    }
+    pub fn field_count(&self) -> usize {
+        if self.total_size() == molecule::NUMBER_SIZE {
+            0
+        } else {
+            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
+        }
+    }
+    pub fn count_extra_fields(&self) -> usize {
+        self.field_count() - Self::FIELD_COUNT
+    }
+    pub fn has_extra_fields(&self) -> bool {
+        Self::FIELD_COUNT != self.field_count()
+    }
+    pub fn trigger(&self) -> Byte {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[4..]) as usize;
+        let end = molecule::unpack_number(&slice[8..]) as usize;
+        Byte::new_unchecked(self.0.slice(start..end))
+    }
+    pub fn count(&self) -> Byte {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[8..]) as usize;
+        if self.has_extra_fields() {
+            let end = molecule::unpack_number(&slice[12..]) as usize;
+            Byte::new_unchecked(self.0.slice(start..end))
+        } else {
+            Byte::new_unchecked(self.0.slice(start..))
+        }
+    }
+    pub fn as_reader<'r>(&'r self) -> DurationReader<'r> {
+        DurationReader::new_unchecked(self.as_slice())
+    }
+}
+impl molecule::prelude::Entity for Duration {
+    type Builder = DurationBuilder;
+    const NAME: &'static str = "Duration";
+    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
+        Duration(data)
+    }
+    fn as_bytes(&self) -> molecule::bytes::Bytes {
+        self.0.clone()
+    }
+    fn as_slice(&self) -> &[u8] {
+        &self.0[..]
+    }
+    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        DurationReader::from_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        DurationReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn new_builder() -> Self::Builder {
+        ::core::default::Default::default()
+    }
+    fn as_builder(self) -> Self::Builder {
+        Self::new_builder()
+            .trigger(self.trigger())
+            .count(self.count())
+    }
+}
+#[derive(Clone, Copy)]
+pub struct DurationReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for DurationReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl<'r> ::core::fmt::Debug for DurationReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl<'r> ::core::fmt::Display for DurationReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{} {{ ", Self::NAME)?;
+        write!(f, "{}: {}", "trigger", self.trigger())?;
+        write!(f, ", {}: {}", "count", self.count())?;
+        let extra_count = self.count_extra_fields();
+        if extra_count != 0 {
+            write!(f, ", .. ({} fields)", extra_count)?;
+        }
+        write!(f, " }}")
+    }
+}
+impl<'r> DurationReader<'r> {
+    pub const FIELD_COUNT: usize = 2;
+    pub fn total_size(&self) -> usize {
+        molecule::unpack_number(self.as_slice()) as usize
+    }
+    pub fn field_count(&self) -> usize {
+        if self.total_size() == molecule::NUMBER_SIZE {
+            0
+        } else {
+            (molecule::unpack_number(&self.as_slice()[molecule::NUMBER_SIZE..]) as usize / 4) - 1
+        }
+    }
+    pub fn count_extra_fields(&self) -> usize {
+        self.field_count() - Self::FIELD_COUNT
+    }
+    pub fn has_extra_fields(&self) -> bool {
+        Self::FIELD_COUNT != self.field_count()
+    }
+    pub fn trigger(&self) -> ByteReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[4..]) as usize;
+        let end = molecule::unpack_number(&slice[8..]) as usize;
+        ByteReader::new_unchecked(&self.as_slice()[start..end])
+    }
+    pub fn count(&self) -> ByteReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[8..]) as usize;
+        if self.has_extra_fields() {
+            let end = molecule::unpack_number(&slice[12..]) as usize;
+            ByteReader::new_unchecked(&self.as_slice()[start..end])
+        } else {
+            ByteReader::new_unchecked(&self.as_slice()[start..])
+        }
+    }
+}
+impl<'r> molecule::prelude::Reader<'r> for DurationReader<'r> {
+    type Entity = Duration;
+    const NAME: &'static str = "DurationReader";
+    fn to_entity(&self) -> Self::Entity {
+        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
+    }
+    fn new_unchecked(slice: &'r [u8]) -> Self {
+        DurationReader(slice)
+    }
+    fn as_slice(&self) -> &'r [u8] {
+        self.0
+    }
+    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
+        use molecule::verification_error as ve;
+        let slice_len = slice.len();
+        if slice_len < molecule::NUMBER_SIZE {
+            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE, slice_len);
+        }
+        let total_size = molecule::unpack_number(slice) as usize;
+        if slice_len != total_size {
+            return ve!(Self, TotalSizeNotMatch, total_size, slice_len);
+        }
+        if slice_len < molecule::NUMBER_SIZE * 2 {
+            return ve!(Self, HeaderIsBroken, molecule::NUMBER_SIZE * 2, slice_len);
+        }
+        let offset_first = molecule::unpack_number(&slice[molecule::NUMBER_SIZE..]) as usize;
+        if offset_first % molecule::NUMBER_SIZE != 0 || offset_first < molecule::NUMBER_SIZE * 2 {
+            return ve!(Self, OffsetsNotMatch);
+        }
+        if slice_len < offset_first {
+            return ve!(Self, HeaderIsBroken, offset_first, slice_len);
+        }
+        let field_count = offset_first / molecule::NUMBER_SIZE - 1;
+        if field_count < Self::FIELD_COUNT {
+            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
+        } else if !compatible && field_count > Self::FIELD_COUNT {
+            return ve!(Self, FieldCountNotMatch, Self::FIELD_COUNT, field_count);
+        };
+        let mut offsets: Vec<usize> = slice[molecule::NUMBER_SIZE..offset_first]
+            .chunks_exact(molecule::NUMBER_SIZE)
+            .map(|x| molecule::unpack_number(x) as usize)
+            .collect();
+        offsets.push(total_size);
+        if offsets.windows(2).any(|i| i[0] > i[1]) {
+            return ve!(Self, OffsetsNotMatch);
+        }
+        ByteReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
+        ByteReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, Default)]
+pub struct DurationBuilder {
+    pub(crate) trigger: Byte,
+    pub(crate) count: Byte,
+}
+impl DurationBuilder {
+    pub const FIELD_COUNT: usize = 2;
+    pub fn trigger(mut self, v: Byte) -> Self {
+        self.trigger = v;
+        self
+    }
+    pub fn count(mut self, v: Byte) -> Self {
+        self.count = v;
+        self
+    }
+}
+impl molecule::prelude::Builder for DurationBuilder {
+    type Entity = Duration;
+    const NAME: &'static str = "DurationBuilder";
+    fn expected_length(&self) -> usize {
+        molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1)
+            + self.trigger.as_slice().len()
+            + self.count.as_slice().len()
+    }
+    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
+        let mut total_size = molecule::NUMBER_SIZE * (Self::FIELD_COUNT + 1);
+        let mut offsets = Vec::with_capacity(Self::FIELD_COUNT);
+        offsets.push(total_size);
+        total_size += self.trigger.as_slice().len();
+        offsets.push(total_size);
+        total_size += self.count.as_slice().len();
+        writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
+        for offset in offsets.into_iter() {
+            writer.write_all(&molecule::pack_number(offset as molecule::Number))?;
+        }
+        writer.write_all(self.trigger.as_slice())?;
+        writer.write_all(self.count.as_slice())?;
+        Ok(())
+    }
+    fn build(&self) -> Self::Entity {
+        let mut inner = Vec::with_capacity(self.expected_length());
+        self.write(&mut inner)
+            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
+        Duration::new_unchecked(inner.into())
+    }
+}
+#[derive(Clone)]
+pub struct DurationOpt(molecule::bytes::Bytes);
+impl ::core::fmt::LowerHex for DurationOpt {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl ::core::fmt::Debug for DurationOpt {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl ::core::fmt::Display for DurationOpt {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        if let Some(v) = self.to_opt() {
+            write!(f, "{}(Some({}))", Self::NAME, v)
+        } else {
+            write!(f, "{}(None)", Self::NAME)
+        }
+    }
+}
+impl ::core::default::Default for DurationOpt {
+    fn default() -> Self {
+        let v = molecule::bytes::Bytes::from_static(&Self::DEFAULT_VALUE);
+        DurationOpt::new_unchecked(v)
+    }
+}
+impl DurationOpt {
+    const DEFAULT_VALUE: [u8; 0] = [];
+    pub fn is_none(&self) -> bool {
+        self.0.is_empty()
+    }
+    pub fn is_some(&self) -> bool {
+        !self.0.is_empty()
+    }
+    pub fn to_opt(&self) -> Option<Duration> {
+        if self.is_none() {
+            None
+        } else {
+            Some(Duration::new_unchecked(self.0.clone()))
+        }
+    }
+    pub fn as_reader<'r>(&'r self) -> DurationOptReader<'r> {
+        DurationOptReader::new_unchecked(self.as_slice())
+    }
+}
+impl molecule::prelude::Entity for DurationOpt {
+    type Builder = DurationOptBuilder;
+    const NAME: &'static str = "DurationOpt";
+    fn new_unchecked(data: molecule::bytes::Bytes) -> Self {
+        DurationOpt(data)
+    }
+    fn as_bytes(&self) -> molecule::bytes::Bytes {
+        self.0.clone()
+    }
+    fn as_slice(&self) -> &[u8] {
+        &self.0[..]
+    }
+    fn from_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        DurationOptReader::from_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn from_compatible_slice(slice: &[u8]) -> molecule::error::VerificationResult<Self> {
+        DurationOptReader::from_compatible_slice(slice).map(|reader| reader.to_entity())
+    }
+    fn new_builder() -> Self::Builder {
+        ::core::default::Default::default()
+    }
+    fn as_builder(self) -> Self::Builder {
+        Self::new_builder().set(self.to_opt())
+    }
+}
+#[derive(Clone, Copy)]
+pub struct DurationOptReader<'r>(&'r [u8]);
+impl<'r> ::core::fmt::LowerHex for DurationOptReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        use molecule::hex_string;
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+        write!(f, "{}", hex_string(self.as_slice()))
+    }
+}
+impl<'r> ::core::fmt::Debug for DurationOptReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        write!(f, "{}({:#x})", Self::NAME, self)
+    }
+}
+impl<'r> ::core::fmt::Display for DurationOptReader<'r> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        if let Some(v) = self.to_opt() {
+            write!(f, "{}(Some({}))", Self::NAME, v)
+        } else {
+            write!(f, "{}(None)", Self::NAME)
+        }
+    }
+}
+impl<'r> DurationOptReader<'r> {
+    pub fn is_none(&self) -> bool {
+        self.0.is_empty()
+    }
+    pub fn is_some(&self) -> bool {
+        !self.0.is_empty()
+    }
+    pub fn to_opt(&self) -> Option<DurationReader<'r>> {
+        if self.is_none() {
+            None
+        } else {
+            Some(DurationReader::new_unchecked(self.as_slice()))
+        }
+    }
+}
+impl<'r> molecule::prelude::Reader<'r> for DurationOptReader<'r> {
+    type Entity = DurationOpt;
+    const NAME: &'static str = "DurationOptReader";
+    fn to_entity(&self) -> Self::Entity {
+        Self::Entity::new_unchecked(self.as_slice().to_owned().into())
+    }
+    fn new_unchecked(slice: &'r [u8]) -> Self {
+        DurationOptReader(slice)
+    }
+    fn as_slice(&self) -> &'r [u8] {
+        self.0
+    }
+    fn verify(slice: &[u8], compatible: bool) -> molecule::error::VerificationResult<()> {
+        if !slice.is_empty() {
+            DurationReader::verify(&slice[..], compatible)?;
+        }
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, Default)]
+pub struct DurationOptBuilder(pub(crate) Option<Duration>);
+impl DurationOptBuilder {
+    pub fn set(mut self, v: Option<Duration>) -> Self {
+        self.0 = v;
+        self
+    }
+}
+impl molecule::prelude::Builder for DurationOptBuilder {
+    type Entity = DurationOpt;
+    const NAME: &'static str = "DurationOptBuilder";
+    fn expected_length(&self) -> usize {
+        self.0
+            .as_ref()
+            .map(|ref inner| inner.as_slice().len())
+            .unwrap_or(0)
+    }
+    fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
+        self.0
+            .as_ref()
+            .map(|ref inner| writer.write_all(inner.as_slice()))
+            .unwrap_or(Ok(()))
+    }
+    fn build(&self) -> Self::Entity {
+        let mut inner = Vec::with_capacity(self.expected_length());
+        self.write(&mut inner)
+            .unwrap_or_else(|_| panic!("{} build should be ok", Self::NAME));
+        DurationOpt::new_unchecked(inner.into())
+    }
+}
+#[derive(Clone)]
 pub struct System(molecule::bytes::Bytes);
 impl ::core::fmt::LowerHex for System {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
@@ -3758,6 +4182,7 @@ impl ::core::fmt::Display for System {
         write!(f, "{}: {}", "id", self.id())?;
         write!(f, ", {}: {}", "system_id", self.system_id())?;
         write!(f, ", {}: {}", "args", self.args())?;
+        write!(f, ", {}: {}", "duration", self.duration())?;
         write!(f, ", {}: {}", "target_type", self.target_type())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
@@ -3773,10 +4198,11 @@ impl ::core::default::Default for System {
     }
 }
 impl System {
-    const DEFAULT_VALUE: [u8; 29] = [
-        29, 0, 0, 0, 20, 0, 0, 0, 22, 0, 0, 0, 24, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0,
+    const DEFAULT_VALUE: [u8; 33] = [
+        33, 0, 0, 0, 24, 0, 0, 0, 26, 0, 0, 0, 28, 0, 0, 0, 32, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0,
+        4, 0, 0, 0, 0,
     ];
-    pub const FIELD_COUNT: usize = 4;
+    pub const FIELD_COUNT: usize = 5;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -3811,11 +4237,17 @@ impl System {
         let end = molecule::unpack_number(&slice[16..]) as usize;
         ValueVec::new_unchecked(self.0.slice(start..end))
     }
-    pub fn target_type(&self) -> Byte {
+    pub fn duration(&self) -> DurationOpt {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[16..]) as usize;
+        let end = molecule::unpack_number(&slice[20..]) as usize;
+        DurationOpt::new_unchecked(self.0.slice(start..end))
+    }
+    pub fn target_type(&self) -> Byte {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[20..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[20..]) as usize;
+            let end = molecule::unpack_number(&slice[24..]) as usize;
             Byte::new_unchecked(self.0.slice(start..end))
         } else {
             Byte::new_unchecked(self.0.slice(start..))
@@ -3851,6 +4283,7 @@ impl molecule::prelude::Entity for System {
             .id(self.id())
             .system_id(self.system_id())
             .args(self.args())
+            .duration(self.duration())
             .target_type(self.target_type())
     }
 }
@@ -3876,6 +4309,7 @@ impl<'r> ::core::fmt::Display for SystemReader<'r> {
         write!(f, "{}: {}", "id", self.id())?;
         write!(f, ", {}: {}", "system_id", self.system_id())?;
         write!(f, ", {}: {}", "args", self.args())?;
+        write!(f, ", {}: {}", "duration", self.duration())?;
         write!(f, ", {}: {}", "target_type", self.target_type())?;
         let extra_count = self.count_extra_fields();
         if extra_count != 0 {
@@ -3885,7 +4319,7 @@ impl<'r> ::core::fmt::Display for SystemReader<'r> {
     }
 }
 impl<'r> SystemReader<'r> {
-    pub const FIELD_COUNT: usize = 4;
+    pub const FIELD_COUNT: usize = 5;
     pub fn total_size(&self) -> usize {
         molecule::unpack_number(self.as_slice()) as usize
     }
@@ -3920,11 +4354,17 @@ impl<'r> SystemReader<'r> {
         let end = molecule::unpack_number(&slice[16..]) as usize;
         ValueVecReader::new_unchecked(&self.as_slice()[start..end])
     }
-    pub fn target_type(&self) -> ByteReader<'r> {
+    pub fn duration(&self) -> DurationOptReader<'r> {
         let slice = self.as_slice();
         let start = molecule::unpack_number(&slice[16..]) as usize;
+        let end = molecule::unpack_number(&slice[20..]) as usize;
+        DurationOptReader::new_unchecked(&self.as_slice()[start..end])
+    }
+    pub fn target_type(&self) -> ByteReader<'r> {
+        let slice = self.as_slice();
+        let start = molecule::unpack_number(&slice[20..]) as usize;
         if self.has_extra_fields() {
-            let end = molecule::unpack_number(&slice[20..]) as usize;
+            let end = molecule::unpack_number(&slice[24..]) as usize;
             ByteReader::new_unchecked(&self.as_slice()[start..end])
         } else {
             ByteReader::new_unchecked(&self.as_slice()[start..])
@@ -3980,7 +4420,8 @@ impl<'r> molecule::prelude::Reader<'r> for SystemReader<'r> {
         ResourceIdReader::verify(&slice[offsets[0]..offsets[1]], compatible)?;
         SystemIdReader::verify(&slice[offsets[1]..offsets[2]], compatible)?;
         ValueVecReader::verify(&slice[offsets[2]..offsets[3]], compatible)?;
-        ByteReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
+        DurationOptReader::verify(&slice[offsets[3]..offsets[4]], compatible)?;
+        ByteReader::verify(&slice[offsets[4]..offsets[5]], compatible)?;
         Ok(())
     }
 }
@@ -3989,10 +4430,11 @@ pub struct SystemBuilder {
     pub(crate) id: ResourceId,
     pub(crate) system_id: SystemId,
     pub(crate) args: ValueVec,
+    pub(crate) duration: DurationOpt,
     pub(crate) target_type: Byte,
 }
 impl SystemBuilder {
-    pub const FIELD_COUNT: usize = 4;
+    pub const FIELD_COUNT: usize = 5;
     pub fn id(mut self, v: ResourceId) -> Self {
         self.id = v;
         self
@@ -4003,6 +4445,10 @@ impl SystemBuilder {
     }
     pub fn args(mut self, v: ValueVec) -> Self {
         self.args = v;
+        self
+    }
+    pub fn duration(mut self, v: DurationOpt) -> Self {
+        self.duration = v;
         self
     }
     pub fn target_type(mut self, v: Byte) -> Self {
@@ -4018,6 +4464,7 @@ impl molecule::prelude::Builder for SystemBuilder {
             + self.id.as_slice().len()
             + self.system_id.as_slice().len()
             + self.args.as_slice().len()
+            + self.duration.as_slice().len()
             + self.target_type.as_slice().len()
     }
     fn write<W: molecule::io::Write>(&self, writer: &mut W) -> molecule::io::Result<()> {
@@ -4030,6 +4477,8 @@ impl molecule::prelude::Builder for SystemBuilder {
         offsets.push(total_size);
         total_size += self.args.as_slice().len();
         offsets.push(total_size);
+        total_size += self.duration.as_slice().len();
+        offsets.push(total_size);
         total_size += self.target_type.as_slice().len();
         writer.write_all(&molecule::pack_number(total_size as molecule::Number))?;
         for offset in offsets.into_iter() {
@@ -4038,6 +4487,7 @@ impl molecule::prelude::Builder for SystemBuilder {
         writer.write_all(self.id.as_slice())?;
         writer.write_all(self.system_id.as_slice())?;
         writer.write_all(self.args.as_slice())?;
+        writer.write_all(self.duration.as_slice())?;
         writer.write_all(self.target_type.as_slice())?;
         Ok(())
     }

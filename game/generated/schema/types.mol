@@ -28,10 +28,18 @@ union Value {
 
 vector ValueVec <Value>;
 
+table Duration {
+    trigger: byte,
+    count: byte,
+}
+
+option DurationOpt (Duration);
+
 table System {
     id: ResourceId,
     system_id: SystemId,
     args: ValueVec,
+    duration: DurationOpt,
     target_type: byte,
 }
 

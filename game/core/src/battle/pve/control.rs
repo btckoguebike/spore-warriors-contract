@@ -6,7 +6,7 @@ use crate::battle::pve::{FightView, Instruction, MapBattlePVE};
 use crate::battle::traits::{FightLog, IterationOutput};
 use crate::contexts::CtxAdaptor;
 use crate::errors::Error;
-use crate::systems::{SystemController, SystemInput, SystemReturn};
+use crate::systems::{Command, SystemController, SystemInput, SystemReturn};
 use crate::wrappings::RequireTarget;
 
 impl<'a> MapBattlePVE<'a> {
@@ -33,6 +33,24 @@ impl<'a> MapBattlePVE<'a> {
             self.trigger_log(FightLog::Draw(card_index))?;
         }
         Ok(())
+    }
+
+    pub(super) fn collect_system_caster_offset(
+        &self,
+        view: FightView,
+        target: RequireTarget,
+        target_offset: Option<usize>,
+    ) -> Result<Option<usize>, Error> {
+        match (view, target) {
+            (FightView::Card(_), _) => Ok(None),
+            (FightView::Player, _) => Ok(Some(self.player.offset())),
+            (FightView::Enemy, _) => {
+                let Some(offset) = target_offset else {
+                    return Err(Error::BattleSelectionError);
+                };
+                Ok(Some(offset))
+            }
+        }
     }
 
     pub(super) fn collect_system_contexts(
@@ -95,19 +113,22 @@ impl<'a> MapBattlePVE<'a> {
         self.last_output = IterationOutput::Continue;
         while let Some(Instruction {
             view,
-            system,
+            ctx,
             target,
             mut system_input,
         }) = self.pending_instructions.pop_front()
         {
-            self.trigger_log(FightLog::CallSystemId(system.id.into()))?;
+            let target_type = ctx.system.target_type;
+            if let Some(caster) = self.collect_system_caster_offset(view, target_type, target)? {
+                self.trigger_log(FightLog::CallSystem(caster, ctx.clone()))?;
+            }
             let mut system_contexts =
-                self.collect_system_contexts(view, system.target_type, target, controller)?;
+                self.collect_system_contexts(view, target_type, target, controller)?;
             if game_over {
-                system_input = Some(SystemInput::GameOver);
+                system_input = Some(SystemInput::Trigger(FightLog::GameOver));
             }
             let system_return =
-                controller.system_call(&system, &mut system_contexts, system_input.clone())?;
+                controller.system_call(ctx, &mut system_contexts, system_input.clone())?;
             if !game_over {
                 if self.player.hp == 0 {
                     self.last_output = IterationOutput::GameLose;
@@ -121,34 +142,9 @@ impl<'a> MapBattlePVE<'a> {
                     game_over = true;
                     continue;
                 }
-                match system_return {
-                    SystemReturn::RequireCardSelect => {
-                        if let FightView::Player = view {
-                            return Err(Error::ResourceEffectCardSelectInEnemy);
-                        }
-                        self.last_output = IterationOutput::RequireCardSelect;
-                        break;
-                    }
-                    SystemReturn::DrawCard(draw_count) => {
-                        self.player_draw(draw_count, controller)?
-                    }
-                    SystemReturn::SystemLog(mut logs) => self.fight_logs.append(&mut logs),
-                    SystemReturn::PendingSystems(pending, mut logs) => {
-                        let mut instructions = pending
-                            .into_iter()
-                            .map(|system| Instruction {
-                                view,
-                                system,
-                                target,
-                                system_input: system_input.clone(),
-                            })
-                            .collect::<Vec<_>>();
-                        instructions.reverse();
-                        instructions.into_iter().for_each(|v| {
-                            self.pending_instructions.push_front(v);
-                        });
-                        self.fight_logs.append(&mut logs);
-                    }
+                self.operate_system_return(system_return, view, target, system_input, controller)?;
+                if self.last_output == IterationOutput::RequireCardSelect {
+                    break;
                 }
             }
         }
@@ -156,5 +152,49 @@ impl<'a> MapBattlePVE<'a> {
             self.player.reset();
         }
         Ok(self.last_output)
+    }
+
+    fn operate_system_return(
+        &mut self,
+        system_return: SystemReturn,
+        view: FightView,
+        target: Option<usize>,
+        system_input: Option<SystemInput>,
+        controller: &mut SystemController,
+    ) -> Result<(), Error> {
+        let return_cmds;
+        match system_return {
+            SystemReturn::Continue(cmds) => return_cmds = cmds,
+            SystemReturn::RequireCardSelect(cmds) => {
+                if let FightView::Player = view {
+                    return Err(Error::ResourceEffectCardSelectInEnemy);
+                }
+                self.last_output = IterationOutput::RequireCardSelect;
+                return_cmds = cmds;
+            }
+            SystemReturn::PendingSystems(pending, cmds) => {
+                let mut instructions = pending
+                    .into_iter()
+                    .map(|instant_system| Instruction {
+                        view,
+                        ctx: instant_system.into(),
+                        target,
+                        system_input: system_input.clone(),
+                    })
+                    .collect::<Vec<_>>();
+                instructions.reverse();
+                instructions.into_iter().for_each(|v| {
+                    self.pending_instructions.push_front(v);
+                });
+                return_cmds = cmds;
+            }
+        };
+        for cmd in return_cmds {
+            match cmd {
+                Command::AddLogs(mut logs) => self.fight_logs.append(&mut logs),
+                Command::DrawCards(count) => self.player_draw(count, controller)?,
+            }
+        }
+        Ok(())
     }
 }

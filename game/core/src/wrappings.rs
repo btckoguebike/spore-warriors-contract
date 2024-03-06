@@ -116,14 +116,25 @@ impl rlp::Decodable for RequireTarget {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(PartialEq, PartialOrd, Eq, Ord, Clone)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy)]
 #[repr(u16)]
 pub enum SystemId {
-    Damage,
-    MultipleDamage,
-    Healing,
-    AttackPowerUp,
-    DefensePowerUp,
+    InstantDamage,
+    InstantMultipleDamage,
+    InstantArmorUp,
+    InstantArmorDown,
+    InstantShieldUp,
+    InstantShieldDown,
+    InstantHealing,
+    InstantDrawCountUp,
+    InstantDrawCountDown,
+    InstantAttackPowerUp,
+    InstantDefensePowerUp,
+    InstantAttackPowerWeak,
+    InstantDefensePowerWeak,
+    InstantDrawCards,
+
+    TriggerRecoverHp,
 }
 
 impl From<SystemId> for u16 {
@@ -137,8 +148,20 @@ impl TryFrom<u16> for SystemId {
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(Self::Damage),
-            1 => Ok(Self::MultipleDamage),
+            0 => Ok(Self::InstantDamage),
+            1 => Ok(Self::InstantMultipleDamage),
+            2 => Ok(Self::InstantArmorUp),
+            3 => Ok(Self::InstantArmorDown),
+            4 => Ok(Self::InstantShieldUp),
+            5 => Ok(Self::InstantShieldDown),
+            6 => Ok(Self::InstantHealing),
+            7 => Ok(Self::InstantDrawCountUp),
+            8 => Ok(Self::InstantDrawCountDown),
+            9 => Ok(Self::InstantAttackPowerUp),
+            10 => Ok(Self::InstantDefensePowerUp),
+            11 => Ok(Self::InstantAttackPowerWeak),
+            12 => Ok(Self::InstantDefensePowerWeak),
+            13 => Ok(Self::InstantDrawCards),
             _ => Err(Error::ResourceBrokenSystemId),
         }
     }
@@ -162,11 +185,28 @@ impl rlp::Decodable for SystemId {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[derive(Clone, Copy, RlpEncodable, RlpDecodable)]
+pub struct Duration {
+    pub trigger: u16,
+    pub count: u16,
+}
+
+impl From<generated::Duration> for Duration {
+    fn from(value: generated::Duration) -> Self {
+        Self {
+            trigger: u8::from(value.trigger()) as u16,
+            count: u8::from(value.count()) as u16,
+        }
+    }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct System {
     pub id: u16,
     pub system_id: SystemId,
     pub args: Vec<Value>,
+    pub duration: Option<Duration>,
     pub target_type: RequireTarget,
 }
 
@@ -176,6 +216,12 @@ impl System {
         value: generated::System,
         rng: &mut impl RngCore,
     ) -> Result<Self, Error> {
+        let duration: Option<Duration> = value.duration().to_opt().map(Into::into);
+        if let Some(duration) = duration.as_ref() {
+            if duration.count == 0 {
+                return Err(Error::ResourceBrokenDurationCount);
+            }
+        }
         Ok(Self {
             id: value.id().into(),
             system_id: u16::from(value.system_id()).try_into()?,
@@ -185,6 +231,7 @@ impl System {
                 .into_iter()
                 .map(|v| Value::randomized(v, rng))
                 .collect(),
+            duration,
         })
     }
 }

@@ -15,6 +15,7 @@ pub enum Error {
     ResourceBrokenPlayerDeck,
     ResourceBrokenHpPercent,
     ResourceBrokenUniqueId,
+    ResourceBrokenDurationCount,
 
     ResourceEffectMultiTargetInEffectPool,
     ResourceEffectSetupConflict,
@@ -27,6 +28,7 @@ pub enum Error {
     SceneUnexpectedSystemReturn,
     SceneUserImportOutOfIndex,
     SceneMerchantInsufficientGold,
+    SceneMerchantInsufficientPhysique,
     SceneTreasureChestOutOfBound,
 
     BattleNotStarted,
@@ -41,6 +43,7 @@ pub enum Error {
     BattleInstructionNotEmpty,
     BattleInstructionEmpty,
     BattleSystemInvalidReturn,
+    BattleSystemNotMounted,
     BattleInternalError,
 
     BattleUnexpectedDrawCount,
@@ -49,10 +52,12 @@ pub enum Error {
     BattleUnexpectedSystemReturn,
     BattleUnexpectedSystemArgs,
     BattleUnexpectedSystemContext,
-    BattleUnexpectedSystemContextType,
+    BattleUnexpectedSystemContextOffset,
+    BattleUnexpectedSystemContextDuration,
 
     SystemTriggerMissing,
     SystemDeserializeError,
     SystemRngRotationError,
     SystemEmptyReference,
+    SystemWrongMixedSystem,
 }

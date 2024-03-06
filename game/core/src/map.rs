@@ -6,20 +6,26 @@ use crate::battle::pve::MapBattlePVE;
 use crate::battle::traits::{FightLog, SimplePVE};
 use crate::contexts::{CardContext, CtxAdaptor, WarriorContext};
 use crate::errors::Error;
-use crate::systems::{SystemController, SystemReturn};
+use crate::systems::{Command, SystemController, SystemReturn};
 use crate::wrappings::{
     randomized_selection, Card, Item, ItemClass, LevelNode, LevelPartition, Node, Point, System,
 };
 
 fn run_context(
     player: &mut WarriorContext,
-    system: &System,
+    system: System,
     controller: &mut SystemController,
 ) -> Result<Vec<FightLog>, Error> {
     let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
-    let system_return = controller.system_call(&system, &mut system_contexts, None)?;
-    if let SystemReturn::SystemLog(logs) = system_return {
-        Ok(logs)
+    let system_return = controller.system_call(system.into(), &mut system_contexts, None)?;
+    if let SystemReturn::Continue(cmds) = system_return {
+        let mut context_logs = vec![];
+        cmds.into_iter().for_each(|v| {
+            if let Command::AddLogs(mut logs) = v {
+                context_logs.append(&mut logs);
+            }
+        });
+        Ok(context_logs)
     } else {
         return Err(Error::SceneUnexpectedSystemReturn);
     }
@@ -59,6 +65,10 @@ fn collect_items(
                     return Err(Error::SceneMerchantInsufficientGold);
                 }
                 player.gold -= item.price;
+                if item.weight > player.physique {
+                    return Err(Error::SceneMerchantInsufficientPhysique);
+                }
+                player.physique -= item.weight;
             }
             match item.class {
                 ItemClass::Equipment => player.equipment_list.push(item.clone()),
@@ -185,14 +195,14 @@ impl<'a> MapSkeleton {
                 map_logs.push(FightLog::RecoverHp(hp_recover));
             }
             Node::Campsite(context) => {
-                let mut logs = run_context(player, context, controller)?;
+                let mut logs = run_context(player, context.clone(), controller)?;
                 map_logs.append(&mut logs);
             }
             Node::Unknown(contexts) => {
                 contexts
                     .iter()
                     .map(|context| {
-                        let mut logs = run_context(player, context, controller)?;
+                        let mut logs = run_context(player, context.clone(), controller)?;
                         map_logs.append(&mut logs);
                         Ok(())
                     })

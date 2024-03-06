@@ -3,9 +3,9 @@ use alloc::vec::Vec;
 
 use crate::battle::pve::{FightView, Instruction, MapBattlePVE};
 use crate::battle::traits::FightLog;
+use crate::contexts::SystemContext;
 use crate::errors::Error;
 use crate::systems::SystemInput;
-use crate::wrappings::System;
 
 impl<'a> MapBattlePVE<'a> {
     pub(super) fn trigger_log(&mut self, log: FightLog) -> Result<(), Error> {
@@ -21,15 +21,20 @@ impl<'a> MapBattlePVE<'a> {
             .collect::<Vec<_>>()
             .into_iter()
             .enumerate()
-            .map(|(offset, effects)| {
-                self.trigger_mounting_systems(FightView::Enemy, effects, Some(offset), log.clone())
+            .map(|(offset, contexts)| {
+                self.trigger_mounting_systems(FightView::Enemy, contexts, Some(offset), log.clone())
             })
             .collect::<Result<Vec<_>, _>>()?;
         self.player
-            .collect_card_systems(true)
+            .collect_card_mountings()
             .into_iter()
-            .map(|(offset, effects)| {
-                self.trigger_mounting_systems(FightView::Card(offset), effects, None, log.clone())
+            .map(|(card_offset, system_offsets)| {
+                self.trigger_mounting_systems(
+                    FightView::Card(card_offset),
+                    system_offsets,
+                    None,
+                    log.clone(),
+                )
             })
             .collect::<Result<Vec<_>, _>>()?;
         self.fight_logs.push(log);
@@ -39,18 +44,18 @@ impl<'a> MapBattlePVE<'a> {
     fn trigger_mounting_systems(
         &mut self,
         view: FightView,
-        effects: Vec<System>,
+        contexts: Vec<SystemContext>,
         target: Option<usize>,
         log: FightLog,
     ) -> Result<(), Error> {
-        effects
+        contexts
             .into_iter()
-            .map(|system| {
+            .map(|ctx| {
                 let system_input = SystemInput::Trigger(log.clone());
                 self.pending_instructions.push_back(Instruction {
                     target,
+                    ctx,
                     view,
-                    system,
                     system_input: Some(system_input),
                 });
                 Ok(())

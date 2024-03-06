@@ -1,13 +1,11 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use crate::battle::pve::{FightView, MapBattlePVE};
+use crate::battle::pve::{FightView, Instruction, MapBattlePVE};
 use crate::battle::traits::{FightLog, IterationInput, IterationOutput, Selection};
 use crate::errors::Error;
 use crate::systems::{SystemController, SystemInput};
 use crate::wrappings::System;
-
-use super::Instruction;
 
 impl<'a> MapBattlePVE<'a> {
     pub(super) fn iterate(
@@ -36,17 +34,17 @@ impl<'a> MapBattlePVE<'a> {
     pub(super) fn trigger_iteration_systems(
         &mut self,
         view: FightView,
-        effects: Vec<System>,
+        systems: Vec<System>,
         target: Option<usize>,
         controller: &mut SystemController,
     ) -> Result<IterationOutput, Error> {
-        effects
+        systems
             .into_iter()
             .map(|system| {
                 self.pending_instructions.push_back(Instruction {
                     view,
+                    ctx: system.into(),
                     target,
-                    system,
                     system_input: None,
                 });
                 Ok(())

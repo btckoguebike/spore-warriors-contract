@@ -3,10 +3,10 @@ use alloc::collections::VecDeque;
 use alloc::{vec, vec::Vec};
 
 use crate::battle::traits::{FightLog, IterationInput, IterationOutput, Selection, SimplePVE};
-use crate::contexts::{EnemyContext, WarriorContext};
+use crate::contexts::{EnemyContext, SystemContext, WarriorContext};
 use crate::errors::Error;
 use crate::systems::{SystemController, SystemInput};
-use crate::wrappings::{Enemy, ItemClass, RequireTarget, System};
+use crate::wrappings::{Enemy, ItemClass, RequireTarget};
 
 mod control;
 mod iteration;
@@ -21,7 +21,7 @@ enum FightView {
 
 struct Instruction {
     target: Option<usize>,
-    system: System,
+    ctx: SystemContext,
     view: FightView,
     system_input: Option<SystemInput>,
 }
@@ -67,12 +67,13 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
                     .for_each(|effect| equipment_effects.push(effect.clone()));
             }
         });
-        self.trigger_log(FightLog::CharactorSet(
+        self.trigger_log(FightLog::GameStart)?;
+        self.trigger_log(FightLog::Snapshot(
             self.player.clone(),
             self.opponents.iter().map(|v| v.clone()).collect(),
         ))?;
         self.player
-            .collect_card_systems(false)
+            .collect_card_systems()
             .into_iter()
             .map(|(offset, effects)| {
                 self.trigger_iteration_systems(FightView::Card(offset), effects, None, controller)
@@ -103,7 +104,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
             }
         }
         #[cfg(feature = "debug")]
-        self.trigger_log(FightLog::CharactorSet(
+        self.trigger_log(FightLog::Snapshot(
             self.player.clone(),
             self.opponents.iter().map(|v| v.clone()).collect(),
         ))?;

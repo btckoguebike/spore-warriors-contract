@@ -2,7 +2,10 @@ extern crate alloc;
 use alloc::vec;
 use rand::RngCore;
 
-use crate::contexts::{ContextType, CtxAdaptor};
+use crate::contexts::{
+    add_mounting_system_internal, remove_mounting_system_internal, ContextType, CtxAdaptor,
+    SystemContext,
+};
 use crate::errors::Error;
 use crate::wrappings::{Enemy, System};
 
@@ -12,14 +15,14 @@ pub struct EnemyContext {
     pub enemy: Enemy,
     pub offset: usize,
     pub hp: u16,
-    pub armor: u8,
-    pub shield: u8,
+    pub armor: u16,
+    pub shield: u16,
     pub attack: u8,
     pub attack_weak: u8,
     pub defense: u8,
     pub defense_weak: u8,
     pub strategy: Vec<Vec<System>>,
-    pub mounting_systems: Vec<System>,
+    pub mounting_systems: Vec<SystemContext>,
 }
 
 impl EnemyContext {
@@ -27,8 +30,8 @@ impl EnemyContext {
         Self {
             offset,
             hp: enemy.hp,
-            armor: enemy.armor,
-            shield: enemy.shield,
+            armor: enemy.armor as u16,
+            shield: enemy.shield as u16,
             attack: enemy.attack,
             attack_weak: enemy.attack_weak,
             defense: enemy.defense,
@@ -80,6 +83,14 @@ impl CtxAdaptor for EnemyContext {
 
     fn offset(&self) -> usize {
         self.offset
+    }
+
+    fn add_mounting_system(&mut self, ctx: &SystemContext) -> bool {
+        add_mounting_system_internal(ctx, &mut self.mounting_systems)
+    }
+
+    fn remove_mounting_system(&mut self, ctx: &SystemContext) -> bool {
+        remove_mounting_system_internal(ctx, &mut self.mounting_systems)
     }
 
     fn enemy(&mut self) -> Result<&mut EnemyContext, Error> {
