@@ -1,57 +1,42 @@
 extern crate alloc;
+use core::slice::Iter;
 use spore_warriors_generated as generated;
 
+use crate::apply_system;
 use crate::battle::traits::FightLog;
 use crate::contexts::{ContextType, CtxAdaptor, SystemContext};
 use crate::errors::Error;
 use crate::game::SporeRng;
+use crate::systems::applications::{
+    armor_up_apply, attack_apply, attack_power_weak_apply, defense_power_weak_apply,
+    draw_count_down_apply, draw_count_up_apply, healing_apply, shield_up_apply,
+};
 use crate::systems::{Command, SystemInput, SystemReturn};
 use crate::wrappings::{System, Value};
 
-macro_rules! simple_change {
-    ($iter:ident, $input:ident, $ctxs:ident, $field:ident, $ft:ty, $meth:ident, $log:ident) => {{
-        let mut logs = vec![];
-        if let Some(SystemInput::Trigger(FightLog::GameOver)) = $input {
-            return Ok(SystemReturn::Continue(vec![]));
-        }
-        let Some(Value(value)) = $iter.next() else {
-            return Err(Error::BattleUnexpectedSystemArgs);
+fn check_extensions<'a>(
+    mut iter: Iter<'a, Value>,
+    resource_pool: &generated::ResourcePool,
+    rng: &mut SporeRng,
+    commands: Vec<Command>,
+) -> Result<SystemReturn, Error> {
+    let mut continue_systems = vec![];
+    while let Some(Value(system_id)) = iter.next() {
+        let system = {
+            let system = resource_pool
+                .system_pool()
+                .into_iter()
+                .find(|v| u16::from(v.id()) == *system_id)
+                .ok_or(Error::ResourceBrokenSystemId)?;
+            System::randomized(resource_pool, system, rng)?
         };
-        let value = *value as $ft;
-        for object in $ctxs.iter_mut() {
-            match object.context_type() {
-                ContextType::Warrior => {
-                    let warrior = object.warrior()?;
-                    warrior.$field = warrior.$field.$meth(value);
-                }
-                ContextType::Enemy => {
-                    let enemy = object.enemy()?;
-                    enemy.$field = enemy.$field.$meth(value);
-                }
-                ContextType::Card => continue,
-            };
-            logs.push(FightLog::$log(object.offset(), value));
-        }
-        logs
-    }};
-}
-
-macro_rules! continue_system {
-    ($iter:ident, $resource:ident, $rng:ident) => {{
-        let mut continue_systems = vec![];
-        while let Some(Value(system_id)) = $iter.next() {
-            let system = {
-                let system = $resource
-                    .system_pool()
-                    .into_iter()
-                    .find(|v| u16::from(v.id()) == *system_id)
-                    .ok_or(Error::ResourceBrokenSystemId)?;
-                System::randomized($resource, system, $rng)?
-            };
-            continue_systems.push(system);
-        }
-        continue_systems
-    }};
+        continue_systems.push(system);
+    }
+    if continue_systems.is_empty() {
+        Ok(SystemReturn::Continue(commands))
+    } else {
+        Ok(SystemReturn::PendingSystems(continue_systems, commands))
+    }
 }
 
 // normally inflict single damage
@@ -62,15 +47,10 @@ pub fn attack(
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
     let mut iter = ctx.system.args.iter();
-    let logs = simple_change!(iter, input, objects, hp, u16, saturating_sub, SystemDamage);
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    apply_system!(logs, iter, input, objects, u16, attack_apply);
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally inflict multiple damage
@@ -88,34 +68,13 @@ pub fn multiple_attack(
     let (Some(Value(damage)), Some(Value(count))) = (iter.next(), iter.next()) else {
         return Err(Error::BattleUnexpectedSystemArgs);
     };
-    let value = *damage;
     let mut logs = vec![];
     for object in objects.iter_mut() {
         (0..*count)
-            .map(|_| {
-                match object.context_type() {
-                    ContextType::Warrior => {
-                        let warrior = object.warrior()?;
-                        warrior.hp -= value;
-                    }
-                    ContextType::Enemy => {
-                        let enemy = object.enemy()?;
-                        enemy.hp -= value;
-                    }
-                    ContextType::Card => return Ok(()),
-                };
-                logs.push(FightLog::SystemDamage(object.offset(), value));
-                Ok(())
-            })
+            .map(|_| attack_apply(&mut logs, *damage, object))
             .collect::<Result<_, _>>()?;
     }
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally increase DEF
@@ -126,23 +85,10 @@ pub fn armor_up(
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
     let mut iter = ctx.system.args.iter();
-    let logs = simple_change!(
-        iter,
-        input,
-        objects,
-        armor,
-        u16,
-        saturating_add,
-        SystemArmorUp
-    );
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    apply_system!(logs, iter, input, objects, u16, armor_up_apply);
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally decrease DEF
@@ -154,7 +100,7 @@ pub fn armor_down(
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
     let mut iter = ctx.system.args.iter();
-    let logs = simple_change!(
+    let logs = apply_system!(
         iter,
         input,
         objects,
@@ -163,13 +109,7 @@ pub fn armor_down(
         saturating_sub,
         SystemArmorDown
     );
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally increase SHD
@@ -180,23 +120,10 @@ pub fn shield_up(
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
     let mut iter = ctx.system.args.iter();
-    let logs = simple_change!(
-        iter,
-        input,
-        objects,
-        shield,
-        u16,
-        saturating_add,
-        SystemShieldUp
-    );
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    apply_system!(logs, iter, input, objects, u16, shield_up_apply);
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally decrease SHD
@@ -208,7 +135,7 @@ pub fn shield_down(
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
     let mut iter = ctx.system.args.iter();
-    let logs = simple_change!(
+    let logs = apply_system!(
         iter,
         input,
         objects,
@@ -217,13 +144,7 @@ pub fn shield_down(
         saturating_sub,
         SystemShieldDown
     );
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally cure object's hp
@@ -234,23 +155,10 @@ pub fn healing(
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
     let mut iter = ctx.system.args.iter();
-    let logs = simple_change!(
-        iter,
-        input,
-        objects,
-        hp,
-        u16,
-        saturating_add,
-        SystemRecoverHp
-    );
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    apply_system!(logs, iter, input, objects, u16, healing_apply);
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally increase the drawn cards count
@@ -261,33 +169,10 @@ pub fn draw_count_up(
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
-    if let Some(SystemInput::Trigger(FightLog::GameOver)) = input {
-        return Ok(SystemReturn::Continue(vec![]));
-    }
-    let mut iter = ctx.system.args.iter();
-    let Some(Value(draw_count)) = iter.next() else {
-        return Err(Error::BattleUnexpectedSystemArgs);
-    };
-    let value = *draw_count as u8;
     let mut logs = vec![];
-    for object in objects.iter_mut() {
-        match object.context_type() {
-            ContextType::Warrior => {
-                let warrior = object.warrior()?;
-                warrior.draw_count = warrior.draw_count.saturating_add(value);
-            }
-            ContextType::Enemy => continue,
-            ContextType::Card => continue,
-        };
-        logs.push(FightLog::SystemDrawCountUp(value));
-    }
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    let mut iter = ctx.system.args.iter();
+    apply_system!(logs, iter, input, objects, u8, draw_count_up_apply);
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally increase the drawn cards count
@@ -298,33 +183,10 @@ pub fn draw_count_down(
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
-    if let Some(SystemInput::Trigger(FightLog::GameOver)) = input {
-        return Ok(SystemReturn::Continue(vec![]));
-    }
-    let mut iter = ctx.system.args.iter();
-    let Some(Value(draw_count)) = iter.next() else {
-        return Err(Error::BattleUnexpectedSystemArgs);
-    };
-    let value = *draw_count as u8;
     let mut logs = vec![];
-    for object in objects.iter_mut() {
-        match object.context_type() {
-            ContextType::Warrior => {
-                let warrior = object.warrior()?;
-                warrior.draw_count = warrior.draw_count.saturating_sub(value);
-            }
-            ContextType::Enemy => continue,
-            ContextType::Card => continue,
-        };
-        logs.push(FightLog::SystemDrawCountDown(value));
-    }
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    let mut iter = ctx.system.args.iter();
+    apply_system!(logs, iter, input, objects, u8, draw_count_down_apply);
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally increase ATK, which impacts object's damage
@@ -336,7 +198,7 @@ pub fn attack_power_up(
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
     let mut iter = ctx.system.args.iter();
-    let logs = simple_change!(
+    let logs = apply_system!(
         iter,
         input,
         objects,
@@ -345,13 +207,7 @@ pub fn attack_power_up(
         saturating_add,
         SystemAttackPowerUp
     );
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally increase DEF, which impacts object's sheild and defense
@@ -363,7 +219,7 @@ pub fn defense_power_up(
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
     let mut iter = ctx.system.args.iter();
-    let logs = simple_change!(
+    let logs = apply_system!(
         iter,
         input,
         objects,
@@ -372,13 +228,7 @@ pub fn defense_power_up(
         saturating_add,
         SystemDefensePowerUp
     );
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally increase ATK_WEAK value
@@ -389,23 +239,10 @@ pub fn attack_power_weak(
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
     let mut iter = ctx.system.args.iter();
-    let logs = simple_change!(
-        iter,
-        input,
-        objects,
-        attack_weak,
-        u8,
-        saturating_add,
-        SystemAttackWeak
-    );
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    apply_system!(logs, iter, input, objects, u8, attack_power_weak_apply);
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // normally increase DEF_WEAK value
@@ -416,23 +253,10 @@ pub fn defense_power_weak(
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
     let mut iter = ctx.system.args.iter();
-    let logs = simple_change!(
-        iter,
-        input,
-        objects,
-        defense_weak,
-        u8,
-        saturating_add,
-        SystemDefenseWeak
-    );
-    let commands = vec![Command::AddLogs(logs)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    apply_system!(logs, iter, input, objects, u8, defense_power_weak_apply);
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
 // return DrawCard command
@@ -451,10 +275,5 @@ pub fn draw_cards(
         return Err(Error::BattleUnexpectedSystemArgs);
     };
     let commands = vec![Command::DrawCards(*count as u8)];
-    let pending = continue_system!(iter, resource_pool, rng);
-    if !pending.is_empty() {
-        Ok(SystemReturn::PendingSystems(pending, commands))
-    } else {
-        Ok(SystemReturn::Continue(commands))
-    }
+    check_extensions(iter, resource_pool, rng, commands)
 }

@@ -8,6 +8,9 @@ use crate::errors::Error;
 use crate::game::SporeRng;
 use crate::wrappings::{System, SystemId};
 
+const MAX_WEAK_COUNT: u8 = 10;
+
+mod applications;
 mod instant;
 mod triggered;
 
@@ -48,6 +51,51 @@ macro_rules! collect_systems {
             $collector.insert(SystemId::$id, $ns::$sys as SystemCallback);
         )+
     };
+}
+
+#[macro_export]
+macro_rules! apply_system {
+    ($iter:ident, $input:ident, $ctxs:ident, $field:ident, $ft:ty, $meth:ident, $log:ident) => {{
+        let mut logs = vec![];
+        if let Some(SystemInput::Trigger(FightLog::GameOver)) = $input {
+            return Ok(SystemReturn::Continue(vec![]));
+        }
+        let Some(Value(value)) = $iter.next() else {
+            return Err(Error::BattleUnexpectedSystemArgs);
+        };
+        let value = *value as $ft;
+        for object in $ctxs.iter_mut() {
+            match object.context_type() {
+                ContextType::Warrior => {
+                    let warrior = object.warrior()?;
+                    warrior.$field = warrior.$field.$meth(value);
+                }
+                ContextType::Enemy => {
+                    let enemy = object.enemy()?;
+                    enemy.$field = enemy.$field.$meth(value);
+                }
+                ContextType::Card => continue,
+            };
+            logs.push(FightLog::$log(object.offset(), value));
+        }
+        logs
+    }};
+    ($logs:ident, $iter:ident, $input:ident, $ctxs:ident, $ft:ty, $app:tt) => {{
+        if let Some(SystemInput::Trigger(FightLog::GameOver)) = $input {
+            let commands = if $logs.is_empty() {
+                vec![]
+            } else {
+                vec![Command::AddLogs($logs)]
+            };
+            return Ok(SystemReturn::Continue(commands));
+        }
+        let Some(Value(value)) = $iter.next() else {
+            return Err(Error::BattleUnexpectedSystemArgs);
+        };
+        for object in $ctxs.iter_mut() {
+            $app(&mut $logs, *value as $ft, object)?;
+        }
+    }};
 }
 
 impl SystemController {
