@@ -26,6 +26,8 @@ pub trait CtxAdaptor {
 
     fn add_mounting_system(&mut self, ctx: &SystemContext) -> bool;
 
+    fn update_mounting_system(&mut self, ctx: &SystemContext) -> bool;
+
     fn remove_mounting_system(&mut self, ctx: &SystemContext) -> bool;
 
     fn warrior(&mut self) -> Result<&mut WarriorContext, Error> {
@@ -56,6 +58,19 @@ fn add_mounting_system_internal(
         return false;
     }
     true
+}
+
+fn update_mounting_system_internal(
+    ctx: &SystemContext,
+    mounting_systems: &mut Vec<SystemContext>,
+) -> bool {
+    if !ctx.is_durable() {
+        return false;
+    }
+    let Some(exist_ctx) = mounting_systems.iter_mut().find(|v| v.equal(&ctx)) else {
+        return false;
+    };
+    exist_ctx.durable_update(ctx)
 }
 
 fn remove_mounting_system_internal(

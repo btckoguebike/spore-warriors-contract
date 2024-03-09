@@ -9,6 +9,8 @@ use crate::contexts::{
 use crate::errors::Error;
 use crate::wrappings::Card;
 
+use super::update_mounting_system_internal;
+
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct CardContext {
@@ -44,6 +46,10 @@ impl CtxAdaptor for CardContext {
 
     fn add_mounting_system(&mut self, ctx: &SystemContext) -> bool {
         add_mounting_system_internal(ctx, &mut self.mounting_systems)
+    }
+
+    fn update_mounting_system(&mut self, ctx: &SystemContext) -> bool {
+        update_mounting_system_internal(ctx, &mut self.mounting_systems)
     }
 
     fn remove_mounting_system(&mut self, ctx: &SystemContext) -> bool {

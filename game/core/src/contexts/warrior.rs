@@ -4,11 +4,18 @@ use rlp::{RlpDecodable, RlpEncodable};
 
 use crate::contexts::system::SystemContext;
 use crate::contexts::{
-    add_mounting_system_internal, remove_mounting_system_internal, CardContext, ContextType,
-    CtxAdaptor,
+    add_mounting_system_internal, remove_mounting_system_internal, update_mounting_system_internal,
+    CardContext, ContextType, CtxAdaptor,
 };
 use crate::errors::Error;
-use crate::wrappings::{Card, Item, ItemClass, Potion, System, Warrior};
+use crate::wrappings::{Item, ItemClass, Potion, System, Warrior};
+
+#[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[derive(Default, Clone, RlpEncodable, RlpDecodable)]
+pub struct CardSelection {
+    pub selection_pool: Vec<usize>,
+    pub unbelonging_deck: Vec<CardContext>,
+}
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
@@ -33,8 +40,9 @@ pub struct WarriorContext {
     pub hand_deck: Vec<CardContext>,
     pub deck: Vec<CardContext>,
     pub grave_deck: Vec<CardContext>,
-    pub selection_deck: Vec<Card>,
+    pub unavaliable_deck: Vec<CardContext>,
     pub mounting_systems: Vec<SystemContext>,
+    pub card_selection: CardSelection,
 }
 
 impl WarriorContext {
@@ -70,8 +78,9 @@ impl WarriorContext {
             deck,
             hand_deck: vec![],
             grave_deck: vec![],
-            selection_deck: vec![],
+            unavaliable_deck: vec![],
             mounting_systems: vec![],
+            card_selection: Default::default(),
             warrior,
         };
         if let Some(potion) = potion {
@@ -160,7 +169,7 @@ impl WarriorContext {
         self.deck.append(&mut self.hand_deck.drain(..).collect());
         self.deck.append(&mut self.grave_deck.drain(..).collect());
         self.deck.iter_mut().for_each(|card| card.reset());
-        self.selection_deck.clear();
+        self.card_selection.selection_pool.clear();
         self.mounting_systems.clear();
     }
 }
@@ -176,6 +185,10 @@ impl CtxAdaptor for WarriorContext {
 
     fn add_mounting_system(&mut self, ctx: &SystemContext) -> bool {
         add_mounting_system_internal(ctx, &mut self.mounting_systems)
+    }
+
+    fn update_mounting_system(&mut self, ctx: &SystemContext) -> bool {
+        update_mounting_system_internal(ctx, &mut self.mounting_systems)
     }
 
     fn remove_mounting_system(&mut self, ctx: &SystemContext) -> bool {

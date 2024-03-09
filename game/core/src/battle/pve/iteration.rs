@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use crate::battle::pve::{FightView, Instruction, MapBattlePVE};
 use crate::battle::traits::{FightLog, IterationInput, IterationOutput, Selection};
 use crate::errors::Error;
-use crate::systems::{SystemController, SystemInput};
+use crate::systems::SystemController;
 use crate::wrappings::System;
 
 impl<'a> MapBattlePVE<'a> {
@@ -123,22 +123,25 @@ impl<'a> MapBattlePVE<'a> {
 
     fn iterate_pending_card_select(
         &mut self,
-        card_indexes: Vec<usize>,
+        card_offsets: Vec<usize>,
         controller: &mut SystemController,
     ) -> Result<IterationOutput, Error> {
-        if card_indexes
+        if card_offsets
             .iter()
-            .any(|v| *v >= self.player.selection_deck.len())
+            .any(|v| *v >= self.player.card_selection.selection_pool.len())
         {
             return Err(Error::BattleSelectionError);
         }
-        if IterationOutput::RequireCardSelect != self.last_output {
+        let IterationOutput::RequireCardSelect(count, draw) = self.last_output else {
             return Err(Error::BattleUnexpectedOutput);
+        };
+        if card_offsets.len() > count as usize {
+            return Err(Error::BattleExceedCardSelection);
         }
-        if let Some(value) = self.pending_instructions.front_mut() {
-            value.system_input = Some(SystemInput::Selection(card_indexes));
+        if draw {
+            self.player_select_draw(card_offsets)?;
         } else {
-            return Err(Error::BattleInstructionEmpty);
+            self.player_select_discard(card_offsets, true)?;
         }
         self.operate_pending_instructions(controller)
     }
@@ -152,7 +155,7 @@ impl<'a> MapBattlePVE<'a> {
         }
         let mut remained_hand_cards = self.player.hand_deck.drain(..).collect::<Vec<_>>();
         self.player.grave_deck.append(&mut remained_hand_cards);
-        self.trigger_log(FightLog::DiscardHandDeck)?;
+        self.trigger_log(FightLog::DiscardAllHandDeck)?;
         self.trigger_log(FightLog::EnemyTurn(self.round))?;
 
         let actions = self

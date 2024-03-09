@@ -29,8 +29,89 @@ impl<'a> MapBattlePVE<'a> {
             }
             let card_index = controller.rng.next_u32() as usize % self.player.deck.len();
             let card = self.player.deck.remove(card_index);
+            self.trigger_log(FightLog::Draw(card.offset()))?;
             self.player.hand_deck.push(card);
-            self.trigger_log(FightLog::Draw(card_index))?;
+        }
+        Ok(())
+    }
+
+    pub(super) fn player_select_draw(&mut self, card_offsets: Vec<usize>) -> Result<(), Error> {
+        for offset in card_offsets {
+            if !self.player.card_selection.selection_pool.contains(&offset) {
+                return Err(Error::BattleUnexpectedCardOffset);
+            }
+            for (deck, remove) in [
+                (&mut self.player.deck, true),
+                (&mut self.player.grave_deck, true),
+                (&mut self.player.card_selection.unbelonging_deck, false),
+            ] {
+                let Some((index, card)) =
+                    deck.iter().enumerate().find(|(_, v)| v.offset() == offset)
+                else {
+                    return Err(Error::BattleCardOffsetNotFound);
+                };
+                if remove {
+                    self.player.hand_deck.push(deck.remove(index));
+                } else {
+                    self.player.hand_deck.push(card.clone());
+                }
+            }
+            self.trigger_log(FightLog::Draw(offset))?;
+        }
+        self.player.card_selection.selection_pool.clear();
+        Ok(())
+    }
+
+    pub(super) fn player_select_discard(
+        &mut self,
+        discard_offsets: Vec<usize>,
+        grave: bool,
+    ) -> Result<(), Error> {
+        if discard_offsets.is_empty() {
+            return Err(Error::BattleUnexpectedDiscardCount);
+        }
+        for offset in discard_offsets {
+            let Some((index, _)) = self
+                .player
+                .hand_deck
+                .iter()
+                .enumerate()
+                .find(|(_, card)| card.offset() == offset)
+            else {
+                break;
+            };
+            let hand_card = self.player.hand_deck.remove(index);
+            self.trigger_log(FightLog::DiscardHandDeck(hand_card.offset()))?;
+            if grave {
+                self.player.grave_deck.push(hand_card);
+            } else {
+                self.player.unavaliable_deck.push(hand_card);
+            }
+        }
+        Ok(())
+    }
+
+    pub(super) fn player_random_discard(
+        &mut self,
+        discard_count: u8,
+        grave: bool,
+        controller: &mut SystemController,
+    ) -> Result<(), Error> {
+        if discard_count == 0 {
+            return Err(Error::BattleUnexpectedDiscardCount);
+        }
+        for _ in 0..discard_count {
+            if self.player.hand_deck.is_empty() {
+                break;
+            }
+            let card_index = controller.rng.next_u32() as usize % self.player.hand_deck.len();
+            let hand_card = self.player.hand_deck.remove(card_index);
+            self.trigger_log(FightLog::DiscardHandDeck(hand_card.offset()))?;
+            if grave {
+                self.player.grave_deck.push(hand_card);
+            } else {
+                self.player.unavaliable_deck.push(hand_card);
+            }
         }
         Ok(())
     }
@@ -143,7 +224,7 @@ impl<'a> MapBattlePVE<'a> {
                     continue;
                 }
                 self.operate_system_return(system_return, view, target, system_input, controller)?;
-                if self.last_output == IterationOutput::RequireCardSelect {
+                if let IterationOutput::RequireCardSelect(_, _) = self.last_output {
                     break;
                 }
             }
@@ -165,11 +246,11 @@ impl<'a> MapBattlePVE<'a> {
         let return_cmds;
         match system_return {
             SystemReturn::Continue(cmds) => return_cmds = cmds,
-            SystemReturn::RequireCardSelect(cmds) => {
+            SystemReturn::RequireCardSelect(select_count, is_draw, cmds) => {
                 if let FightView::Player = view {
                     return Err(Error::ResourceEffectCardSelectInEnemy);
                 }
-                self.last_output = IterationOutput::RequireCardSelect;
+                self.last_output = IterationOutput::RequireCardSelect(select_count, is_draw);
                 return_cmds = cmds;
             }
             SystemReturn::PendingSystems(pending, cmds) => {
@@ -193,6 +274,9 @@ impl<'a> MapBattlePVE<'a> {
             match cmd {
                 Command::AddLogs(mut logs) => self.fight_logs.append(&mut logs),
                 Command::DrawCards(count) => self.player_draw(count, controller)?,
+                Command::DiscardHandCards(count, to_grave) => {
+                    self.player_random_discard(count, to_grave, controller)?
+                }
             }
         }
         Ok(())

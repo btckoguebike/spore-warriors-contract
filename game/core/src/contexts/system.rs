@@ -49,6 +49,22 @@ impl SystemContext {
         false
     }
 
+    pub fn durable_update(&mut self, other: &Self) -> bool {
+        let Some(duration) = &self.system.duration else {
+            return false;
+        };
+        if self.equal(other) {
+            if let Some(other_duration) = other.system.duration {
+                if duration.trigger == other_duration.trigger {
+                    self.duration_counter = other.duration_counter;
+                    // TODO: combine registers?
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     pub fn is_durable(&self) -> bool {
         self.system.duration.is_some()
     }

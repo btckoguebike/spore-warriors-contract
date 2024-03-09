@@ -17,10 +17,11 @@ mod triggered;
 pub enum Command {
     AddLogs(Vec<FightLog>),
     DrawCards(u8),
+    DiscardHandCards(u8, bool),
 }
 
 pub enum SystemReturn {
-    RequireCardSelect(Vec<Command>),
+    RequireCardSelect(u8, bool, Vec<Command>),
     Continue(Vec<Command>),
     PendingSystems(Vec<System>, Vec<Command>),
 }
@@ -55,8 +56,7 @@ macro_rules! collect_systems {
 
 #[macro_export]
 macro_rules! apply_system {
-    ($iter:ident, $input:ident, $ctxs:ident, $field:ident, $ft:ty, $meth:ident, $log:ident) => {{
-        let mut logs = vec![];
+    ($logs:ident, $iter:ident, $input:ident, $ctxs:ident, $field:ident, $ft:ty, $meth:ident, $log:ident) => {
         if let Some(SystemInput::Trigger(FightLog::GameOver)) = $input {
             return Ok(SystemReturn::Continue(vec![]));
         }
@@ -76,11 +76,10 @@ macro_rules! apply_system {
                 }
                 ContextType::Card => continue,
             };
-            logs.push(FightLog::$log(object.offset(), value));
+            $logs.push(FightLog::$log(object.offset(), value));
         }
-        logs
-    }};
-    ($logs:ident, $iter:ident, $input:ident, $ctxs:ident, $ft:ty, $app:tt) => {{
+    };
+    ($logs:ident, $iter:ident, $input:ident, $ctxs:ident, $ft:ty, $app:tt) => {
         if let Some(SystemInput::Trigger(FightLog::GameOver)) = $input {
             let commands = if $logs.is_empty() {
                 vec![]
@@ -95,7 +94,7 @@ macro_rules! apply_system {
         for object in $ctxs.iter_mut() {
             $app(&mut $logs, *value as $ft, object)?;
         }
-    }};
+    };
 }
 
 impl SystemController {
@@ -112,11 +111,20 @@ impl SystemController {
             (InstantHealing, instant::healing),
             (InstantDrawCountUp, instant::draw_count_up),
             (InstantDrawCountDown, instant::draw_count_down),
-            (InstantAttackPowerUp, instant::attack_power_up),
-            (InstantAttackPowerWeak, instant::attack_power_weak),
-            (InstantDefensePowerUp, instant::defense_power_up),
-            (InstantDefensePowerWeak, instant::defense_power_weak),
+            (InstantAttackUp, instant::attack_up),
+            (InstantAttackDown, instant::attack_down),
+            (InstantAttackWeakUp, instant::attack_weak_up),
+            (InstantAttackWeakDown, instant::attack_weak_down),
+            (InstantDefenseUp, instant::defense_up),
+            (InstantDefenseDown, instant::defense_down),
+            (InstantDefenseWeakUp, instant::defense_weak_up),
+            (InstantDefenseWeakDown, instant::defense_weak_down),
+            (InstantMaxHpUp, instant::max_hp_up),
+            (InstantMaxHpDown, instant::max_hp_down),
             (InstantDrawCards, instant::draw_cards),
+            (InstantDrawSelectCards, instant::draw_select_cards),
+            (InstantDiscardSelectCards, instant::discard_select_cards),
+            (InstantDiscardRandomCards, instant::discard_random_cards),
             (TriggerRecoverHp, triggered::recover_hp)
         );
         Self {

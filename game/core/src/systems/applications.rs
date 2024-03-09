@@ -148,7 +148,7 @@ pub fn attack_power_weak_apply(
         }
         ContextType::Card => return Ok(()),
     }
-    logs.push(FightLog::SystemAttackWeak(object.offset(), value));
+    logs.push(FightLog::SystemAttackWeakUp(object.offset(), value));
     Ok(())
 }
 
@@ -176,7 +176,7 @@ pub fn defense_power_weak_apply(
         }
         ContextType::Card => return Ok(()),
     }
-    logs.push(FightLog::SystemDefenseWeak(object.offset(), value));
+    logs.push(FightLog::SystemDefenseWeakUp(object.offset(), value));
     Ok(())
 }
 
@@ -209,5 +209,43 @@ pub fn draw_count_down_apply(
         ContextType::Enemy | ContextType::Card => return Ok(()),
     };
     logs.push(FightLog::SystemDrawCountDown(value));
+    Ok(())
+}
+
+pub fn max_hp_up_apply(
+    logs: &mut Vec<FightLog>,
+    mut value: u16,
+    object: &mut &mut dyn CtxAdaptor,
+) -> Result<(), Error> {
+    match object.context_type() {
+        ContextType::Warrior => {
+            let warrior = object.warrior()?;
+            let new_max_hp = warrior.max_hp.saturating_add(value);
+            value = new_max_hp - warrior.max_hp;
+            warrior.max_hp += value;
+            warrior.hp = min(warrior.hp + value, warrior.max_hp);
+        }
+        ContextType::Enemy | ContextType::Card => return Ok(()),
+    }
+    logs.push(FightLog::SystemMaxHpUp(value));
+    Ok(())
+}
+
+pub fn max_hp_down_apply(
+    logs: &mut Vec<FightLog>,
+    mut value: u16,
+    object: &mut &mut dyn CtxAdaptor,
+) -> Result<(), Error> {
+    match object.context_type() {
+        ContextType::Warrior => {
+            let warrior = object.warrior()?;
+            let new_max_hp = warrior.max_hp.saturating_sub(value);
+            value = warrior.max_hp - new_max_hp;
+            warrior.max_hp -= value;
+            warrior.hp = warrior.hp.saturating_sub(value);
+        }
+        ContextType::Enemy | ContextType::Card => return Ok(()),
+    }
+    logs.push(FightLog::SystemMaxHpDown(value));
     Ok(())
 }

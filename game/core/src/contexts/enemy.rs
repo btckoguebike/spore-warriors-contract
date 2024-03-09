@@ -3,8 +3,8 @@ use alloc::vec;
 use rand::RngCore;
 
 use crate::contexts::{
-    add_mounting_system_internal, remove_mounting_system_internal, ContextType, CtxAdaptor,
-    SystemContext,
+    add_mounting_system_internal, remove_mounting_system_internal, update_mounting_system_internal,
+    ContextType, CtxAdaptor, SystemContext,
 };
 use crate::errors::Error;
 use crate::wrappings::{Enemy, System};
@@ -87,6 +87,10 @@ impl CtxAdaptor for EnemyContext {
 
     fn add_mounting_system(&mut self, ctx: &SystemContext) -> bool {
         add_mounting_system_internal(ctx, &mut self.mounting_systems)
+    }
+
+    fn update_mounting_system(&mut self, ctx: &SystemContext) -> bool {
+        update_mounting_system_internal(ctx, &mut self.mounting_systems)
     }
 
     fn remove_mounting_system(&mut self, ctx: &SystemContext) -> bool {

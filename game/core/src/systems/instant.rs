@@ -1,18 +1,39 @@
 extern crate alloc;
 use core::slice::Iter;
+use rand::RngCore;
 use spore_warriors_generated as generated;
 
 use crate::apply_system;
 use crate::battle::traits::FightLog;
-use crate::contexts::{ContextType, CtxAdaptor, SystemContext};
+use crate::contexts::{CardContext, ContextType, CtxAdaptor, SystemContext};
 use crate::errors::Error;
 use crate::game::SporeRng;
 use crate::systems::applications::{
     armor_up_apply, attack_apply, attack_power_weak_apply, defense_power_weak_apply,
-    draw_count_down_apply, draw_count_up_apply, healing_apply, shield_up_apply,
+    draw_count_down_apply, draw_count_up_apply, healing_apply, max_hp_down_apply, max_hp_up_apply,
+    shield_up_apply,
 };
 use crate::systems::{Command, SystemInput, SystemReturn};
-use crate::wrappings::{System, Value};
+use crate::wrappings::{Card, System, Value};
+
+enum DeckType {
+    FromDeck,
+    FromGrave,
+    FromResource,
+}
+
+impl TryFrom<&u16> for DeckType {
+    type Error = Error;
+
+    fn try_from(value: &u16) -> Result<Self, Self::Error> {
+        match value {
+            &0u16 => Ok(Self::FromDeck),
+            &1u16 => Ok(Self::FromGrave),
+            &2u16 => Ok(Self::FromResource),
+            _ => Err(Error::BattleUnexpectedDeckType),
+        }
+    }
+}
 
 fn check_extensions<'a>(
     mut iter: Iter<'a, Value>,
@@ -99,8 +120,10 @@ pub fn armor_down(
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
     let mut iter = ctx.system.args.iter();
-    let logs = apply_system!(
+    apply_system!(
+        logs,
         iter,
         input,
         objects,
@@ -134,8 +157,10 @@ pub fn shield_down(
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
     let mut iter = ctx.system.args.iter();
-    let logs = apply_system!(
+    apply_system!(
+        logs,
         iter,
         input,
         objects,
@@ -189,16 +214,46 @@ pub fn draw_count_down(
     check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
-// normally increase ATK, which impacts object's damage
-pub fn attack_power_up(
+// simplely increase max hp value
+pub fn max_hp_up(
     resource_pool: &generated::ResourcePool,
     rng: &mut SporeRng,
     ctx: SystemContext,
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
     let mut iter = ctx.system.args.iter();
-    let logs = apply_system!(
+    apply_system!(logs, iter, input, objects, u16, max_hp_up_apply);
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
+}
+
+// simplely decrease max hp value
+pub fn max_hp_down(
+    resource_pool: &generated::ResourcePool,
+    rng: &mut SporeRng,
+    ctx: SystemContext,
+    objects: &mut [&mut dyn CtxAdaptor],
+    input: Option<SystemInput>,
+) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
+    let mut iter = ctx.system.args.iter();
+    apply_system!(logs, iter, input, objects, u16, max_hp_down_apply);
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
+}
+
+// normally increase ATK, which impacts object's damage
+pub fn attack_up(
+    resource_pool: &generated::ResourcePool,
+    rng: &mut SporeRng,
+    ctx: SystemContext,
+    objects: &mut [&mut dyn CtxAdaptor],
+    input: Option<SystemInput>,
+) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
+    let mut iter = ctx.system.args.iter();
+    apply_system!(
+        logs,
         iter,
         input,
         objects,
@@ -210,16 +265,41 @@ pub fn attack_power_up(
     check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
-// normally increase DEF, which impacts object's sheild and defense
-pub fn defense_power_up(
+// normally decrease ATK
+pub fn attack_down(
     resource_pool: &generated::ResourcePool,
     rng: &mut SporeRng,
     ctx: SystemContext,
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
     let mut iter = ctx.system.args.iter();
-    let logs = apply_system!(
+    apply_system!(
+        logs,
+        iter,
+        input,
+        objects,
+        attack,
+        u8,
+        saturating_sub,
+        SystemAttackPowerDown
+    );
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
+}
+
+// normally increase DEF, which impacts object's sheild and defense
+pub fn defense_up(
+    resource_pool: &generated::ResourcePool,
+    rng: &mut SporeRng,
+    ctx: SystemContext,
+    objects: &mut [&mut dyn CtxAdaptor],
+    input: Option<SystemInput>,
+) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
+    let mut iter = ctx.system.args.iter();
+    apply_system!(
+        logs,
         iter,
         input,
         objects,
@@ -231,8 +311,31 @@ pub fn defense_power_up(
     check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
+// normally decrease DEF
+pub fn defense_down(
+    resource_pool: &generated::ResourcePool,
+    rng: &mut SporeRng,
+    ctx: SystemContext,
+    objects: &mut [&mut dyn CtxAdaptor],
+    input: Option<SystemInput>,
+) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
+    let mut iter = ctx.system.args.iter();
+    apply_system!(
+        logs,
+        iter,
+        input,
+        objects,
+        defense,
+        u8,
+        saturating_sub,
+        SystemDefensePowerDown
+    );
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
+}
+
 // normally increase ATK_WEAK value
-pub fn attack_power_weak(
+pub fn attack_weak_up(
     resource_pool: &generated::ResourcePool,
     rng: &mut SporeRng,
     ctx: SystemContext,
@@ -245,8 +348,31 @@ pub fn attack_power_weak(
     check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
+// normally decrease ATK_WEAK value
+pub fn attack_weak_down(
+    resource_pool: &generated::ResourcePool,
+    rng: &mut SporeRng,
+    ctx: SystemContext,
+    objects: &mut [&mut dyn CtxAdaptor],
+    input: Option<SystemInput>,
+) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
+    let mut iter = ctx.system.args.iter();
+    apply_system!(
+        logs,
+        iter,
+        input,
+        objects,
+        attack_weak,
+        u8,
+        saturating_sub,
+        SystemAttackWeakDown
+    );
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
+}
+
 // normally increase DEF_WEAK value
-pub fn defense_power_weak(
+pub fn defense_weak_up(
     resource_pool: &generated::ResourcePool,
     rng: &mut SporeRng,
     ctx: SystemContext,
@@ -259,7 +385,30 @@ pub fn defense_power_weak(
     check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
 }
 
-// return DrawCard command
+// normally decrease DEF_WEAK value
+pub fn defense_weak_down(
+    resource_pool: &generated::ResourcePool,
+    rng: &mut SporeRng,
+    ctx: SystemContext,
+    objects: &mut [&mut dyn CtxAdaptor],
+    input: Option<SystemInput>,
+) -> Result<SystemReturn, Error> {
+    let mut logs = vec![];
+    let mut iter = ctx.system.args.iter();
+    apply_system!(
+        logs,
+        iter,
+        input,
+        objects,
+        defense_weak,
+        u8,
+        saturating_sub,
+        SystemDefenseWeakDown
+    );
+    check_extensions(iter, resource_pool, rng, vec![Command::AddLogs(logs)])
+}
+
+// just draw cards from main deck
 pub fn draw_cards(
     resource_pool: &generated::ResourcePool,
     rng: &mut SporeRng,
@@ -276,4 +425,123 @@ pub fn draw_cards(
     };
     let commands = vec![Command::DrawCards(*count as u8)];
     check_extensions(iter, resource_pool, rng, commands)
+}
+
+// select cards randomly from particular deck, no extensions
+pub fn draw_select_cards(
+    resource_pool: &generated::ResourcePool,
+    rng: &mut SporeRng,
+    ctx: SystemContext,
+    objects: &mut [&mut dyn CtxAdaptor],
+    input: Option<SystemInput>,
+) -> Result<SystemReturn, Error> {
+    if let Some(SystemInput::Trigger(FightLog::GameOver)) = input {
+        return Ok(SystemReturn::Continue(vec![]));
+    }
+    let mut iter = ctx.system.args.iter();
+    let (Some(Value(deck_type)), Some(Value(select_count))) = (iter.next(), iter.next()) else {
+        return Err(Error::BattleUnexpectedSystemArgs);
+    };
+    let mut resource_pick_info = None;
+    if let (Some(Value(card_class)), Some(Value(pick_count))) = (iter.next(), iter.next()) {
+        if pick_count < select_count {
+            return Err(Error::ResourceBrokenCardSelection);
+        }
+        resource_pick_info = Some((*card_class, *pick_count));
+    }
+    for object in objects {
+        match object.context_type() {
+            ContextType::Warrior => {
+                let warrior = object.warrior()?;
+                match deck_type.try_into()? {
+                    DeckType::FromDeck => {
+                        warrior.card_selection.selection_pool =
+                            warrior.deck.iter().map(|v| v.offset()).collect::<Vec<_>>();
+                    }
+                    DeckType::FromGrave => {
+                        warrior.card_selection.selection_pool = warrior
+                            .grave_deck
+                            .iter()
+                            .map(|v| v.offset())
+                            .collect::<Vec<_>>();
+                    }
+                    DeckType::FromResource => {
+                        let Some((card_class, pick_count)) = resource_pick_info else {
+                            return Err(Error::BattleUnexpectedSystemArgs);
+                        };
+                        let mut avaliable_cards = resource_pool
+                            .card_pool()
+                            .into_iter()
+                            .filter(|card| u8::from(card.class()) == card_class as u8)
+                            .collect::<Vec<_>>();
+                        if pick_count as usize > avaliable_cards.len() {
+                            return Err(Error::BattleUnexpectedSystemArgs);
+                        }
+                        let mut pick_cards = (0..pick_count)
+                            .into_iter()
+                            .map(|_| {
+                                let card_index = rng.next_u32() as usize % avaliable_cards.len();
+                                let card = avaliable_cards.remove(card_index);
+                                Ok(CardContext::new(Card::randomized(
+                                    resource_pool,
+                                    card,
+                                    rng,
+                                )?))
+                            })
+                            .collect::<Result<Vec<_>, _>>()?;
+                        warrior.card_selection.selection_pool =
+                            pick_cards.iter().map(|v| v.offset()).collect::<Vec<_>>();
+                        warrior
+                            .card_selection
+                            .unbelonging_deck
+                            .append(&mut pick_cards);
+                    }
+                }
+            }
+            ContextType::Enemy | ContextType::Card => continue,
+        }
+    }
+    Ok(SystemReturn::RequireCardSelect(
+        *select_count as u8,
+        true,
+        vec![],
+    ))
+}
+
+// discard from hand deck, no extensions
+pub fn discard_select_cards(
+    _: &generated::ResourcePool,
+    _: &mut SporeRng,
+    ctx: SystemContext,
+    _: &mut [&mut dyn CtxAdaptor],
+    input: Option<SystemInput>,
+) -> Result<SystemReturn, Error> {
+    if let Some(SystemInput::Trigger(FightLog::GameOver)) = input {
+        return Ok(SystemReturn::Continue(vec![]));
+    }
+    let mut iter = ctx.system.args.iter();
+    let Some(Value(count)) = iter.next() else {
+        return Err(Error::BattleUnexpectedSystemArgs);
+    };
+    Ok(SystemReturn::RequireCardSelect(*count as u8, false, vec![]))
+}
+
+pub fn discard_random_cards(
+    _: &generated::ResourcePool,
+    _: &mut SporeRng,
+    ctx: SystemContext,
+    _: &mut [&mut dyn CtxAdaptor],
+    input: Option<SystemInput>,
+) -> Result<SystemReturn, Error> {
+    if let Some(SystemInput::Trigger(FightLog::GameOver)) = input {
+        return Ok(SystemReturn::Continue(vec![]));
+    }
+    let mut iter = ctx.system.args.iter();
+    let Some(Value(count)) = iter.next() else {
+        return Err(Error::BattleUnexpectedSystemArgs);
+    };
+    Ok(SystemReturn::Continue(vec![Command::DiscardHandCards(
+        *count as u8,
+        true,
+    )]))
 }
