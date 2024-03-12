@@ -40,6 +40,7 @@ pub enum Error {
     BattleSelectionMismatch,
     BattleUserSelectionMissing,
     BattlePowerInsufficient,
+    BattleUseCountInsufficient,
     BattleEnemyNotFound,
     BattleInstructionNotEmpty,
     BattleInstructionEmpty,

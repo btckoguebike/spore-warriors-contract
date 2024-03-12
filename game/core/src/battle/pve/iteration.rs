@@ -107,11 +107,15 @@ impl<'a> MapBattlePVE<'a> {
         if IterationOutput::Continue != self.last_output {
             return Err(Error::BattleUnexpectedOutput);
         };
+        if self.player_deck.special_use_count >= self.player_deck.special_max_count {
+            return Err(Error::BattleUseCountInsufficient);
+        }
         let cost = self.player_deck.special_card.power_cost;
         if self.player.power < cost {
             return Err(Error::BattlePowerInsufficient);
         }
         self.player.power -= cost;
+        self.player_deck.special_use_count += 1;
         self.trigger_log(FightLog::PowerCost(cost))?;
         self.trigger_log(FightLog::SpecialCardUse)?;
         self.trigger_iteration_systems(

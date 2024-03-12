@@ -13,6 +13,8 @@ use crate::wrappings::{Card, Item, ItemClass, Potion, System, Warrior};
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct WarriorDeckContext {
+    pub special_use_count: u8,
+    pub special_max_count: u8,
     pub special_card: CardContext,
     pub hand_deck: Vec<CardContext>,
     pub deck: Vec<CardContext>,
@@ -30,6 +32,8 @@ impl WarriorDeckContext {
             .map(|card| CardContext::new(card.clone()))
             .collect();
         Self {
+            special_use_count: 0,
+            special_max_count: 1,
             special_card: CardContext::new(warrior.charactor_card.clone()),
             deck,
             hand_deck: vec![],
@@ -116,6 +120,7 @@ impl WarriorDeckContext {
     }
 
     pub fn round_reset(&mut self) {
+        self.special_use_count = 0;
         self.deck.iter_mut().for_each(|v| v.round_reset());
         self.hand_deck.iter_mut().for_each(|v| v.round_reset());
         self.grave_deck.iter_mut().for_each(|v| v.round_reset());

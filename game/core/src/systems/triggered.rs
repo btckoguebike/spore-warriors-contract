@@ -169,7 +169,7 @@ pub fn attack_down(
 }
 
 // decrease card power cost when the other one used with the same card class
-// pub fn card_light_up(
+// pub fn card_cost_light_up(
 //     _: &generated::ResourcePool,
 //     _: &mut SporeRng,
 //     ctx: SystemContext,
@@ -178,13 +178,29 @@ pub fn attack_down(
 //     objects: &mut [&mut dyn CtxAdaptor],
 //     input: Option<SystemInput>,
 // ) -> Result<SystemReturn, Error> {
-//     let mut objects = filter_objects!(objects, { vec![caster] });
-//     let (mut logs, trigger) = match run_trigger(ctx, &mut objects, &input)? {
+//     let mut trigger_objects = filter_objects!(objects, { vec![caster] });
+//     let (logs, trigger) = match run_trigger(ctx, &mut trigger_objects, &input)? {
 //         TriggerResult::BreakOut(result) => return Ok(result),
 //         TriggerResult::Continue(logs, _, trigger) => (logs, trigger),
 //     };
 //     let FightLog::HandCardUse(card_offset) = trigger else {
 //         return Ok(SystemReturn::Continue(vec![Command::AddLogs(logs)]));
 //     };
-//     let card =
+//     let mut used_card = None;
+//     let mut trigger_card = None;
+//     let objects = filter_objects!(objects, { vec![card_offset, caster] });
+//     for object in objects {
+//         if object.offset() == caster {
+//             trigger_card = Some(object.card()?);
+//         } else if object.offset() == card_offset {
+//             used_card = Some(object.card()?);
+//         }
+//     }
+//     let (Some(used_card), Some(trigger_card)) = (used_card, trigger_card) else {
+//         return Err(Error::BattleCardOffsetNotFound);
+//     };
+//     if used_card.card.class == trigger_card.card.class {
+//         trigger_card.power_cost = trigger_card.power_cost.saturating_sub(1);
+//     }
+//     Ok(SystemReturn::Continue(vec![Command::AddLogs(logs)]))
 // }
