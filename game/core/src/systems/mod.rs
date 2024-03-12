@@ -6,7 +6,7 @@ use crate::battle::traits::FightLog;
 use crate::contexts::{CtxAdaptor, SystemContext};
 use crate::errors::Error;
 use crate::game::SporeRng;
-use crate::wrappings::{System, SystemId};
+use crate::wrappings::SystemId;
 
 const MAX_WEAK_COUNT: u8 = 10;
 
@@ -23,7 +23,6 @@ pub enum Command {
 pub enum SystemReturn {
     RequireCardSelect(u8, bool, Vec<Command>),
     Continue(Vec<Command>),
-    PendingSystems(Vec<System>, Vec<Command>),
 }
 
 #[derive(Clone)]
@@ -36,6 +35,8 @@ pub type SystemCallback = fn(
     &generated::ResourcePool,
     &mut SporeRng,
     SystemContext,
+    usize,
+    Vec<usize>,
     &mut [&mut dyn CtxAdaptor],
     Option<SystemInput>,
 ) -> Result<SystemReturn, Error>;
@@ -64,7 +65,7 @@ macro_rules! apply_system {
             return Err(Error::BattleUnexpectedSystemArgs);
         };
         let value = *value as $ft;
-        for object in $ctxs.iter_mut() {
+        for object in $ctxs {
             match object.context_type() {
                 ContextType::Warrior => {
                     let warrior = object.warrior()?;
@@ -91,9 +92,19 @@ macro_rules! apply_system {
         let Some(Value(value)) = $iter.next() else {
             return Err(Error::BattleUnexpectedSystemArgs);
         };
-        for object in $ctxs.iter_mut() {
+        for object in $ctxs {
             $app(&mut $logs, *value as $ft, object)?;
         }
+    };
+}
+
+#[macro_export]
+macro_rules! filter_objects {
+    ($objs:ident, $filters:tt) => {
+        $objs
+            .into_iter()
+            .filter(|v| $filters.contains(&v.offset()))
+            .collect::<Vec<_>>()
     };
 }
 
@@ -123,9 +134,14 @@ impl SystemController {
             (InstantMaxHpDown, instant::max_hp_down),
             (InstantDrawCards, instant::draw_cards),
             (InstantDrawSelectCards, instant::draw_select_cards),
+            (InstantDiscardCards, instant::discard_cards),
             (InstantDiscardSelectCards, instant::discard_select_cards),
-            (InstantDiscardRandomCards, instant::discard_random_cards),
-            (TriggerRecoverHp, triggered::recover_hp)
+            (InstantPowerCostDown, instant::card_power_cost_down),
+            (InstantChangePowerCost, instant::change_random_card_cost),
+            (TriggerRecoverHp, triggered::recover_hp),
+            (TriggerRecoverHpAttack, triggered::recover_hp_to_attack),
+            (TriggerAttackUp, triggered::attack_up),
+            (TriggerAttackDown, triggered::attack_down)
         );
         Self {
             resource_pool,
@@ -137,6 +153,8 @@ impl SystemController {
     pub fn system_call(
         &mut self,
         ctx: SystemContext,
+        caster: usize,
+        targets: Vec<usize>,
         objects: &mut [&mut dyn CtxAdaptor],
         system_input: Option<SystemInput>,
     ) -> Result<SystemReturn, Error> {
@@ -148,6 +166,8 @@ impl SystemController {
             &self.resource_pool,
             &mut self.rng,
             ctx,
+            caster,
+            targets,
             objects,
             system_input,
         )

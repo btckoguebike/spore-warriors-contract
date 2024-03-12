@@ -1,6 +1,5 @@
 use spore_warriors_generated as generated;
 
-use crate::apply_system;
 use crate::battle::traits::FightLog;
 use crate::contexts::{ContextType, CtxAdaptor, SystemContext};
 use crate::errors::Error;
@@ -8,6 +7,7 @@ use crate::game::SporeRng;
 use crate::systems::applications::healing_apply;
 use crate::systems::{Command, SystemInput, SystemReturn};
 use crate::wrappings::Value;
+use crate::{apply_system, filter_objects};
 
 use super::applications::attack_apply;
 
@@ -18,7 +18,7 @@ enum TriggerResult {
 
 fn run_trigger(
     mut ctx: SystemContext,
-    objects: &mut [&mut dyn CtxAdaptor],
+    objects: &mut Vec<&mut &mut dyn CtxAdaptor>,
     input: &Option<SystemInput>,
 ) -> Result<TriggerResult, Error> {
     let Some(SystemInput::Trigger(trigger)) = &input else {
@@ -60,10 +60,13 @@ pub fn recover_hp(
     _: &generated::ResourcePool,
     _: &mut SporeRng,
     ctx: SystemContext,
+    _: usize,
+    targets: Vec<usize>,
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
-    let (mut logs, ctx) = match run_trigger(ctx, objects, &input)? {
+    let mut objects = filter_objects!(objects, targets);
+    let (mut logs, ctx) = match run_trigger(ctx, &mut objects, &input)? {
         TriggerResult::BreakOut(result) => return Ok(result),
         TriggerResult::Continue(logs, ctx, _) => (logs, ctx),
     };
@@ -72,37 +75,53 @@ pub fn recover_hp(
     Ok(SystemReturn::Continue(vec![Command::AddLogs(logs)]))
 }
 
+// recover hp and then turn to damage on other object
 pub fn recover_hp_to_attack(
     _: &generated::ResourcePool,
     _: &mut SporeRng,
     ctx: SystemContext,
+    caster: usize,
+    targets: Vec<usize>,
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
-    let (mut logs, _, trigger) = match run_trigger(ctx, objects, &input)? {
+    let mut trigger_objects = filter_objects!(objects, { vec![caster] });
+    let (mut logs, mut ctx, trigger) = match run_trigger(ctx, &mut trigger_objects, &input)? {
         TriggerResult::BreakOut(result) => return Ok(result),
         TriggerResult::Continue(logs, ctx, trigger) => (logs, ctx, trigger),
-    };
-    let FightLog::SystemRecoverHp(_, hp) = trigger else {
-        return Ok(SystemReturn::Continue(vec![Command::AddLogs(logs)]));
     };
     if let Some(SystemInput::Trigger(FightLog::GameOver)) = input {
         return Ok(SystemReturn::Continue(vec![]));
     }
-    for object in objects.iter_mut() {
+    let FightLog::SystemRecoverHp(_, hp) = trigger else {
+        return Ok(SystemReturn::Continue(vec![Command::AddLogs(logs)]));
+    };
+    if ctx.register_3.is_empty() {
+        ctx.register_3 = targets;
+        trigger_objects.iter_mut().for_each(|object| {
+            object.update_mounting_system(&ctx);
+            logs.push(FightLog::UpdateSystem(object.offset(), ctx.clone()));
+        });
+    }
+    let objects = filter_objects!(objects, { &ctx.register_3 });
+    for object in objects {
         attack_apply(&mut logs, hp, object)?;
     }
     Ok(SystemReturn::Continue(vec![Command::AddLogs(logs)]))
 }
 
+// roundly increase object's attack power
 pub fn attack_up(
     _: &generated::ResourcePool,
     _: &mut SporeRng,
     ctx: SystemContext,
+    caster: usize,
+    _: Vec<usize>,
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
-    let (mut logs, ctx) = match run_trigger(ctx, objects, &input)? {
+    let mut objects = filter_objects!(objects, { vec![caster] });
+    let (mut logs, ctx) = match run_trigger(ctx, &mut objects, &input)? {
         TriggerResult::BreakOut(result) => return Ok(result),
         TriggerResult::Continue(logs, ctx, _) => (logs, ctx),
     };
@@ -120,14 +139,18 @@ pub fn attack_up(
     Ok(SystemReturn::Continue(vec![Command::AddLogs(logs)]))
 }
 
+// roundly decrease object's attack power
 pub fn attack_down(
     _: &generated::ResourcePool,
     _: &mut SporeRng,
     ctx: SystemContext,
+    caster: usize,
+    _: Vec<usize>,
     objects: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
-    let (mut logs, ctx) = match run_trigger(ctx, objects, &input)? {
+    let mut objects = filter_objects!(objects, { vec![caster] });
+    let (mut logs, ctx) = match run_trigger(ctx, &mut objects, &input)? {
         TriggerResult::BreakOut(result) => return Ok(result),
         TriggerResult::Continue(logs, ctx, _) => (logs, ctx),
     };
@@ -144,3 +167,24 @@ pub fn attack_down(
     );
     Ok(SystemReturn::Continue(vec![Command::AddLogs(logs)]))
 }
+
+// decrease card power cost when the other one used with the same card class
+// pub fn card_light_up(
+//     _: &generated::ResourcePool,
+//     _: &mut SporeRng,
+//     ctx: SystemContext,
+//     caster: usize,
+//     _: Vec<usize>,
+//     objects: &mut [&mut dyn CtxAdaptor],
+//     input: Option<SystemInput>,
+// ) -> Result<SystemReturn, Error> {
+//     let mut objects = filter_objects!(objects, { vec![caster] });
+//     let (mut logs, trigger) = match run_trigger(ctx, &mut objects, &input)? {
+//         TriggerResult::BreakOut(result) => return Ok(result),
+//         TriggerResult::Continue(logs, _, trigger) => (logs, trigger),
+//     };
+//     let FightLog::HandCardUse(card_offset) = trigger else {
+//         return Ok(SystemReturn::Continue(vec![Command::AddLogs(logs)]));
+//     };
+//     let card =
+// }

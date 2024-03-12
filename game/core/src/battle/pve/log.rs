@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 
 use crate::battle::pve::{FightView, Instruction, MapBattlePVE};
 use crate::battle::traits::FightLog;
-use crate::contexts::SystemContext;
+use crate::contexts::{CtxAdaptor, SystemContext};
 use crate::errors::Error;
 use crate::systems::SystemInput;
 
@@ -17,10 +17,9 @@ impl<'a> MapBattlePVE<'a> {
         )?;
         self.opponents
             .iter()
-            .map(|enemy| enemy.mounting_systems.clone())
+            .map(|enemy| (enemy.offset(), enemy.mounting_systems.clone()))
             .collect::<Vec<_>>()
             .into_iter()
-            .enumerate()
             .map(|(offset, contexts)| {
                 self.trigger_mounting_systems(FightView::Enemy, contexts, Some(offset), log.clone())
             })

@@ -26,6 +26,7 @@ pub struct WarriorContext {
     pub hp: u16,
     pub gold: u16,
     pub power: u8,
+    pub max_power: u8,
     pub armor: u16,
     pub shield: u16,
     pub attack: u8,
@@ -64,6 +65,7 @@ impl WarriorContext {
             hp: warrior.hp,
             gold: warrior.gold,
             power: warrior.power,
+            max_power: warrior.power,
             armor: warrior.armor as u16,
             shield: warrior.shield as u16,
             attack: warrior.attack,
@@ -104,7 +106,7 @@ impl WarriorContext {
         player
     }
 
-    pub fn refer_card(&mut self, offset: usize) -> Option<&mut CardContext> {
+    pub fn refer_card(&mut self, offset: usize) -> Option<&mut dyn CtxAdaptor> {
         if self.special_card.offset() == offset {
             return Some(&mut self.special_card);
         }
@@ -154,6 +156,13 @@ impl WarriorContext {
             .iter()
             .for_each(|v| collection.push((v.offset(), v.card.system_pool.clone())));
         collection
+    }
+
+    pub fn round_reset(&mut self) {
+        self.power = self.max_power;
+        self.deck.iter_mut().for_each(|v| v.round_reset());
+        self.hand_deck.iter_mut().for_each(|v| v.round_reset());
+        self.grave_deck.iter_mut().for_each(|v| v.round_reset());
     }
 
     pub fn reset(&mut self) {

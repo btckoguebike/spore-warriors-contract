@@ -13,6 +13,7 @@ use alloc::vec::Vec;
 
 use crate::errors::Error;
 
+#[derive(PartialEq)]
 pub enum ContextType {
     Warrior,
     Enemy,

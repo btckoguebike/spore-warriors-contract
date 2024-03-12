@@ -141,9 +141,13 @@ pub enum SystemId {
     InstantDrawCards,
     InstantDrawSelectCards,
     InstantDiscardSelectCards,
-    InstantDiscardRandomCards,
-
+    InstantDiscardCards,
+    InstantPowerCostDown,
+    InstantChangePowerCost,
     TriggerRecoverHp,
+    TriggerRecoverHpAttack,
+    TriggerAttackUp,
+    TriggerAttackDown,
 }
 
 impl From<SystemId> for u16 {
@@ -179,8 +183,13 @@ impl TryFrom<u16> for SystemId {
             19 => Ok(Self::InstantDrawCards),
             20 => Ok(Self::InstantDrawSelectCards),
             21 => Ok(Self::InstantDiscardSelectCards),
-            22 => Ok(Self::InstantDiscardRandomCards),
-            23 => Ok(Self::TriggerRecoverHp),
+            22 => Ok(Self::InstantDiscardCards),
+            23 => Ok(Self::InstantPowerCostDown),
+            24 => Ok(Self::InstantChangePowerCost),
+            25 => Ok(Self::TriggerRecoverHp),
+            26 => Ok(Self::TriggerRecoverHpAttack),
+            27 => Ok(Self::TriggerAttackUp),
+            28 => Ok(Self::TriggerAttackDown),
             _ => Err(Error::ResourceBrokenSystemId),
         }
     }
@@ -561,6 +570,19 @@ impl Card {
             System,
             rng
         )?;
+        let mut select_object = false;
+        system_pool
+            .iter()
+            .map(|v| {
+                if v.target_type == RequireTarget::Opponent {
+                    if select_object {
+                        return Err(Error::ResourceEffectMultiTargetInSystemPool);
+                    }
+                    select_object = true;
+                }
+                Ok(())
+            })
+            .collect::<Result<_, _>>()?;
         Ok(Self {
             offset: OFFSET.fetch_add(1, core::sync::atomic::Ordering::SeqCst),
             id: value.id().into(),

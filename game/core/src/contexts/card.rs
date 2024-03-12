@@ -16,7 +16,8 @@ use super::update_mounting_system_internal;
 pub struct CardContext {
     pub card: Card,
     pub power_cost: u8,
-    pub max_power_cost: u8,
+    pub battle_max_power_cost: u8,
+    pub game_max_power_cost: u8,
     pub mounting_systems: Vec<SystemContext>,
 }
 
@@ -24,14 +25,19 @@ impl CardContext {
     pub fn new(card: Card) -> Self {
         Self {
             power_cost: card.power_cost,
-            max_power_cost: card.power_cost,
+            battle_max_power_cost: card.power_cost,
+            game_max_power_cost: card.power_cost,
             mounting_systems: vec![],
             card,
         }
     }
 
+    pub fn round_reset(&mut self) {
+        self.power_cost = self.battle_max_power_cost;
+    }
+
     pub fn reset(&mut self) {
-        self.power_cost = self.max_power_cost;
+        self.power_cost = self.game_max_power_cost;
     }
 }
 

@@ -9,7 +9,7 @@ pub struct SystemContext {
     pub duration_counter: u16,
     pub register_1: Option<u16>,
     pub register_2: Option<u16>,
-    pub register_3: Option<u16>,
+    pub register_3: Vec<usize>,
 }
 
 impl SystemContext {
@@ -19,7 +19,7 @@ impl SystemContext {
             duration_counter: 0,
             register_1: None,
             register_2: None,
-            register_3: None,
+            register_3: Default::default(),
         }
     }
 

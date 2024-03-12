@@ -18,7 +18,7 @@ pub enum Error {
     ResourceBrokenUniqueId,
     ResourceBrokenDurationCount,
 
-    ResourceEffectMultiTargetInEffectPool,
+    ResourceEffectMultiTargetInSystemPool,
     ResourceEffectSetupConflict,
     ResourceEffectCardSelectInEnemy,
     ResourceEffectNotNegative,

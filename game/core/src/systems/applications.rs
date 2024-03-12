@@ -249,3 +249,20 @@ pub fn max_hp_down_apply(
     logs.push(FightLog::SystemMaxHpDown(value));
     Ok(())
 }
+
+pub fn power_cost_down_apply(
+    logs: &mut Vec<FightLog>,
+    mut value: u8,
+    object: &mut &mut dyn CtxAdaptor,
+) -> Result<(), Error> {
+    match object.context_type() {
+        ContextType::Card => {
+            let card = object.card()?;
+            card.power_cost = card.power_cost.saturating_sub(value);
+            value = card.power_cost;
+        }
+        ContextType::Warrior | ContextType::Enemy => return Ok(()),
+    }
+    logs.push(FightLog::SystemPowerCostChange(object.offset(), value));
+    Ok(())
+}

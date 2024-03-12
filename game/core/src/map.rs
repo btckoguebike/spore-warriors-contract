@@ -16,8 +16,15 @@ fn run_context(
     system: System,
     controller: &mut SystemController,
 ) -> Result<Vec<FightLog>, Error> {
+    let player_offset = player.offset();
     let mut system_contexts: Vec<&mut dyn CtxAdaptor> = vec![player];
-    let system_return = controller.system_call(system.into(), &mut system_contexts, None)?;
+    let system_return = controller.system_call(
+        system.into(),
+        player_offset,
+        vec![],
+        &mut system_contexts,
+        None,
+    )?;
     if let SystemReturn::Continue(cmds) = system_return {
         let mut context_logs = vec![];
         cmds.into_iter().for_each(|v| {

@@ -103,11 +103,6 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
                 return Ok((self.last_output, logs));
             }
         }
-        #[cfg(feature = "debug")]
-        self.trigger_log(FightLog::Snapshot(
-            self.player.clone(),
-            self.opponents.iter().map(|v| v.clone()).collect(),
-        ))?;
         let logs = self.fight_logs.drain(..).collect();
         Ok((self.last_output, logs))
     }
@@ -130,7 +125,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
         for target in &required_targets {
             if let RequireTarget::Opponent = target {
                 if select_required {
-                    return Err(Error::ResourceEffectMultiTargetInEffectPool);
+                    return Err(Error::ResourceEffectMultiTargetInSystemPool);
                 }
                 select_required = true;
             }

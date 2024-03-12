@@ -3,6 +3,7 @@ use alloc::vec::Vec;
 
 use crate::battle::pve::{FightView, Instruction, MapBattlePVE};
 use crate::battle::traits::{FightLog, IterationInput, IterationOutput, Selection};
+use crate::contexts::CtxAdaptor;
 use crate::errors::Error;
 use crate::systems::SystemController;
 use crate::wrappings::System;
@@ -91,11 +92,11 @@ impl<'a> MapBattlePVE<'a> {
         if self.player.power < context.power_cost {
             return Err(Error::BattlePowerInsufficient);
         }
-        let effects = context.card.system_pool.clone();
+        let systems = context.card.system_pool.clone();
         self.trigger_log(FightLog::PowerCost(context.power_cost))?;
-        self.trigger_log(FightLog::HandCardUse(card_index))?;
+        self.trigger_log(FightLog::HandCardUse(context.offset()))?;
         self.player.grave_deck.push(context);
-        self.trigger_iteration_systems(FightView::Player, effects, target, controller)
+        self.trigger_iteration_systems(FightView::Player, systems, target, controller)
     }
 
     fn iterate_special_card_use(
@@ -178,10 +179,17 @@ impl<'a> MapBattlePVE<'a> {
             return Err(Error::BattleInstructionNotEmpty);
         }
         self.round += 1;
-        self.player.power = self.player.warrior.power;
-        self.trigger_log(FightLog::PlayerTurn(self.round))?;
+        self.player.round_reset();
         self.trigger_log(FightLog::RecoverPower)?;
+        self.trigger_log(FightLog::RecoverCardCost)?;
+        self.trigger_log(FightLog::PlayerTurn(self.round))?;
         self.player_draw(self.player.draw_count, controller)?;
+
+        #[cfg(feature = "debug")]
+        self.trigger_log(FightLog::Snapshot(
+            self.player.clone(),
+            self.opponents.iter().map(|v| v.clone()).collect(),
+        ))?;
 
         let output = self.operate_pending_instructions(controller)?;
         if IterationOutput::Continue == output {
