@@ -38,6 +38,7 @@ impl CardContext {
 
     pub fn reset(&mut self) {
         self.power_cost = self.game_max_power_cost;
+        self.mounting_systems.clear();
     }
 }
 

@@ -4,7 +4,7 @@ use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 use spore_warriors_generated as generated;
 
-use crate::contexts::WarriorContext;
+use crate::contexts::{WarriorContext, WarriorDeckContext};
 use crate::errors::Error;
 use crate::map::MapSkeleton;
 use crate::systems::SystemController;
@@ -95,7 +95,7 @@ impl Game {
         &mut self,
         player_id: u16,
         player_point: Point,
-    ) -> Result<WarriorContext, Error> {
+    ) -> Result<(WarriorContext, WarriorDeckContext), Error> {
         let resource_pool = &self.controller.resource_pool;
         let rng = &mut self.controller.rng;
         let warrior = {

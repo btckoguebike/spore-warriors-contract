@@ -3,7 +3,7 @@ use alloc::collections::VecDeque;
 use alloc::{vec, vec::Vec};
 
 use crate::battle::traits::{FightLog, IterationInput, IterationOutput, Selection, SimplePVE};
-use crate::contexts::{EnemyContext, SystemContext, WarriorContext};
+use crate::contexts::{EnemyContext, SystemContext, WarriorContext, WarriorDeckContext};
 use crate::errors::Error;
 use crate::systems::{SystemController, SystemInput};
 use crate::wrappings::{Enemy, ItemClass, RequireTarget};
@@ -28,6 +28,7 @@ struct Instruction {
 
 pub struct MapBattlePVE<'a> {
     player: &'a mut WarriorContext,
+    player_deck: &'a mut WarriorDeckContext,
     opponents: Vec<EnemyContext>,
     round: u8,
     fight_logs: Vec<FightLog>,
@@ -36,7 +37,11 @@ pub struct MapBattlePVE<'a> {
 }
 
 impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
-    fn create(player: &'a mut WarriorContext, enemies: Vec<Enemy>) -> Result<Self, Error> {
+    fn create(
+        player: &'a mut WarriorContext,
+        player_deck: &'a mut WarriorDeckContext,
+        enemies: Vec<Enemy>,
+    ) -> Result<Self, Error> {
         let opponents = enemies
             .into_iter()
             .enumerate()
@@ -44,6 +49,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
             .collect();
         Ok(Self {
             player,
+            player_deck,
             opponents,
             round: 0,
             fight_logs: vec![],
@@ -72,8 +78,8 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
             self.player.clone(),
             self.opponents.iter().map(|v| v.clone()).collect(),
         ))?;
-        self.player
-            .collect_card_systems()
+        self.player_deck
+            .collect_systems()
             .into_iter()
             .map(|(offset, effects)| {
                 self.trigger_iteration_systems(FightView::Card(offset), effects, None, controller)
@@ -112,7 +118,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
             return Err(Error::BattleOperationMismatch);
         };
         let required_targets = self
-            .player
+            .player_deck
             .hand_deck
             .get(index)
             .ok_or(Error::BattleSelectionError)?

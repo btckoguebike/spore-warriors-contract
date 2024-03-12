@@ -1,7 +1,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use crate::contexts::{EnemyContext, SystemContext, WarriorContext};
+use crate::contexts::{EnemyContext, SystemContext, WarriorContext, WarriorDeckContext};
 use crate::errors::Error;
 use crate::systems::SystemController;
 use crate::wrappings::Enemy;
@@ -137,7 +137,11 @@ pub trait SimplePVE<'a>
 where
     Self: Sized,
 {
-    fn create(player: &'a mut WarriorContext, enemies: Vec<Enemy>) -> Result<Self, Error>;
+    fn create(
+        player: &'a mut WarriorContext,
+        player_deck: &'a mut WarriorDeckContext,
+        enemies: Vec<Enemy>,
+    ) -> Result<Self, Error>;
 
     fn start(
         &mut self,

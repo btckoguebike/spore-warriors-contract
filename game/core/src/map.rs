@@ -4,7 +4,7 @@ use core::cmp::{max, min};
 
 use crate::battle::pve::MapBattlePVE;
 use crate::battle::traits::{FightLog, SimplePVE};
-use crate::contexts::{CardContext, CtxAdaptor, WarriorContext};
+use crate::contexts::{CardContext, CtxAdaptor, WarriorContext, WarriorDeckContext};
 use crate::errors::Error;
 use crate::systems::{Command, SystemController, SystemReturn};
 use crate::wrappings::{
@@ -40,6 +40,7 @@ fn run_context(
 
 fn purchase_cards(
     player: &mut WarriorContext,
+    player_deck: &mut WarriorDeckContext,
     user_imported: Vec<usize>,
     cards: &Vec<Card>,
 ) -> Result<Vec<()>, Error> {
@@ -51,7 +52,7 @@ fn purchase_cards(
                 return Err(Error::SceneMerchantInsufficientGold);
             }
             player.gold -= card.price;
-            player.deck.push(CardContext::new(card.clone()));
+            player_deck.deck.push(CardContext::new(card.clone()));
             Ok(())
         })
         .collect::<Result<Vec<_>, _>>()
@@ -183,6 +184,7 @@ impl<'a> MapSkeleton {
     pub fn move_to(
         &'a mut self,
         player: &'a mut WarriorContext,
+        player_deck: &'a mut WarriorDeckContext,
         player_point: Point,
         user_imported: Vec<usize>,
         controller: &'a mut SystemController,
@@ -216,14 +218,14 @@ impl<'a> MapSkeleton {
                     .collect::<Result<_, _>>()?;
             }
             Node::Enemy(enemies) => {
-                let fight = MapBattlePVE::create(player, enemies.clone())?;
+                let fight = MapBattlePVE::create(player, player_deck, enemies.clone())?;
                 return Ok(MoveResult::Fight(fight));
             }
             Node::ItemMerchant(items) => {
                 collect_items(player, user_imported, items, true)?;
             }
             Node::CardMerchant(cards) => {
-                purchase_cards(player, user_imported, cards)?;
+                purchase_cards(player, player_deck, user_imported, cards)?;
             }
             Node::TreasureChest(items, pick_count) => {
                 if user_imported.len() > *pick_count as usize {

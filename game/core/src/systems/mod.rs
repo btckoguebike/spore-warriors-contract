@@ -1,9 +1,10 @@
 extern crate alloc;
+use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use spore_warriors_generated as generated;
 
 use crate::battle::traits::FightLog;
-use crate::contexts::{CtxAdaptor, SystemContext};
+use crate::contexts::{CtxAdaptor, SystemContext, WarriorDeckContext};
 use crate::errors::Error;
 use crate::game::SporeRng;
 use crate::wrappings::SystemId;
@@ -20,8 +21,11 @@ pub enum Command {
     DiscardHandCards(u8, bool),
 }
 
+type DeckOperator = Box<dyn FnMut(&mut WarriorDeckContext) -> Vec<FightLog>>;
+
 pub enum SystemReturn {
-    RequireCardSelect(u8, bool, Vec<Command>),
+    RequireCardSelect(u8, bool, Option<DeckOperator>),
+    RequireDeckChange(DeckOperator),
     Continue(Vec<Command>),
 }
 

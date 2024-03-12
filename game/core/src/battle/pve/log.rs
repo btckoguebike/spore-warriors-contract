@@ -24,8 +24,8 @@ impl<'a> MapBattlePVE<'a> {
                 self.trigger_mounting_systems(FightView::Enemy, contexts, Some(offset), log.clone())
             })
             .collect::<Result<Vec<_>, _>>()?;
-        self.player
-            .collect_card_mountings()
+        self.player_deck
+            .collect_mountings()
             .into_iter()
             .map(|(card_offset, system_offsets)| {
                 self.trigger_mounting_systems(

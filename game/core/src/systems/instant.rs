@@ -1,9 +1,11 @@
 extern crate alloc;
+use alloc::boxed::Box;
+use alloc::{vec, vec::Vec};
 use rand::RngCore;
 use spore_warriors_generated as generated;
 
 use crate::battle::traits::FightLog;
-use crate::contexts::{CardContext, ContextType, CtxAdaptor, SystemContext};
+use crate::contexts::{CardContext, ContextType, CtxAdaptor, SystemContext, WarriorDeckContext};
 use crate::errors::Error;
 use crate::game::SporeRng;
 use crate::systems::applications::{
@@ -15,6 +17,7 @@ use crate::systems::{Command, SystemInput, SystemReturn};
 use crate::wrappings::{Card, Value};
 use crate::{apply_system, filter_objects};
 
+#[derive(PartialEq)]
 enum DeckType {
     FromDeck,
     FromGrave,
@@ -467,8 +470,8 @@ pub fn draw_select_cards(
     rng: &mut SporeRng,
     ctx: SystemContext,
     _: usize,
-    targets: Vec<usize>,
-    objects: &mut [&mut dyn CtxAdaptor],
+    _: Vec<usize>,
+    _: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
     if let Some(SystemInput::Trigger(FightLog::GameOver)) = input {
@@ -485,63 +488,62 @@ pub fn draw_select_cards(
         }
         resource_pick_info = Some((*card_class, *pick_count));
     }
-    let objects = filter_objects!(objects, targets);
-    for object in objects {
-        match object.context_type() {
-            ContextType::Warrior => {
-                let warrior = object.warrior()?;
-                match deck_type.try_into()? {
-                    DeckType::FromDeck => {
-                        warrior.card_selection.selection_pool =
-                            warrior.deck.iter().map(|v| v.offset()).collect::<Vec<_>>();
-                    }
-                    DeckType::FromGrave => {
-                        warrior.card_selection.selection_pool = warrior
-                            .grave_deck
-                            .iter()
-                            .map(|v| v.offset())
-                            .collect::<Vec<_>>();
-                    }
-                    DeckType::FromResource => {
-                        let Some((card_class, pick_count)) = resource_pick_info else {
-                            return Err(Error::BattleUnexpectedSystemArgs);
-                        };
-                        let mut avaliable_cards = resource_pool
-                            .card_pool()
-                            .into_iter()
-                            .filter(|card| u8::from(card.class()) == card_class as u8)
-                            .collect::<Vec<_>>();
-                        if pick_count as usize > avaliable_cards.len() {
-                            return Err(Error::BattleUnexpectedSystemArgs);
-                        }
-                        let mut pick_cards = (0..pick_count)
-                            .into_iter()
-                            .map(|_| {
-                                let card_index = rng.next_u32() as usize % avaliable_cards.len();
-                                let card = avaliable_cards.remove(card_index);
-                                Ok(CardContext::new(Card::randomized(
-                                    resource_pool,
-                                    card,
-                                    rng,
-                                )?))
-                            })
-                            .collect::<Result<Vec<_>, _>>()?;
-                        warrior.card_selection.selection_pool =
-                            pick_cards.iter().map(|v| v.offset()).collect::<Vec<_>>();
-                        warrior
-                            .card_selection
-                            .unbelonging_deck
-                            .append(&mut pick_cards);
-                    }
-                }
-            }
-            ContextType::Enemy | ContextType::Card => continue,
+    let deck_type = deck_type.try_into()?;
+    let mut pick_cards = vec![];
+    if DeckType::FromResource == deck_type {
+        let Some((card_class, pick_count)) = resource_pick_info else {
+            return Err(Error::BattleUnexpectedSystemArgs);
+        };
+        let mut avaliable_cards = resource_pool
+            .card_pool()
+            .into_iter()
+            .filter(|card| u8::from(card.class()) == card_class as u8)
+            .collect::<Vec<_>>();
+        if pick_count as usize > avaliable_cards.len() {
+            return Err(Error::BattleUnexpectedSystemArgs);
         }
+        pick_cards = (0..pick_count)
+            .into_iter()
+            .map(|_| {
+                let card_index = rng.next_u32() as usize % avaliable_cards.len();
+                let card = avaliable_cards.remove(card_index);
+                Ok(CardContext::new(Card::randomized(
+                    resource_pool,
+                    card,
+                    rng,
+                )?))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
     }
+    let operator = move |player_deck: &mut WarriorDeckContext| {
+        match deck_type {
+            DeckType::FromDeck => {
+                player_deck.selection_pool = player_deck
+                    .deck
+                    .iter()
+                    .map(|v| v.offset())
+                    .collect::<Vec<_>>();
+            }
+            DeckType::FromGrave => {
+                player_deck.selection_pool = player_deck
+                    .grave_deck
+                    .iter()
+                    .map(|v| v.offset())
+                    .collect::<Vec<_>>();
+            }
+            DeckType::FromResource => {
+                player_deck.selection_pool =
+                    pick_cards.iter().map(|v| v.offset()).collect::<Vec<_>>();
+                player_deck.unbelonging_deck.append(&mut pick_cards);
+            }
+        };
+        vec![]
+    };
+
     Ok(SystemReturn::RequireCardSelect(
         *select_count as u8,
         true,
-        vec![],
+        Some(Box::new(operator)),
     ))
 }
 
@@ -583,7 +585,7 @@ pub fn discard_select_cards(
     let Some(Value(count)) = iter.next() else {
         return Err(Error::BattleUnexpectedSystemArgs);
     };
-    Ok(SystemReturn::RequireCardSelect(*count as u8, false, vec![]))
+    Ok(SystemReturn::RequireCardSelect(*count as u8, false, None))
 }
 
 // decrease card power cost only in battle
@@ -609,8 +611,8 @@ pub fn change_random_card_cost(
     rng: &mut SporeRng,
     ctx: SystemContext,
     _: usize,
-    targets: Vec<usize>,
-    objects: &mut [&mut dyn CtxAdaptor],
+    _: Vec<usize>,
+    _: &mut [&mut dyn CtxAdaptor],
     input: Option<SystemInput>,
 ) -> Result<SystemReturn, Error> {
     if let Some(SystemInput::Trigger(FightLog::GameOver)) = input {
@@ -620,25 +622,16 @@ pub fn change_random_card_cost(
     let Some(Value(cost)) = iter.next() else {
         return Err(Error::BattleUnexpectedSystemArgs);
     };
-    let mut logs = vec![];
-    let objects = filter_objects!(objects, targets);
-    for object in objects {
-        match object.context_type() {
-            ContextType::Warrior => {
-                let warrior = object.warrior()?;
-                if warrior.hand_deck.is_empty() {
-                    continue;
-                }
-                let card_index = rng.next_u32() as usize % warrior.hand_deck.len();
-                let card = warrior.hand_deck.get_mut(card_index).unwrap();
-                card.power_cost = *cost as u8;
-            }
-            ContextType::Enemy | ContextType::Card => continue,
+    let value = *cost as u8;
+    let random_value = rng.next_u32() as usize;
+    let operator = move |player_deck: &mut WarriorDeckContext| {
+        if player_deck.hand_deck.is_empty() {
+            return vec![];
         }
-        logs.push(FightLog::SystemPowerCostChange(
-            object.offset(),
-            *cost as u8,
-        ));
-    }
-    Ok(SystemReturn::Continue(vec![Command::AddLogs(logs)]))
+        let card_index = random_value % player_deck.hand_deck.len();
+        let card = player_deck.hand_deck.get_mut(card_index).unwrap();
+        card.power_cost = value;
+        vec![FightLog::SystemPowerCostChange(card.offset(), value)]
+    };
+    Ok(SystemReturn::RequireDeckChange(Box::new(operator)))
 }

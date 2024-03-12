@@ -82,20 +82,20 @@ impl<'a> MapBattlePVE<'a> {
         target: Option<usize>,
         controller: &mut SystemController,
     ) -> Result<IterationOutput, Error> {
-        if card_index >= self.player.hand_deck.len() {
+        if card_index >= self.player_deck.hand_deck.len() {
             return Err(Error::BattleSelectionError);
         }
         if IterationOutput::Continue != self.last_output {
             return Err(Error::BattleUnexpectedOutput);
         };
-        let context = self.player.hand_deck.remove(card_index);
+        let context = self.player_deck.hand_deck.remove(card_index);
         if self.player.power < context.power_cost {
             return Err(Error::BattlePowerInsufficient);
         }
         let systems = context.card.system_pool.clone();
         self.trigger_log(FightLog::PowerCost(context.power_cost))?;
         self.trigger_log(FightLog::HandCardUse(context.offset()))?;
-        self.player.grave_deck.push(context);
+        self.player_deck.grave_deck.push(context);
         self.trigger_iteration_systems(FightView::Player, systems, target, controller)
     }
 
@@ -107,7 +107,7 @@ impl<'a> MapBattlePVE<'a> {
         if IterationOutput::Continue != self.last_output {
             return Err(Error::BattleUnexpectedOutput);
         };
-        let cost = self.player.special_card.power_cost;
+        let cost = self.player_deck.special_card.power_cost;
         if self.player.power < cost {
             return Err(Error::BattlePowerInsufficient);
         }
@@ -116,7 +116,7 @@ impl<'a> MapBattlePVE<'a> {
         self.trigger_log(FightLog::SpecialCardUse)?;
         self.trigger_iteration_systems(
             FightView::Player,
-            self.player.special_card.card.system_pool.clone(),
+            self.player_deck.special_card.card.system_pool.clone(),
             target,
             controller,
         )
@@ -129,7 +129,7 @@ impl<'a> MapBattlePVE<'a> {
     ) -> Result<IterationOutput, Error> {
         if card_offsets
             .iter()
-            .any(|v| *v >= self.player.card_selection.selection_pool.len())
+            .any(|v| *v >= self.player_deck.selection_pool.len())
         {
             return Err(Error::BattleSelectionError);
         }
@@ -154,8 +154,8 @@ impl<'a> MapBattlePVE<'a> {
         if !self.pending_instructions.is_empty() {
             return Err(Error::BattleInstructionNotEmpty);
         }
-        let mut remained_hand_cards = self.player.hand_deck.drain(..).collect::<Vec<_>>();
-        self.player.grave_deck.append(&mut remained_hand_cards);
+        let mut remained_hand_cards = self.player_deck.hand_deck.drain(..).collect::<Vec<_>>();
+        self.player_deck.grave_deck.append(&mut remained_hand_cards);
         self.trigger_log(FightLog::DiscardAllHandDeck)?;
         self.trigger_log(FightLog::EnemyTurn(self.round))?;
 

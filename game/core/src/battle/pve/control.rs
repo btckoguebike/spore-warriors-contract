@@ -19,31 +19,31 @@ impl<'a> MapBattlePVE<'a> {
             return Err(Error::BattleUnexpectedDrawCount);
         }
         for _ in 0..draw_count {
-            if self.player.deck.is_empty() {
-                let mut grave_cards = self.player.grave_deck.drain(..).collect::<Vec<_>>();
+            if self.player_deck.deck.is_empty() {
+                let mut grave_cards = self.player_deck.grave_deck.drain(..).collect::<Vec<_>>();
                 if grave_cards.is_empty() {
                     return Err(Error::BattleInternalError);
                 }
-                self.player.deck.append(&mut grave_cards);
+                self.player_deck.deck.append(&mut grave_cards);
                 self.trigger_log(FightLog::RecoverGraveDeck)?;
             }
-            let card_index = controller.rng.next_u32() as usize % self.player.deck.len();
-            let card = self.player.deck.remove(card_index);
+            let card_index = controller.rng.next_u32() as usize % self.player_deck.deck.len();
+            let card = self.player_deck.deck.remove(card_index);
             self.trigger_log(FightLog::Draw(card.offset()))?;
-            self.player.hand_deck.push(card);
+            self.player_deck.hand_deck.push(card);
         }
         Ok(())
     }
 
     pub(super) fn player_select_draw(&mut self, card_offsets: Vec<usize>) -> Result<(), Error> {
         for offset in card_offsets {
-            if !self.player.card_selection.selection_pool.contains(&offset) {
+            if !self.player_deck.selection_pool.contains(&offset) {
                 return Err(Error::BattleUnexpectedCardOffset);
             }
             for (deck, remove) in [
-                (&mut self.player.deck, true),
-                (&mut self.player.grave_deck, true),
-                (&mut self.player.card_selection.unbelonging_deck, false),
+                (&mut self.player_deck.deck, true),
+                (&mut self.player_deck.grave_deck, true),
+                (&mut self.player_deck.unbelonging_deck, false),
             ] {
                 let Some((index, card)) =
                     deck.iter().enumerate().find(|(_, v)| v.offset() == offset)
@@ -51,14 +51,14 @@ impl<'a> MapBattlePVE<'a> {
                     return Err(Error::BattleCardOffsetNotFound);
                 };
                 if remove {
-                    self.player.hand_deck.push(deck.remove(index));
+                    self.player_deck.hand_deck.push(deck.remove(index));
                 } else {
-                    self.player.hand_deck.push(card.clone());
+                    self.player_deck.hand_deck.push(card.clone());
                 }
             }
             self.trigger_log(FightLog::Draw(offset))?;
         }
-        self.player.card_selection.selection_pool.clear();
+        self.player_deck.selection_pool.clear();
         Ok(())
     }
 
@@ -72,7 +72,7 @@ impl<'a> MapBattlePVE<'a> {
         }
         for offset in discard_offsets {
             let Some((index, _)) = self
-                .player
+                .player_deck
                 .hand_deck
                 .iter()
                 .enumerate()
@@ -80,12 +80,12 @@ impl<'a> MapBattlePVE<'a> {
             else {
                 break;
             };
-            let hand_card = self.player.hand_deck.remove(index);
+            let hand_card = self.player_deck.hand_deck.remove(index);
             self.trigger_log(FightLog::DiscardHandDeck(hand_card.offset()))?;
             if grave {
-                self.player.grave_deck.push(hand_card);
+                self.player_deck.grave_deck.push(hand_card);
             } else {
-                self.player.unavaliable_deck.push(hand_card);
+                self.player_deck.unavaliable_deck.push(hand_card);
             }
         }
         Ok(())
@@ -101,16 +101,16 @@ impl<'a> MapBattlePVE<'a> {
             return Err(Error::BattleUnexpectedDiscardCount);
         }
         for _ in 0..discard_count {
-            if self.player.hand_deck.is_empty() {
+            if self.player_deck.hand_deck.is_empty() {
                 break;
             }
-            let card_index = controller.rng.next_u32() as usize % self.player.hand_deck.len();
-            let hand_card = self.player.hand_deck.remove(card_index);
+            let card_index = controller.rng.next_u32() as usize % self.player_deck.hand_deck.len();
+            let hand_card = self.player_deck.hand_deck.remove(card_index);
             self.trigger_log(FightLog::DiscardHandDeck(hand_card.offset()))?;
             if grave {
-                self.player.grave_deck.push(hand_card);
+                self.player_deck.grave_deck.push(hand_card);
             } else {
-                self.player.unavaliable_deck.push(hand_card);
+                self.player_deck.unavaliable_deck.push(hand_card);
             }
         }
         Ok(())
@@ -145,7 +145,7 @@ impl<'a> MapBattlePVE<'a> {
         match (view, target) {
             (FightView::Card(offset), _) => {
                 let card = self
-                    .player
+                    .player_deck
                     .refer_card(offset)
                     .ok_or(Error::BattleInternalError)?;
                 targets.push(card.offset());
@@ -206,6 +206,10 @@ impl<'a> MapBattlePVE<'a> {
                 self.collect_system_target_offsets(view, target_type, target, controller)?;
             let mut objects: Vec<&mut dyn CtxAdaptor> = vec![self.player];
             self.opponents.iter_mut().for_each(|v| objects.push(v));
+            self.player_deck
+                .collect_cards()
+                .into_iter()
+                .for_each(|v| objects.push(v));
             if game_over {
                 system_input = Some(SystemInput::Trigger(FightLog::GameOver));
             }
@@ -242,15 +246,22 @@ impl<'a> MapBattlePVE<'a> {
         view: FightView,
         controller: &mut SystemController,
     ) -> Result<(), Error> {
-        let return_cmds;
+        let mut return_cmds = vec![];
         match system_return {
             SystemReturn::Continue(cmds) => return_cmds = cmds,
-            SystemReturn::RequireCardSelect(select_count, is_draw, cmds) => {
+            SystemReturn::RequireCardSelect(select_count, is_draw, operator) => {
                 if let FightView::Player = view {
                     return Err(Error::ResourceEffectCardSelectInEnemy);
                 }
                 self.last_output = IterationOutput::RequireCardSelect(select_count, is_draw);
-                return_cmds = cmds;
+                if let Some(mut changer) = operator {
+                    let logs = changer(self.player_deck);
+                    return_cmds = vec![Command::AddLogs(logs)];
+                }
+            }
+            SystemReturn::RequireDeckChange(mut changer) => {
+                let logs = changer(self.player_deck);
+                return_cmds = vec![Command::AddLogs(logs)];
             }
         };
         for cmd in return_cmds {
