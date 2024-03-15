@@ -1,5 +1,5 @@
 extern crate alloc;
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 use rand::RngCore;
 
 use crate::contexts::{

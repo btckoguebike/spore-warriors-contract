@@ -1,6 +1,7 @@
 extern crate alloc;
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
 use spore_warriors_generated as generated;
 
 use crate::battle::traits::FightLog;

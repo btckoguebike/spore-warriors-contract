@@ -1,3 +1,5 @@
+extern crate alloc;
+use alloc::vec::Vec;
 use core::cmp::min;
 
 use crate::battle::traits::FightLog;

@@ -1,4 +1,5 @@
 extern crate alloc;
+use alloc::vec::Vec;
 use molecule::prelude::Entity;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};

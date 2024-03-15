@@ -1,3 +1,5 @@
+extern crate alloc;
+use alloc::{vec, vec::Vec};
 use spore_warriors_generated as generated;
 
 use crate::battle::traits::FightLog;

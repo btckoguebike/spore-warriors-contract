@@ -1,3 +1,5 @@
+extern crate alloc;
+use alloc::vec::Vec;
 use rlp::{RlpDecodable, RlpEncodable};
 
 use crate::wrappings::System;
