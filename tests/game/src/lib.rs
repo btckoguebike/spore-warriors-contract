@@ -15,8 +15,8 @@ mod test {
     #[test]
     fn test_map_skeleton() -> eyre::Result<()> {
         let point = Point::from_xy(1, 0);
-        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000)?;
-        let (mut player, mut player_deck) = game.new_session(5001, point)?;
+        let mut game = Game::new(&RAW_RESOURCE_POOL, 10000)?;
+        let (mut player, mut player_deck) = game.new_session(5001, point, None)?;
         println!("[map] = {:?}", game.map);
         println!(
             "[node] = {:?}",
@@ -34,7 +34,7 @@ mod test {
 
     #[test]
     fn test_pve_fight() -> eyre::Result<()> {
-        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000)?;
+        let mut game = Game::new(&RAW_RESOURCE_POOL, 10000)?;
         let enemies = {
             let resource_pool = &game.controller.resource_pool;
             let enemy = resource_pool.enemy_pool().get_unchecked(0);
@@ -42,7 +42,7 @@ mod test {
             vec![enemy]
         };
         let point = Point::from_xy(1, 0);
-        let (mut player, mut player_deck) = game.new_session(5001, point)?;
+        let (mut player, mut player_deck) = game.new_session(5001, point, None)?;
         let mut battle = MapBattlePVE::create(&mut player, &mut player_deck, enemies)?;
         let (output, logs) = battle.start(&mut game.controller)?;
         println!("===START===");
@@ -68,8 +68,8 @@ mod test {
     #[test]
     fn test_context_encode_decode() -> eyre::Result<()> {
         let point = Point::from_xy(1, 0);
-        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10086)?;
-        let (player, player_deck) = game.new_session(5001, point)?;
+        let mut game = Game::new(&RAW_RESOURCE_POOL, 10086)?;
+        let (player, player_deck) = game.new_session(5001, point, None)?;
         let decoded_player: WarriorContext = rlp::decode(&rlp::encode(&player).to_vec())?;
         assert_eq!(player, decoded_player);
         let decoded_player_deck: WarriorDeckContext =
@@ -81,8 +81,8 @@ mod test {
     #[test]
     fn test_json_encode() -> eyre::Result<()> {
         let point = Point::from_xy(1, 0);
-        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10086)?;
-        let (player, player_deck) = game.new_session(5001, point)?;
+        let mut game = Game::new(&RAW_RESOURCE_POOL, 10086)?;
+        let (player, player_deck) = game.new_session(5001, point, None)?;
         println!("[MAP] = {}", serde_json::to_string_pretty(&game.map)?);
         println!("[PLAYER] = {}", serde_json::to_string_pretty(&player)?);
         println!("[DECK] = {}", serde_json::to_string_pretty(&player_deck)?);

@@ -66,14 +66,27 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(
-        raw_resource_pool: &Vec<u8>,
-        raw_potion: Option<Vec<u8>>,
-        seed: u64,
-    ) -> Result<Self, Error> {
+    pub fn new(raw_resource_pool: &Vec<u8>, seed: u64) -> Result<Self, Error> {
         let resource_pool = generated::ResourcePool::from_compatible_slice(raw_resource_pool)
             .map_err(|_| Error::ResourceBroken)?;
-        let mut rng = SporeRng::new(seed);
+        let rng = SporeRng::new(seed);
+        let mut controller = SystemController::new(resource_pool, rng);
+        let map = MapSkeleton::randomized(&mut controller)?;
+        Ok(Self {
+            controller,
+            map,
+            potion: None,
+        })
+    }
+
+    pub fn new_session<'a>(
+        &mut self,
+        player_id: u16,
+        player_point: Point,
+        raw_potion: Option<Vec<u8>>,
+    ) -> Result<(WarriorContext, WarriorDeckContext), Error> {
+        let resource_pool = &self.controller.resource_pool;
+        let mut rng = &mut self.controller.rng;
         let potion = {
             if let Some(raw_potion) = raw_potion {
                 let potion = generated::Potion::from_compatible_slice(&raw_potion)
@@ -83,22 +96,6 @@ impl Game {
                 None
             }
         };
-        let mut controller = SystemController::new(resource_pool, rng);
-        let map = MapSkeleton::randomized(&mut controller)?;
-        Ok(Self {
-            controller,
-            map,
-            potion,
-        })
-    }
-
-    pub fn new_session<'a>(
-        &mut self,
-        player_id: u16,
-        player_point: Point,
-    ) -> Result<(WarriorContext, WarriorDeckContext), Error> {
-        let resource_pool = &self.controller.resource_pool;
-        let rng = &mut self.controller.rng;
         let warrior = {
             let warrior = resource_pool
                 .warrior_pool()
@@ -107,6 +104,7 @@ impl Game {
                 .ok_or(Error::ResourceBrokenCharactorId)?;
             Warrior::randomized(resource_pool, warrior, rng)?
         };
+        self.potion = potion;
         self.map.place_player(player_point, true)?;
         Ok(WarriorContext::new(warrior, self.potion.clone()))
     }
