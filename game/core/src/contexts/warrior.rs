@@ -10,7 +10,11 @@ use crate::contexts::{
 use crate::errors::Error;
 use crate::wrappings::{Card, Item, ItemClass, Potion, System, Warrior};
 
+#[cfg(feature = "json_ser")]
+use serde::Serialize;
+
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct WarriorDeckContext {
     pub special_use_count: u8,
@@ -136,6 +140,7 @@ impl WarriorDeckContext {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct WarriorContext {
     pub warrior: Warrior,

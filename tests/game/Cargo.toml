@@ -11,6 +11,7 @@ eyre = "0.6.12"
 molecule = "0.7.5"
 rlp =  "0.5.2"
 rand = { version = "0.8.5", features = ["small_rng"] }
+serde_json = "1.0"
 
-spore-warriors-core = { path = "../../game/core", features = ["debug"] }
+spore-warriors-core = { path = "../../game/core", features = ["debug", "json_ser"] }
 spore-warriors-generated = { path = "../../game/generated" }

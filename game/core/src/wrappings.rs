@@ -6,6 +6,9 @@ use rand::RngCore;
 use rlp::{RlpDecodable, RlpEncodable};
 use spore_warriors_generated as generated;
 
+#[cfg(feature = "json_ser")]
+use serde::Serialize;
+
 use crate::errors::Error;
 
 static OFFSET: AtomicUsize = AtomicUsize::new(10);
@@ -61,6 +64,7 @@ pub fn randomized_selection<T: IntoIterator>(
 }
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct Value(pub u16);
 
@@ -74,6 +78,7 @@ impl Value {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone, Copy)]
 pub enum RequireTarget {
     Owner,
@@ -116,6 +121,7 @@ impl rlp::Decodable for RequireTarget {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy)]
 #[repr(u16)]
 pub enum SystemId {
@@ -213,6 +219,7 @@ impl rlp::Decodable for SystemId {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone, Copy, RlpEncodable, RlpDecodable)]
 pub struct Duration {
     pub trigger: u16,
@@ -229,6 +236,7 @@ impl From<generated::Duration> for Duration {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct System {
     pub id: u16,
@@ -265,6 +273,7 @@ impl System {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(PartialEq, Clone)]
 #[repr(u8)]
 pub enum ItemClass {
@@ -304,6 +313,7 @@ impl rlp::Decodable for ItemClass {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone, RlpDecodable, RlpEncodable)]
 pub struct Item {
     pub id: u16,
@@ -338,6 +348,7 @@ impl Item {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone)]
 pub struct Loot {
     pub gold: u16,
@@ -374,6 +385,7 @@ impl Loot {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone)]
 pub struct Action {
     pub random_select: bool,
@@ -400,6 +412,7 @@ impl Action {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone)]
 pub struct ActionStrategy {
     pub random_select: bool,
@@ -426,6 +439,7 @@ impl ActionStrategy {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone)]
 pub struct Enemy {
     pub id: u16,
@@ -465,8 +479,9 @@ impl Enemy {
     }
 }
 
-#[derive(PartialEq, Eq, Default, Clone, Copy)]
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[derive(PartialEq, Eq, Default, Clone, Copy)]
 pub struct Point {
     pub x: u8,
     pub y: u8,
@@ -487,8 +502,9 @@ impl Point {
     }
 }
 
-#[derive(PartialEq, Eq)]
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[derive(PartialEq, Eq)]
 pub struct SizedPoint {
     pub point: Point,
     x_size: u8,
@@ -548,6 +564,7 @@ impl SizedPoint {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct Card {
     pub offset: usize,
@@ -595,6 +612,7 @@ impl Card {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct Warrior {
     pub id: u16,
@@ -663,6 +681,7 @@ impl Warrior {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 pub enum Node {
     Enemy(Vec<Enemy>),
     TreasureChest(Vec<Item>, u8),
@@ -677,6 +696,7 @@ pub enum Node {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 pub struct LevelNode {
     pub visible: bool,
     pub point: SizedPoint,
@@ -772,6 +792,7 @@ impl LevelNode {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 pub struct LevelPartition {
     pub nodes: Vec<LevelNode>,
 }
@@ -821,6 +842,7 @@ impl LevelPartition {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone)]
 pub struct Potion {
     pub count: u8,

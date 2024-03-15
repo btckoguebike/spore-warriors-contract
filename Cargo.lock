@@ -648,6 +648,7 @@ dependencies = [
  "molecule",
  "rand 0.8.5",
  "rlp",
+ "serde_json",
  "spore-warriors-core",
  "spore-warriors-generated",
 ]
@@ -1264,6 +1265,7 @@ dependencies = [
  "molecule",
  "rand 0.8.5",
  "rlp",
+ "serde",
  "spore-warriors-generated",
  "thiserror",
 ]

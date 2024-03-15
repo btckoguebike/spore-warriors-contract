@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "debug"), no_std)]
+#![cfg_attr(not(feature = "debug"), cfg_attr(not(feature = "json_ser"), no_std))]
 
 pub mod battle;
 pub mod contexts;

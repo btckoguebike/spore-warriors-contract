@@ -77,4 +77,15 @@ mod test {
         assert_eq!(player_deck, decoded_player_deck);
         Ok(())
     }
+
+    #[test]
+    fn test_json_encode() -> eyre::Result<()> {
+        let point = Point::from_xy(1, 0);
+        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10086)?;
+        let (player, player_deck) = game.new_session(5001, point)?;
+        println!("[MAP] = {}", serde_json::to_string_pretty(&game.map)?);
+        println!("[PLAYER] = {}", serde_json::to_string_pretty(&player)?);
+        println!("[DECK] = {}", serde_json::to_string_pretty(&player_deck)?);
+        Ok(())
+    }
 }

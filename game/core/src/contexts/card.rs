@@ -3,15 +3,17 @@ use alloc::{vec, vec::Vec};
 use rlp::{RlpDecodable, RlpEncodable};
 
 use crate::contexts::{
-    add_mounting_system_internal, remove_mounting_system_internal, ContextType, CtxAdaptor,
-    SystemContext,
+    add_mounting_system_internal, remove_mounting_system_internal, update_mounting_system_internal,
+    ContextType, CtxAdaptor, SystemContext,
 };
 use crate::errors::Error;
 use crate::wrappings::Card;
 
-use super::update_mounting_system_internal;
+#[cfg(feature = "json_ser")]
+use serde::Serialize;
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct CardContext {
     pub card: Card,

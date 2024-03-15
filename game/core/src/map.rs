@@ -11,6 +11,9 @@ use crate::wrappings::{
     randomized_selection, Card, Item, ItemClass, LevelNode, LevelPartition, Node, Point, System,
 };
 
+#[cfg(feature = "json_ser")]
+use serde::Serialize;
+
 fn run_context(
     player: &mut WarriorContext,
     system: System,
@@ -100,6 +103,7 @@ pub enum MoveResult<'a, T: SimplePVE<'a>> {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 pub struct MapSkeleton {
     pub id: u16,
     pub width: i16,

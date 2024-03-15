@@ -9,7 +9,11 @@ use crate::contexts::{
 use crate::errors::Error;
 use crate::wrappings::{Enemy, System};
 
+#[cfg(feature = "json_ser")]
+use serde::Serialize;
+
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone)]
 pub struct EnemyContext {
     pub enemy: Enemy,
