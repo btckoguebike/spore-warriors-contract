@@ -25,7 +25,7 @@ fn run_trigger(
         return Ok(TriggerResult::BreakOut(SystemReturn::Continue(vec![])));
     };
     let Some(duration) = ctx.system.duration else {
-        return Err(Error::BattleUnexpectedSystemContextDuration);
+        return Err(Error::BattleUnexpectedSystemDuration);
     };
     let mut logs = vec![];
     if ctx.duration_counter > 0 {

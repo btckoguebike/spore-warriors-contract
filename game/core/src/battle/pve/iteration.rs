@@ -28,7 +28,7 @@ impl<'a> MapBattlePVE<'a> {
                 self.iterate_special_card_use(offset, controller)
             }
             IterationInput::EnemyTurn => self.iterate_enemy_turn(controller),
-            _ => Err(Error::BattleSelectionMismatch),
+            _ => Err(Error::BattleInvalidIterationOperation),
         }
     }
 
@@ -64,7 +64,7 @@ impl<'a> MapBattlePVE<'a> {
             return Err(Error::BattleSelectionError);
         }
         if IterationOutput::Continue != self.last_output {
-            return Err(Error::BattleUnexpectedOutput);
+            return Err(Error::BattleUnexpectedLastOutput);
         }
         let props_item = self.player.props_list.remove(item_index);
         self.trigger_log(FightLog::ItemUse(item_index))?;
@@ -86,7 +86,7 @@ impl<'a> MapBattlePVE<'a> {
             return Err(Error::BattleSelectionError);
         }
         if IterationOutput::Continue != self.last_output {
-            return Err(Error::BattleUnexpectedOutput);
+            return Err(Error::BattleUnexpectedLastOutput);
         };
         let context = self.player_deck.hand_deck.remove(card_index);
         if self.player.power < context.power_cost {
@@ -105,7 +105,7 @@ impl<'a> MapBattlePVE<'a> {
         controller: &mut SystemController,
     ) -> Result<IterationOutput, Error> {
         if IterationOutput::Continue != self.last_output {
-            return Err(Error::BattleUnexpectedOutput);
+            return Err(Error::BattleUnexpectedLastOutput);
         };
         if self.player_deck.special_use_count >= self.player_deck.special_max_count {
             return Err(Error::BattleUseCountInsufficient);
@@ -138,7 +138,7 @@ impl<'a> MapBattlePVE<'a> {
             return Err(Error::BattleSelectionError);
         }
         let IterationOutput::RequireCardSelect(count, draw) = self.last_output else {
-            return Err(Error::BattleUnexpectedOutput);
+            return Err(Error::BattleUnexpectedLastOutput);
         };
         if card_offsets.len() > count as usize {
             return Err(Error::BattleExceedCardSelection);

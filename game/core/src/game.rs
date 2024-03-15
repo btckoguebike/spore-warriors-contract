@@ -117,10 +117,10 @@ impl Game {
         raw_context: Vec<u8>,
     ) -> Result<WarriorContext, Error> {
         if !self.controller.rng.rotate_to(rng_rotation_count) {
-            return Err(Error::SystemRngRotationError);
+            return Err(Error::RngRotationError);
         }
         self.map.place_player(player_point, false)?;
-        let context = rlp::decode(&raw_context).map_err(|_| Error::SystemDeserializeError)?;
+        let context = rlp::decode(&raw_context).map_err(|_| Error::DeserializeError)?;
         Ok(context)
     }
 }

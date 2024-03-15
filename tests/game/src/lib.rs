@@ -13,70 +13,68 @@ mod test {
     }
 
     #[test]
-    fn test_map_skeleton() {
+    fn test_map_skeleton() -> eyre::Result<()> {
         let point = Point::from_xy(1, 0);
-        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000).unwrap();
-        let (mut player, mut player_deck) = game.new_session(5001, point).unwrap();
+        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000)?;
+        let (mut player, mut player_deck) = game.new_session(5001, point)?;
         println!("[map] = {:?}", game.map);
         println!(
             "[node] = {:?}",
             game.map.peak_upcoming_movment(&player, (1, 1).into())
         );
-        game.map
-            .move_to(
-                &mut player,
-                &mut player_deck,
-                point,
-                vec![],
-                &mut game.controller,
-            )
-            .unwrap();
+        game.map.move_to(
+            &mut player,
+            &mut player_deck,
+            point,
+            vec![],
+            &mut game.controller,
+        )?;
+        Ok(())
     }
 
     #[test]
-    fn test_pve_fight() {
-        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000).unwrap();
+    fn test_pve_fight() -> eyre::Result<()> {
+        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10000)?;
         let enemies = {
             let resource_pool = &game.controller.resource_pool;
             let enemy = resource_pool.enemy_pool().get_unchecked(0);
-            vec![Enemy::randomized(resource_pool, enemy, &mut game.controller.rng).unwrap()]
+            let enemy = Enemy::randomized(resource_pool, enemy, &mut game.controller.rng)?;
+            vec![enemy]
         };
         let point = Point::from_xy(1, 0);
-        let (mut player, mut player_deck) = game.new_session(5001, point).unwrap();
-        let mut battle = MapBattlePVE::create(&mut player, &mut player_deck, enemies).unwrap();
-        let (output, logs) = battle.start(&mut game.controller).unwrap();
+        let (mut player, mut player_deck) = game.new_session(5001, point)?;
+        let mut battle = MapBattlePVE::create(&mut player, &mut player_deck, enemies)?;
+        let (output, logs) = battle.start(&mut game.controller)?;
         println!("===START===");
         println!("[logs] = {logs:?}");
         println!("[output] = {output:?}");
-        let (output, logs) = battle
-            .run(
-                vec![IterationInput::HandCardUse(
-                    Selection::SingleCard(0),
-                    Some(0),
-                )],
-                &mut game.controller,
-            )
-            .unwrap();
+        let (output, logs) = battle.run(
+            vec![IterationInput::HandCardUse(
+                Selection::SingleCard(0),
+                Some(0),
+            )],
+            &mut game.controller,
+        )?;
         println!("===PLAYER TURN===");
         println!("[logs] = {logs:?}");
         println!("[output] = {output:?}");
-        let (output, logs) = battle
-            .run(vec![IterationInput::EnemyTurn], &mut game.controller)
-            .unwrap();
+        let (output, logs) = battle.run(vec![IterationInput::EnemyTurn], &mut game.controller)?;
         println!("===ENEMY TURN===");
         println!("[logs] = {logs:?}");
         println!("[output] = {output:?}");
+        Ok(())
     }
 
     #[test]
-    fn test_context_encode_decode() {
+    fn test_context_encode_decode() -> eyre::Result<()> {
         let point = Point::from_xy(1, 0);
-        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10086).unwrap();
-        let (player, player_deck) = game.new_session(5001, point).unwrap();
-        let decoded_player: WarriorContext = rlp::decode(&rlp::encode(&player).to_vec()).unwrap();
+        let mut game = Game::new(&RAW_RESOURCE_POOL, None, 10086)?;
+        let (player, player_deck) = game.new_session(5001, point)?;
+        let decoded_player: WarriorContext = rlp::decode(&rlp::encode(&player).to_vec())?;
         assert_eq!(player, decoded_player);
         let decoded_player_deck: WarriorDeckContext =
-            rlp::decode(&rlp::encode(&player_deck).to_vec()).unwrap();
+            rlp::decode(&rlp::encode(&player_deck).to_vec())?;
         assert_eq!(player_deck, decoded_player_deck);
+        Ok(())
     }
 }

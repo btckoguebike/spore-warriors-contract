@@ -22,7 +22,7 @@ impl<'a> MapBattlePVE<'a> {
             if self.player_deck.deck.is_empty() {
                 let mut grave_cards = self.player_deck.grave_deck.drain(..).collect::<Vec<_>>();
                 if grave_cards.is_empty() {
-                    return Err(Error::BattleInternalError);
+                    return Err(Error::BattlePlayerDeckBroken);
                 }
                 self.player_deck.deck.append(&mut grave_cards);
                 self.trigger_log(FightLog::RecoverGraveDeck)?;
@@ -48,7 +48,7 @@ impl<'a> MapBattlePVE<'a> {
                 let Some((index, card)) =
                     deck.iter().enumerate().find(|(_, v)| v.offset() == offset)
                 else {
-                    return Err(Error::BattleCardOffsetNotFound);
+                    return Err(Error::BattleDrawCardOffsetNotFound);
                 };
                 if remove {
                     self.player_deck.hand_deck.push(deck.remove(index));
@@ -127,7 +127,7 @@ impl<'a> MapBattlePVE<'a> {
             (FightView::Player, _) => Ok(self.player.offset()),
             (FightView::Enemy, _) => {
                 let Some(offset) = target_offset else {
-                    return Err(Error::BattleSelectionError);
+                    return Err(Error::BattleTargetOffsetError);
                 };
                 Ok(offset)
             }
@@ -147,13 +147,13 @@ impl<'a> MapBattlePVE<'a> {
                 let card = self
                     .player_deck
                     .refer_card(offset)
-                    .ok_or(Error::BattleInternalError)?;
+                    .ok_or(Error::BattleInvalidCardOffsetToRefer)?;
                 targets.push(card.offset());
             }
             (FightView::Player, RequireTarget::Opponent)
             | (FightView::Enemy, RequireTarget::Owner) => {
                 let Some(offset) = target_offset else {
-                    return Err(Error::BattleSelectionError);
+                    return Err(Error::BattleTargetOffsetError);
                 };
                 let enemy = self
                     .opponents
@@ -251,7 +251,7 @@ impl<'a> MapBattlePVE<'a> {
             SystemReturn::Continue(cmds) => return_cmds = cmds,
             SystemReturn::RequireCardSelect(select_count, is_draw, operator) => {
                 if let FightView::Player = view {
-                    return Err(Error::ResourceEffectCardSelectInEnemy);
+                    return Err(Error::ResourceSystemCardSelectionInEnemy);
                 }
                 self.last_output = IterationOutput::RequireCardSelect(select_count, is_draw);
                 if let Some(mut changer) = operator {

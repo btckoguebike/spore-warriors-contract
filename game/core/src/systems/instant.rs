@@ -32,7 +32,7 @@ impl TryFrom<&u16> for DeckType {
             &0u16 => Ok(Self::FromDeck),
             &1u16 => Ok(Self::FromGrave),
             &2u16 => Ok(Self::FromResource),
-            _ => Err(Error::BattleUnexpectedDeckType),
+            _ => Err(Error::ResourceBrokenDeckType),
         }
     }
 }
@@ -484,7 +484,7 @@ pub fn draw_select_cards(
     let mut resource_pick_info = None;
     if let (Some(Value(card_class)), Some(Value(pick_count))) = (iter.next(), iter.next()) {
         if pick_count < select_count {
-            return Err(Error::ResourceBrokenCardSelection);
+            return Err(Error::BattleUnexpectedSystemArgs);
         }
         resource_pick_info = Some((*card_class, *pick_count));
     }

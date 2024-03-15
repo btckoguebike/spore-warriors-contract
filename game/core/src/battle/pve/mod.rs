@@ -115,7 +115,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
 
     fn peak_target(&self, hand_card_selection: Selection) -> Result<bool, Error> {
         let Selection::SingleCard(index) = hand_card_selection else {
-            return Err(Error::BattleOperationMismatch);
+            return Err(Error::BattleInvalidPeakOperation);
         };
         let required_targets = self
             .player_deck
@@ -131,7 +131,7 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
         for target in &required_targets {
             if let RequireTarget::Opponent = target {
                 if select_required {
-                    return Err(Error::ResourceEffectMultiTargetInSystemPool);
+                    return Err(Error::ResourceSystemTargetInSystemPoolDuplicated);
                 }
                 select_required = true;
             }

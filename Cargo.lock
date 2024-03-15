@@ -1265,6 +1265,7 @@ dependencies = [
  "rand 0.8.5",
  "rlp",
  "spore-warriors-generated",
+ "thiserror",
 ]
 
 [[package]]

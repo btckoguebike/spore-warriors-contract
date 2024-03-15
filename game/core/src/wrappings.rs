@@ -576,7 +576,7 @@ impl Card {
             .map(|v| {
                 if v.target_type == RequireTarget::Opponent {
                     if select_object {
-                        return Err(Error::ResourceEffectMultiTargetInSystemPool);
+                        return Err(Error::ResourceSystemTargetInSystemPoolDuplicated);
                     }
                     select_object = true;
                 }
