@@ -90,8 +90,8 @@ fn collect_items(
         .collect::<Result<Vec<_>, _>>()
 }
 
-pub enum MoveResult<T: SimplePVE> {
-    Fight(T),
+pub enum MoveResult {
+    Fight(MapBattlePVE),
     MapLogs(Vec<FightLog>),
     Complete,
     Skip,
@@ -187,7 +187,7 @@ impl<'a> MapSkeleton {
         player_point: Point,
         user_imported: Vec<usize>,
         controller: &mut SystemController,
-    ) -> Result<MoveResult<impl SimplePVE>, Error> {
+    ) -> Result<MoveResult, Error> {
         self.player_point = player_point;
         let Some(level) = self.peak_upcoming_movment(player, player_point)? else {
             return Ok(MoveResult::Skip);
