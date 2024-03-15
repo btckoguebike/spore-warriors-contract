@@ -42,8 +42,8 @@ mod test {
             vec![enemy]
         };
         let point = Point::from_xy(1, 0);
-        let (mut player, mut player_deck) = game.new_session(5001, point, None)?;
-        let mut battle = MapBattlePVE::create(&mut player, &mut player_deck, enemies)?;
+        let (player, player_deck) = game.new_session(5001, point, None)?;
+        let mut battle = MapBattlePVE::create(player, player_deck, enemies)?;
         let (output, logs) = battle.start(&mut game.controller)?;
         println!("===START===");
         println!("[logs] = {logs:?}");
@@ -62,6 +62,7 @@ mod test {
         println!("===ENEMY TURN===");
         println!("[logs] = {logs:?}");
         println!("[output] = {output:?}");
+        battle.destroy();
         Ok(())
     }
 

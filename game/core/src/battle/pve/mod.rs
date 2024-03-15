@@ -26,9 +26,9 @@ struct Instruction {
     system_input: Option<SystemInput>,
 }
 
-pub struct MapBattlePVE<'a> {
-    player: &'a mut WarriorContext,
-    player_deck: &'a mut WarriorDeckContext,
+pub struct MapBattlePVE {
+    player: WarriorContext,
+    player_deck: WarriorDeckContext,
     opponents: Vec<EnemyContext>,
     round: u8,
     fight_logs: Vec<FightLog>,
@@ -36,10 +36,10 @@ pub struct MapBattlePVE<'a> {
     pending_instructions: VecDeque<Instruction>,
 }
 
-impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
+impl SimplePVE for MapBattlePVE {
     fn create(
-        player: &'a mut WarriorContext,
-        player_deck: &'a mut WarriorDeckContext,
+        player: WarriorContext,
+        player_deck: WarriorDeckContext,
         enemies: Vec<Enemy>,
     ) -> Result<Self, Error> {
         let opponents = enemies
@@ -137,5 +137,9 @@ impl<'a> SimplePVE<'a> for MapBattlePVE<'a> {
             }
         }
         Ok(select_required)
+    }
+
+    fn destroy(self) -> (WarriorContext, WarriorDeckContext, Vec<EnemyContext>) {
+        (self.player, self.player_deck, self.opponents)
     }
 }

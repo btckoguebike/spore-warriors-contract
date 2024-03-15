@@ -133,13 +133,13 @@ impl PartialEq<u16> for FightLog {
     }
 }
 
-pub trait SimplePVE<'a>
+pub trait SimplePVE
 where
     Self: Sized,
 {
     fn create(
-        player: &'a mut WarriorContext,
-        player_deck: &'a mut WarriorDeckContext,
+        player: WarriorContext,
+        player_deck: WarriorDeckContext,
         enemies: Vec<Enemy>,
     ) -> Result<Self, Error>;
 
@@ -155,4 +155,6 @@ where
     ) -> Result<(IterationOutput, Vec<FightLog>), Error>;
 
     fn peak_target(&self, hand_card_selection: Selection) -> Result<bool, Error>;
+
+    fn destroy(self) -> (WarriorContext, WarriorDeckContext, Vec<EnemyContext>);
 }

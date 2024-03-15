@@ -8,7 +8,7 @@ use crate::errors::Error;
 use crate::systems::SystemController;
 use crate::wrappings::System;
 
-impl<'a> MapBattlePVE<'a> {
+impl MapBattlePVE {
     pub(super) fn iterate(
         &mut self,
         operation: IterationInput,

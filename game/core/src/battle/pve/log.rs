@@ -7,7 +7,7 @@ use crate::contexts::{CtxAdaptor, SystemContext};
 use crate::errors::Error;
 use crate::systems::SystemInput;
 
-impl<'a> MapBattlePVE<'a> {
+impl MapBattlePVE {
     pub(super) fn trigger_log(&mut self, log: FightLog) -> Result<(), Error> {
         self.trigger_mounting_systems(
             FightView::Player,

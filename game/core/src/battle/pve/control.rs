@@ -9,7 +9,7 @@ use crate::errors::Error;
 use crate::systems::{Command, SystemController, SystemInput, SystemReturn};
 use crate::wrappings::RequireTarget;
 
-impl<'a> MapBattlePVE<'a> {
+impl MapBattlePVE {
     pub(super) fn player_draw(
         &mut self,
         draw_count: u8,
@@ -204,7 +204,7 @@ impl<'a> MapBattlePVE<'a> {
             self.trigger_log(FightLog::CallSystem(caster, ctx.clone()))?;
             let targets =
                 self.collect_system_target_offsets(view, target_type, target, controller)?;
-            let mut objects: Vec<&mut dyn CtxAdaptor> = vec![self.player];
+            let mut objects: Vec<&mut dyn CtxAdaptor> = vec![&mut self.player];
             self.opponents.iter_mut().for_each(|v| objects.push(v));
             self.player_deck
                 .collect_cards()
@@ -255,12 +255,12 @@ impl<'a> MapBattlePVE<'a> {
                 }
                 self.last_output = IterationOutput::RequireCardSelect(select_count, is_draw);
                 if let Some(mut changer) = operator {
-                    let logs = changer(self.player_deck);
+                    let logs = changer(&mut self.player_deck);
                     return_cmds = vec![Command::AddLogs(logs)];
                 }
             }
             SystemReturn::RequireDeckChange(mut changer) => {
-                let logs = changer(self.player_deck);
+                let logs = changer(&mut self.player_deck);
                 return_cmds = vec![Command::AddLogs(logs)];
             }
         };

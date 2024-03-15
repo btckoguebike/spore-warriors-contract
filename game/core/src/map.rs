@@ -90,16 +90,11 @@ fn collect_items(
         .collect::<Result<Vec<_>, _>>()
 }
 
-pub struct Phantom<'a> {
-    _i: &'a u8,
-}
-
-pub enum MoveResult<'a, T: SimplePVE<'a>> {
+pub enum MoveResult<T: SimplePVE> {
     Fight(T),
     MapLogs(Vec<FightLog>),
     Complete,
     Skip,
-    _Phantom(Phantom<'a>),
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -186,12 +181,12 @@ impl<'a> MapSkeleton {
     }
 
     pub fn move_to(
-        &'a mut self,
-        player: &'a mut WarriorContext,
-        player_deck: &'a mut WarriorDeckContext,
+        &mut self,
+        player: &mut WarriorContext,
+        player_deck: &mut WarriorDeckContext,
         player_point: Point,
         user_imported: Vec<usize>,
-        controller: &'a mut SystemController,
+        controller: &mut SystemController,
     ) -> Result<MoveResult<impl SimplePVE>, Error> {
         self.player_point = player_point;
         let Some(level) = self.peak_upcoming_movment(player, player_point)? else {
@@ -222,7 +217,8 @@ impl<'a> MapSkeleton {
                     .collect::<Result<_, _>>()?;
             }
             Node::Enemy(enemies) => {
-                let fight = MapBattlePVE::create(player, player_deck, enemies.clone())?;
+                let fight =
+                    MapBattlePVE::create(player.clone(), player_deck.clone(), enemies.clone())?;
                 return Ok(MoveResult::Fight(fight));
             }
             Node::ItemMerchant(items) => {
