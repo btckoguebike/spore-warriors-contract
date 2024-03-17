@@ -249,11 +249,12 @@ impl MapBattlePVE {
         let mut return_cmds = vec![];
         match system_return {
             SystemReturn::Continue(cmds) => return_cmds = cmds,
-            SystemReturn::RequireCardSelect(select_count, is_draw, operator) => {
+            SystemReturn::RequireCardSelect(select_count, draw_or_discard, operator) => {
                 if let FightView::Player = view {
                     return Err(Error::ResourceSystemCardSelectionInEnemy);
                 }
-                self.last_output = IterationOutput::RequireCardSelect(select_count, is_draw);
+                self.last_output =
+                    IterationOutput::RequireCardSelect(select_count, draw_or_discard);
                 if let Some(mut changer) = operator {
                     let logs = changer(&mut self.player_deck);
                     return_cmds = vec![Command::AddLogs(logs)];

@@ -6,6 +6,9 @@ use crate::errors::Error;
 use crate::systems::SystemController;
 use crate::wrappings::Enemy;
 
+#[cfg(feature = "json_ser")]
+use serde::Serialize;
+
 #[derive(Clone)]
 pub enum Target {
     Player,
@@ -15,6 +18,7 @@ pub enum Target {
     AllCharactor,
 }
 
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[derive(Clone)]
 pub enum Selection {
     Item(usize),
@@ -22,6 +26,7 @@ pub enum Selection {
     MultiCards(Vec<usize>),
 }
 
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 pub enum IterationInput {
     ItemUse(Selection, Option<usize>),
     SpecialCardUse(Option<usize>),
@@ -30,6 +35,7 @@ pub enum IterationInput {
     EnemyTurn,
 }
 
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone, Copy, PartialEq)]
 pub enum IterationOutput {
@@ -40,6 +46,7 @@ pub enum IterationOutput {
     PlayerTurn,
 }
 
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone)]
 pub enum FightLog {
