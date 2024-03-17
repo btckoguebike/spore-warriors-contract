@@ -90,6 +90,7 @@ fn collect_items(
         .collect::<Result<Vec<_>, _>>()
 }
 
+#[cfg_attr(feature = "json_ser", derive(Serialize))]
 pub enum MoveResult {
     Fight(MapBattlePVE),
     MapLogs(Vec<FightLog>),
