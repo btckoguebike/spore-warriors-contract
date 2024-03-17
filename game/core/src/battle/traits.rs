@@ -7,7 +7,7 @@ use crate::systems::SystemController;
 use crate::wrappings::Enemy;
 
 #[cfg(feature = "json_ser")]
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
 pub enum Target {
@@ -18,7 +18,7 @@ pub enum Target {
     AllCharactor,
 }
 
-#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[cfg_attr(feature = "json_ser", derive(Deserialize))]
 #[derive(Clone)]
 pub enum Selection {
     Item(usize),
@@ -26,7 +26,7 @@ pub enum Selection {
     MultiCards(Vec<usize>),
 }
 
-#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[cfg_attr(feature = "json_ser", derive(Deserialize))]
 pub enum IterationInput {
     ItemUse(Selection, Option<usize>),
     SpecialCardUse(Option<usize>),
