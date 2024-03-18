@@ -9,11 +9,11 @@ use crate::contexts::{
 use crate::errors::Error;
 use crate::wrappings::Card;
 
-#[cfg(feature = "json_ser")]
-use serde::Serialize;
+#[cfg(feature = "json_serde")]
+use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "debug", derive(Debug, PartialEq))]
-#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize, Deserialize))]
 #[derive(Clone, RlpEncodable, RlpDecodable)]
 pub struct CardContext {
     pub card: Card,

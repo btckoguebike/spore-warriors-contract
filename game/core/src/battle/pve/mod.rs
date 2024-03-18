@@ -12,10 +12,10 @@ mod control;
 mod iteration;
 mod log;
 
-#[cfg(feature = "json_ser")]
+#[cfg(feature = "json_serde")]
 use serde::Serialize;
 
-#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize))]
 #[derive(Clone, Copy, PartialEq)]
 enum FightView {
     Player,
@@ -23,7 +23,7 @@ enum FightView {
     Card(usize),
 }
 
-#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize))]
 struct Instruction {
     target: Option<usize>,
     ctx: SystemContext,
@@ -31,7 +31,7 @@ struct Instruction {
     system_input: Option<SystemInput>,
 }
 
-#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize))]
 pub struct MapBattlePVE {
     player: WarriorContext,
     player_deck: WarriorDeckContext,

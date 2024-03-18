@@ -62,7 +62,7 @@ mod test {
         println!("===ENEMY TURN===");
         println!("[logs] = {logs:?}");
         println!("[output] = {output:?}");
-        battle.destroy();
+        battle.destroy()?;
         Ok(())
     }
 

@@ -10,7 +10,7 @@ use crate::errors::Error;
 use crate::game::SporeRng;
 use crate::wrappings::SystemId;
 
-#[cfg(feature = "json_ser")]
+#[cfg(feature = "json_serde")]
 use serde::Serialize;
 
 const MAX_WEAK_COUNT: u8 = 10;
@@ -33,7 +33,7 @@ pub enum SystemReturn {
     Continue(Vec<Command>),
 }
 
-#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize))]
 #[derive(Clone)]
 pub enum SystemInput {
     Selection(Vec<usize>),

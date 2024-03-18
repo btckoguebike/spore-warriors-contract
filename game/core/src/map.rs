@@ -11,7 +11,7 @@ use crate::wrappings::{
     randomized_selection, Card, Item, ItemClass, LevelNode, LevelPartition, Node, Point, System,
 };
 
-#[cfg(feature = "json_ser")]
+#[cfg(feature = "json_serde")]
 use serde::Serialize;
 
 fn run_context(
@@ -90,7 +90,7 @@ fn collect_items(
         .collect::<Result<Vec<_>, _>>()
 }
 
-#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize))]
 pub enum MoveResult {
     Fight(MapBattlePVE),
     MapLogs(Vec<FightLog>),
@@ -99,7 +99,7 @@ pub enum MoveResult {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "json_ser", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize))]
 pub struct MapSkeleton {
     pub id: u16,
     pub width: i16,
