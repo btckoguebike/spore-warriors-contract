@@ -163,5 +163,5 @@ where
 
     fn peak_target(&self, hand_card_selection: Selection) -> Result<bool, Error>;
 
-    fn destroy(self) -> (WarriorContext, WarriorDeckContext, Vec<EnemyContext>);
+    fn destroy(self) -> Result<(WarriorContext, WarriorDeckContext, Vec<EnemyContext>), Error>;
 }

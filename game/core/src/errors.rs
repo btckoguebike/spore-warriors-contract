@@ -86,6 +86,8 @@ pub enum Error {
     BattleDrawCardOffsetNotFound,
     #[cfg_attr(feature = "debug", error("card selection count exceeeded"))]
     BattleExceedCardSelection,
+    #[cfg_attr(feature = "debug", error("battle isn't finished"))]
+    BattleNotFinished,
     #[cfg_attr(feature = "debug", error("battle unexpected draw count"))]
     BattleUnexpectedDrawCount,
     #[cfg_attr(feature = "debug", error("battle unexpected discard count"))]

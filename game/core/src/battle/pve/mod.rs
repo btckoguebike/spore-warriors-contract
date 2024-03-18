@@ -145,7 +145,12 @@ impl SimplePVE for MapBattlePVE {
         Ok(select_required)
     }
 
-    fn destroy(self) -> (WarriorContext, WarriorDeckContext, Vec<EnemyContext>) {
-        (self.player, self.player_deck, self.opponents)
+    fn destroy(self) -> Result<(WarriorContext, WarriorDeckContext, Vec<EnemyContext>), Error> {
+        if self.last_output != IterationOutput::GameWin
+            || self.last_output != IterationOutput::GameLose
+        {
+            return Err(Error::BattleNotFinished);
+        }
+        Ok((self.player, self.player_deck, self.opponents))
     }
 }
