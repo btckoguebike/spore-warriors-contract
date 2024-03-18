@@ -348,7 +348,7 @@ impl Item {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "json_serde", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub struct Loot {
     pub gold: u16,
@@ -385,7 +385,7 @@ impl Loot {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "json_serde", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub struct Action {
     pub random_select: bool,
@@ -412,7 +412,7 @@ impl Action {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "json_serde", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub struct ActionStrategy {
     pub random_select: bool,
@@ -439,7 +439,7 @@ impl ActionStrategy {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "json_serde", derive(Serialize))]
+#[cfg_attr(feature = "json_serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub struct Enemy {
     pub id: u16,
